@@ -42,6 +42,7 @@ export interface Event {
   location?: string;
   personId?: string;
   rating?: number;
+  status:  0 | 1 | 2 ;
   optionalFields?: any;
   createdAt?: Date;
 }
@@ -61,6 +62,23 @@ export interface EventSuggestion {
   person: Person
   suggestedDate: string // ISO
   message?: string;
+}
+
+export interface Routine {
+  id: string;
+  title: string; // objetivo inspiracional
+  steps: RoutineStep[];
+  items: Array<{ id: string; type: 'task' | 'event' }>; // Key Results
+  progress: number; // 0 a 100
+  order: string[]; // ids na ordem definida pelo usuário
+  time?: string; // opcional
+  createdAt: string; // ISO date
+}
+
+export interface RoutineStep {
+  id: string
+  description: string
+  done: boolean
 }
 
 export type OptionalFieldType = 'address' | 'note' | 'url' | 'phone' | 'email';
@@ -89,3 +107,4 @@ export interface TextField {
 }
 
 export type OptionalField = AddressField | TextField;
+
