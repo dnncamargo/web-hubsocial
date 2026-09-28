@@ -29,6 +29,16 @@ const weekdays: Array<{ value: WeekdayName; label: string }> = [
   { value: 'sunday', label: 'Dom' },
 ]
 
+const weekdayByDateIndex: WeekdayName[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+]
+
 function replaceRuleByType(
   ruleSet: AutomationRuleSet,
   type: AutomationRule['type'],
@@ -92,7 +102,7 @@ export default function AutomationRulesEditor({
     [value.rules],
   )
 
-  const currentWeekday = weekdays[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1].value
+  const currentWeekday = weekdayByDateIndex[new Date().getDay()]
 
   const toggleWeekdayRule = (enabled: boolean) => {
     if (!enabled) {
