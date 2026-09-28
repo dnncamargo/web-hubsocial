@@ -407,17 +407,22 @@ small shared global foundation
 
 ### 6.4. Visual 2 — Migrate representative surfaces
 
-**Status: QUEUED**
+**Status: IN PROGRESS**
 
 Use representative surfaces to prove the visual contracts before a full sweep.
 
-Preferred order:
+Execution checkpoints:
 
-1. application shell/navigation;
-2. Dashboard / Actions of the Day;
-3. authentication/login;
-4. one representative form/modal;
-5. one representative operational list/card.
+- **Visual 2A — application shell/navigation: DONE**
+  - shared routed AppShell;
+  - desktop sidebar;
+  - mobile top bar + bottom navigation;
+  - responsive behavior owned by CSS rather than device detection;
+  - navigation rendered once instead of once per page.
+- **Visual 2B — Dashboard / Actions of the Day: NEXT**
+- **Visual 2C — authentication/login: QUEUED**
+- **Visual 2D — representative form/modal: QUEUED**
+- **Visual 2E — representative operational list/card: QUEUED**
 
 Validate both desktop and mobile before expanding the migration.
 
@@ -625,11 +630,12 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 2 — migrate representative surfaces
+Visual 2B — migrate Dashboard / Actions of the Day
 ```
 
 After that:
 
 ```text
-Visual 3–4 — complete Tailwind removal and implement the canonical workspace shell
+Visual 2C–2E — migrate login, one form/modal, and one operational list/card
+→ Visual 3–4 — complete Tailwind removal and finalize the canonical workspace shell
 ```
