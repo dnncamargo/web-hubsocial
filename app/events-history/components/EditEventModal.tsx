@@ -166,6 +166,8 @@ const EditEventModal = ({ event, isOpen, onClose, onUpdated }: EditEventModalPro
    * @returns {Promise<void>}
    */
   const handleDelete = async (): Promise<void> => {
+    if (!uid) return;
+
     try {
       const eventRef = doc(db, 'users', uid, 'events-history', event.id);
       await deleteDoc(eventRef);

@@ -240,32 +240,6 @@ const PeopleDirectory = (): JSX.Element => {
       );
     });
 
-  const handleAddRelationship = async (newRelationship: string) => {
-    if (!uid) return;
-
-    const trimmed = newRelationship.trim();
-    if (!trimmed || availableRelationships.includes(trimmed)) return;
-
-    const updatedRelationships = [...availableRelationships, trimmed];
-
-    try {
-      // Salva no Firestore
-      const docRef = doc(db, `users/${uid}/settings`, 'userRelationships');
-      await setDoc(docRef, { relationship: updatedRelationships }, { merge: true });
-
-      // Atualiza o estado local
-      setAvailableRelationships(updatedRelationships);
-
-      // (Opcional) Atualiza o filtro para já incluir o novo relacionamento
-      setFilters(prev => ({
-        ...prev,
-        selectedRelationships: [...prev.selectedRelationships, trimmed],
-      }));
-    } catch (error) {
-      console.error('Erro ao adicionar novo relacionamento:', error);
-    }
-  };
-
   const updateFilters = async (updated: PersonFilter) => {
     setFilters(updated);
     if (uid) {
@@ -408,9 +382,6 @@ const PeopleDirectory = (): JSX.Element => {
             onClose={() => setIsEditPersonModalOpen(false)}
             onUpdated={fetchPeople}
             onDeleted={handlePersonDeleted}
-            availableRelationships={availableRelationships}
-            setAvailableRelationships={setAvailableRelationships}
-            onAddRelationship={handleAddRelationship}
           />
         )}
 

@@ -219,8 +219,6 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
             setStartTime={setStartTime}
             endTime={endTime}
             setEndTime={setEndTime}
-            error={error}
-            setError={setError}
           />
         )}
 

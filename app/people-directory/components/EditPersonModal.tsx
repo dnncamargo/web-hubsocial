@@ -133,6 +133,8 @@ const EditPersonModal = ({ person, isOpen, onClose, onUpdated, onDeleted }: Edit
     * @returns {Promise<void>}
     */
   const handleDelete = async (): Promise<void> => {
+    if (!uid) return;
+
     try {
       const personRef = doc(db, 'users', uid, 'people-directory', person.id);
       await deleteDoc(personRef);
