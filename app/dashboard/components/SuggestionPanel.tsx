@@ -6,7 +6,7 @@ import { addDoc, getDocs, collection } from 'firebase/firestore';
 import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider';
 import { motion } from 'framer-motion';
-import { differenceInDays, isAfter, parseISO, add } from 'date-fns'
+import { differenceInDays, format, isAfter, parseISO, add } from 'date-fns'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Person, Event, EventSuggestion } from '../../utils/interfaces'
 import { buildEventPayload } from '../../utils/eventPayload'
@@ -62,13 +62,14 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
 
     function generateSuggestions(people: Person[], events: Event[]): EventSuggestion[] {
         const now = new Date()
+        const today = format(now, 'yyyy-MM-dd')
         const suggestions: EventSuggestion[] = []
 
         for (const person of people) {
             const birthday = person.birthday ? parseISO(person.birthday) : null
             const lastEvent = events
                 .filter(e => e.personIds?.includes(person.id))
-                .sort((a, b) => (new Date(b.startDate)).getTime() - (new Date(a.startDate)).getTime())[0]
+                .sort((a, b) => parseISO(b.startDate).getTime() - parseISO(a.startDate).getTime())[0]
 
             {/* Aniversário nos próximos 7 dias */ }
             if (birthday) {
@@ -80,7 +81,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
                     suggestions.push({
                         reason: daysFromNow > 0 ? 'belatedBirthday' : 'birthday',
                         person,
-                        suggestedDate: upcoming.toISOString()
+                        suggestedDate: format(upcoming, 'yyyy-MM-dd')
                     })
                 }
             }
@@ -90,27 +91,27 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
                 suggestions.push({
                     reason: 'favoriteMissingBirthday',
                     person,
-                    suggestedDate: now.toISOString()
+                    suggestedDate: today
                 })
             }
             else 
             {/* Favoritos sem eventos há muito tempo (somente se tiver data de aniversário) */ }
             if (person.favorite &&
-                 (!lastEvent || differenceInDays(now, new Date(lastEvent.startDate)) > 90)) {
+                 (!lastEvent || differenceInDays(now, parseISO(lastEvent.startDate)) > 90)) {
                 suggestions.push({
                     reason: 'inactiveFavorite',
                     person,
-                    suggestedDate: now.toISOString()
+                    suggestedDate: today
                 })
             }
 
             {/* Frequência de contato vencida */ }
-            const nextContact = getNextContactDate(lastEvent?.startDate ? new Date(lastEvent.startDate) : null, person.contactFrequency)
+            const nextContact = getNextContactDate(lastEvent?.startDate ? parseISO(lastEvent.startDate) : null, person.contactFrequency)
             if (nextContact && isAfter(now, nextContact)) {
                 suggestions.push({
                     reason: 'contactFrequency',
                     person,
-                    suggestedDate: now.toISOString()
+                    suggestedDate: today
                 })
             }
         }
@@ -124,7 +125,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
             return;
         }
 
-        const suggestedDate = suggestion.suggestedDate.split('T')[0];
+        const suggestedDate = suggestion.suggestedDate;
 
         await addDoc(collection(db, `users/${uid}/events-history`), buildEventPayload({
             title: suggestion.reason === 'belatedBirthday'

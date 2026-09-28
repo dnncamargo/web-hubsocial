@@ -41,8 +41,8 @@ export function buildEventPayload(input: EventPayloadInput): EventPayload {
     optionalFields: input.optionalFields ?? [],
     createdAt: input.createdAt ?? new Date(),
     ...(input.location !== undefined ? { location: input.location } : {}),
-    ...(input.startTime !== undefined ? { startTime: input.startTime } : {}),
-    ...(input.endTime !== undefined ? { endTime: input.endTime } : {}),
+    ...(!input.allDay && input.startTime !== undefined ? { startTime: input.startTime } : {}),
+    ...(!input.allDay && input.endTime !== undefined ? { endTime: input.endTime } : {}),
     ...(input.rating !== undefined ? { rating: input.rating } : {}),
     ...(input.timeZone !== undefined ? { timeZone: input.timeZone } : {}),
   }

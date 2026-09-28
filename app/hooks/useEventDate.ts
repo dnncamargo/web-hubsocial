@@ -1,6 +1,12 @@
 // hooks/useEventDate.ts
 import { useEffect, useState } from 'react'
-import { getTodayISO, getNowTimeRounded, getTimePlusOneHour } from '../utils/dateHelpers'
+import {
+    getTodayISO,
+    getNowTimeRounded,
+    getLocalDateTime,
+    getLocalDateTimeAfter,
+    getNextCivilDate,
+} from '../utils/dateHelpers'
 
 export default function useEventDate(initial?: {
     allDay?: boolean
@@ -12,12 +18,15 @@ export default function useEventDate(initial?: {
     const today = getTodayISO()
     const now = getNowTimeRounded()
     const timeZone = 'America/Sao_Paulo'
+    const initialStartDate = initial?.startDate ?? today
+    const initialStartTime = initial?.startTime ?? now
+    const initialEnd = getLocalDateTimeAfter(initialStartDate, initialStartTime, 60)
 
     const [allDay, setAllDay] = useState(initial?.allDay ?? false)
-    const [startDate, setStartDate] = useState(initial?.startDate ?? today)
-    const [endDate, setEndDate] = useState(initial?.endDate ?? today)
-    const [startTime, setStartTime] = useState(initial?.startTime ?? now)
-    const [endTime, setEndTime] = useState(initial?.endTime ?? getTimePlusOneHour(now))
+    const [startDate, setStartDate] = useState(initialStartDate)
+    const [endDate, setEndDate] = useState(initial?.endDate ?? initialEnd.date)
+    const [startTime, setStartTime] = useState(initialStartTime)
+    const [endTime, setEndTime] = useState(initial?.endTime ?? initialEnd.time)
     const [error, setError] = useState('')
 
     // 🔥 Efeito que garante consistência ao alternar allDay
@@ -25,11 +34,13 @@ export default function useEventDate(initial?: {
         if (!allDay) {
             if (!startTime) {
                 const now = getNowTimeRounded();
+                const next = getLocalDateTimeAfter(startDate, now, 60)
                 setStartTime(now);
-                setEndTime(getTimePlusOneHour(now));
+                setEndDate(next.date)
+                setEndTime(next.time);
             }
         }
-    }, [allDay]);
+    }, [allDay, startDate, startTime]);
 
     useEffect(() => {
         correctEnd()
@@ -37,23 +48,26 @@ export default function useEventDate(initial?: {
 
     function correctEnd() {
         if (allDay) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            if (end < start) {
+            if (endDate < startDate) {
                 setEndDate(startDate);
             }
             setStartTime('');
             setEndTime('');
             setError('');
         } else {
-            const start = new Date(`${startDate}T${startTime}`);
-            const end = new Date(`${endDate}T${endTime}`);
+            if (!startTime || !endTime) {
+                setError('');
+                return;
+            }
+
+            const start = getLocalDateTime(startDate, startTime);
+            const end = getLocalDateTime(endDate, endTime);
 
             // Se end é anterior ao start no mesmo dia, OU se a data de término é antes da de início, ajusta.
             if (endDate < startDate || (startDate === endDate && start >= end)) {
-                const newEnd = new Date(start.getTime() + 30 * 60000);
-                setEndDate(newEnd.toISOString().split('T')[0]);
-                setEndTime(newEnd.toTimeString().slice(0, 5));
+                const newEnd = getLocalDateTimeAfter(startDate, startTime, 30)
+                setEndDate(newEnd.date);
+                setEndTime(newEnd.time);
             }
             setError('');
         }
@@ -62,20 +76,20 @@ export default function useEventDate(initial?: {
     function handleStartTimeChange(value: string) {
         setStartTime(value)
 
-        const start = new Date(`${startDate}T${value}`)
-        const currentEnd = new Date(`${endDate}T${endTime}`)
+        if (!value) return
 
-        if (!endTime || start > currentEnd) {
-            const newEnd = new Date(start.getTime() + 30 * 60000)
-            setEndDate(newEnd.toISOString().split('T')[0])
-            setEndTime(newEnd.toTimeString().slice(0, 5))
+        const start = getLocalDateTime(startDate, value)
+        const currentEnd = endTime ? getLocalDateTime(endDate, endTime) : null
+
+        if (!currentEnd || start > currentEnd) {
+            const newEnd = getLocalDateTimeAfter(startDate, value, 30)
+            setEndDate(newEnd.date)
+            setEndTime(newEnd.time)
         }
     }
 
     function getNextDay(dateStr: string): string {
-        const date = new Date(dateStr)
-        date.setDate(date.getDate() + 1)
-        return date.toISOString().split('T')[0]
+        return getNextCivilDate(dateStr)
     }
 
     function getGoogleCalendarFormat() {

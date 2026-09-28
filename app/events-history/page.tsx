@@ -141,9 +141,9 @@ const EventsHistory = (): JSX.Element => {
   const filteredEvents = (!filters.enabled || !filtersLoaded)
     ? events
     : events.filter(event => {
-      const from = filters.startDate ? new Date(filters.startDate) : null;
-      const to = filters.endDate ? new Date(filters.endDate) : null;
-      const eventDate = new Date(event.startDate);
+      const from = filters.startDate || null;
+      const to = filters.endDate || null;
+      const eventDate = event.startDate;
 
       // Filtro por data
       const matchesDate =

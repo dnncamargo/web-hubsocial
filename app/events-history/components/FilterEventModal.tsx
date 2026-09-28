@@ -38,7 +38,7 @@ export default function EventFilterModal({
   const isEndBeforeStart =
     filters.startDate &&
     filters.endDate &&
-    new Date(filters.endDate) < new Date(filters.startDate)
+    filters.endDate < filters.startDate
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

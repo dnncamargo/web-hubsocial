@@ -46,6 +46,6 @@ export interface Task {
 export interface EventSuggestion {
   reason: 'birthday' | 'belatedBirthday' | 'favoriteMissingBirthday' | 'contactFrequency' | 'inactiveFavorite'
   person: Person
-  suggestedDate: string // ISO
+  suggestedDate: string // YYYY-MM-DD civil date
   message?: string;
 }
