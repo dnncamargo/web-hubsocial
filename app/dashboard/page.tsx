@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, JSX } from 'react';
-import { getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
+import { getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
 import { Event, Person, Task } from '../utils/interfaces';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
+import { AutomationRuleSet } from '../types/automation';
+import { AutomationEventContext, evaluateAutomation } from '../utils/automation';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
 import { StarIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -23,6 +25,11 @@ type GroupedEvents = {
   thisMonth: Event[],
   nextMonth: Event[],
   future: Event[]
+}
+
+type PlannedActionSource = {
+  item: Omit<ActionProjectionItem, 'automation'>
+  automation?: AutomationRuleSet
 }
 
 /**
@@ -77,10 +84,11 @@ export default function Dashboard(): JSX.Element {
   const fetchPlannedActions = async (): Promise<void> => {
     if (!uid) return
 
-    const periods = getActionPeriodKeys()
+    const referenceDate = new Date()
+    const periods = getActionPeriodKeys(referenceDate)
     const horizons: ActionHorizon[] = ['day', 'week', 'month']
 
-    const entries = await Promise.all(
+    const sourcesByHorizon = await Promise.all(
       horizons.map(async (horizon) => {
         const [eventSnapshot, taskSnapshot] = await Promise.all([
           getDocs(
@@ -97,38 +105,90 @@ export default function Dashboard(): JSX.Element {
           ),
         ])
 
-        const eventActions: ActionProjectionItem[] = eventSnapshot.docs.map((snapshot) => {
+        const eventActions: PlannedActionSource[] = eventSnapshot.docs.map((snapshot) => {
           const event = { id: snapshot.id, ...snapshot.data() } as Event
           return {
-            key: `event:${event.id}`,
-            sourceType: 'event',
-            sourceId: event.id,
-            title: event.title,
-            completed: event.status === 1,
-            date: event.startDate,
-            ...(event.startTime ? { time: event.startTime } : {}),
+            item: {
+              key: `event:${event.id}`,
+              sourceType: 'event',
+              sourceId: event.id,
+              title: event.title,
+              completed: event.status === 1,
+              date: event.startDate,
+              ...(event.startTime ? { time: event.startTime } : {}),
+            },
+            automation: event.automation,
           }
         })
 
-        const taskActions: ActionProjectionItem[] = taskSnapshot.docs.map((snapshot) => {
+        const taskActions: PlannedActionSource[] = taskSnapshot.docs.map((snapshot) => {
           const task = { id: snapshot.id, ...snapshot.data() } as Task
           return {
-            key: `task:${task.id}`,
-            sourceType: 'task',
-            sourceId: task.id,
-            title: task.content,
-            completed: task.status === 2,
+            item: {
+              key: `task:${task.id}`,
+              sourceType: 'task',
+              sourceId: task.id,
+              title: task.content,
+              completed: task.status === 2,
+            },
+            automation: task.automation,
           }
         })
 
-        const items = [...eventActions, ...taskActions].sort((a, b) => {
+        return [horizon, [...eventActions, ...taskActions]] as const
+      }),
+    )
+
+    const referencedEventIds = new Set<string>()
+
+    for (const [, sources] of sourcesByHorizon) {
+      for (const source of sources) {
+        for (const rule of source.automation?.rules ?? []) {
+          if (rule.type === 'upcomingEvent') {
+            referencedEventIds.add(rule.eventId)
+          }
+        }
+      }
+    }
+
+    const linkedEvents = (
+      await Promise.all(
+        Array.from(referencedEventIds).map(async (eventId) => {
+          const snapshot = await getDoc(
+            doc(db, `users/${uid}/events-history/${eventId}`),
+          )
+
+          if (!snapshot.exists()) return null
+
+          const event = snapshot.data() as Event
+          return {
+            id: snapshot.id,
+            startDate: event.startDate,
+          } satisfies AutomationEventContext
+        }),
+      )
+    ).filter((event): event is AutomationEventContext => event !== null)
+
+    const entries = sourcesByHorizon.map(([horizon, sources]) => {
+      const items: ActionProjectionItem[] = sources
+        .map(({ item, automation }) => ({
+          ...item,
+          automation: evaluateAutomation(automation, {
+            referenceDate,
+            events: linkedEvents,
+          }),
+        }))
+        .sort((a, b) => {
+          if (a.automation.highlighted !== b.automation.highlighted) {
+            return a.automation.highlighted ? -1 : 1
+          }
+
           const timeOrder = (a.time ?? '99:99').localeCompare(b.time ?? '99:99')
           return timeOrder !== 0 ? timeOrder : a.title.localeCompare(b.title, 'pt-BR')
         })
 
-        return [horizon, items] as const
-      }),
-    )
+      return [horizon, items] as const
+    })
 
     setActions(Object.fromEntries(entries) as ActionProjection)
   };
@@ -197,7 +257,7 @@ export default function Dashboard(): JSX.Element {
   };
 
   const refreshDashboardEvents = async () => {
-    await fetchAndGroupEvents(); // invoca a função para buscar e agrupar eventos novamente
+    await Promise.all([fetchAndGroupEvents(), fetchPlannedActions()]);
   };
 
   const handleToggleEventStatus = async (eventId: string, newStatus: 0 | 1) => {
