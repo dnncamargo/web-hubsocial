@@ -10,6 +10,11 @@ export function useEventCategories() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const fetchCategories = async () => {
+    if (!uid) {
+      setAvailableCategories([]);
+      return;
+    }
+
     const EventSettingRef = doc(db, `users/${uid}/settings`, 'userCategories');
     const docSnap = await getDoc(EventSettingRef);
     if (docSnap.exists()) {

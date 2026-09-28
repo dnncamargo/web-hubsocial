@@ -55,8 +55,7 @@ const EditEventModal = ({ event, isOpen, onClose, onUpdated }: EditEventModalPro
 
   const [isDraggable, setIsDraggable] = useState(true);  /** @state {boolean} isDraggable - Controla se o modal pode ser arrastado verticalmente. */
 
-  // Proteção: Se não for open ou sem usuário, nem carrega.
-  if (!isOpen || !uid) return null;
+  const effectiveUid = uid ?? '';
 
   const dateControl = useEventDate();
 
@@ -71,7 +70,7 @@ const EditEventModal = ({ event, isOpen, onClose, onUpdated }: EditEventModalPro
     resetOptionalFields
   } = optionalFieldsControl; // Hook para gerenciar campos opcionais
 
-  const associatePersonControl = useAssociatePerson({ uid });
+  const associatePersonControl = useAssociatePerson({ uid: effectiveUid });
 
   const {
     people,
@@ -96,7 +95,7 @@ const EditEventModal = ({ event, isOpen, onClose, onUpdated }: EditEventModalPro
     location, setLocation,
     error, setError,
     updateEvent
-  } = useEventForm({ uid, event, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
+  } = useEventForm({ uid: effectiveUid, event, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
 
 
   useLayoutEffect(() => {
@@ -189,6 +188,8 @@ const EditEventModal = ({ event, isOpen, onClose, onUpdated }: EditEventModalPro
       setIsDraggable(true);
     }
   }
+
+  if (!isOpen || !uid) return null;
 
   return (
 

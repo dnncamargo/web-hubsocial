@@ -9,7 +9,12 @@ export function usePersonRelationships() {
   const [availableRelationships, setAvailableRelationships] = useState<string[]>([])
   const [selectedRelationships, setSelectedRelationships] = useState<string[]>([]);
 
-    const fetchRelationships = async () => {
+  const fetchRelationships = async () => {
+    if (!uid) {
+      setAvailableRelationships([]);
+      return;
+    }
+
     const PersonSettingRef = doc(db, `users/${uid}/settings`, 'userRelationships');
     const docSnap = await getDoc(PersonSettingRef);
     if (docSnap.exists()) {

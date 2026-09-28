@@ -41,8 +41,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose, onAdde
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [isDraggable, setIsDraggable] = useState(true); /** @state {boolean} isDraggable - Controla se o modal pode ser arrastado verticalmente. */
 
-  // Proteção: Se não for open ou sem usuário, nem carrega.
-  if (!isOpen || !uid) return null;
+  const effectiveUid = uid ?? '';
 
   const optionalFieldsControl = useOptionalFields({ context: "person" }); // Hook para gerenciar campos opcionais
 
@@ -72,7 +71,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose, onAdde
     birthday, setBirthday,
     error, setError,
     createPerson
-  } = usePersonForm({ uid, optionalFieldsControl, personRelationshipsControl }); // Hook para gerenciar o formulário de pessoa
+  } = usePersonForm({ uid: effectiveUid, optionalFieldsControl, personRelationshipsControl }); // Hook para gerenciar o formulário de pessoa
 
   useLayoutEffect(() => {
     adjustModalDraggable(); // Ajusta a propriedade de arrastar do modal com base na altura do conteúdo.
@@ -135,6 +134,8 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose, onAdde
       setIsDraggable(true);
     }
   }
+
+  if (!isOpen || !uid) return null;
 
   return (
 

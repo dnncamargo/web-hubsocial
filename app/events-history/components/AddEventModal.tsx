@@ -44,8 +44,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded 
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [isDraggable, setIsDraggable] = useState(true); /** @state {boolean} isDraggable - Controla se o modal pode ser arrastado verticalmente. */
 
-  // Proteção: Se não for open ou sem usuário, nem carrega.
-  if (!isOpen || !uid) return null;
+  const effectiveUid = uid ?? '';
 
   const dateControl = useEventDate();
 
@@ -60,7 +59,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded 
     resetOptionalFields
   } = optionalFieldsControl; // Hook para gerenciar campos opcionais
 
-  const associatePersonControl = useAssociatePerson({ uid });
+  const associatePersonControl = useAssociatePerson({ uid: effectiveUid });
 
   const {
     people,
@@ -85,7 +84,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded 
     location, setLocation,
     error, setError,
     createEvent
-  } = useEventForm({ uid, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
+  } = useEventForm({ uid: effectiveUid, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
 
   useLayoutEffect(() => {
     adjustModalDraggable(); // Ajusta a propriedade de arrastar do modal com base na altura do conteúdo.
@@ -155,6 +154,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded 
       setIsDraggable(true);
     }
   }
+
+  if (!isOpen || !uid) return null;
 
   return (
 

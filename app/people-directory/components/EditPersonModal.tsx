@@ -48,8 +48,7 @@ const EditPersonModal = ({ person, isOpen, onClose, onUpdated, onDeleted }: Edit
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [isDraggable, setIsDraggable] = useState(true); /** @state {boolean} isDraggable - Controla se o modal pode ser arrastado verticalmente. */
 
-  // Proteção: Se não for open ou sem usuário, nem carrega.
-  if (!isOpen || !uid) return null;
+  const effectiveUid = uid ?? '';
 
   const optionalFieldsControl = useOptionalFields({ context: "person" }); // Hook para gerenciar campos opcionais
 
@@ -81,7 +80,7 @@ const EditPersonModal = ({ person, isOpen, onClose, onUpdated, onDeleted }: Edit
     contactFrequency, setContactFrequency,
     error, setError,
     updatePerson
-  } = usePersonForm({ uid, person, optionalFieldsControl, personRelationshipsControl }); // Hook para gerenciar o formulário de pessoa
+  } = usePersonForm({ uid: effectiveUid, person, optionalFieldsControl, personRelationshipsControl }); // Hook para gerenciar o formulário de pessoa
 
   useLayoutEffect(() => {
     adjustModalDraggable(); // Ajusta a propriedade de arrastar do modal com base na altura do conteúdo.
@@ -156,6 +155,8 @@ const EditPersonModal = ({ person, isOpen, onClose, onUpdated, onDeleted }: Edit
       setIsDraggable(true);
     }
   }
+
+  if (!isOpen || !uid) return null;
 
   return (
 
