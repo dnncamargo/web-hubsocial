@@ -1,10 +1,10 @@
-# Connexus - Seu Hub de Conexão e Organização de Eventos 🔗🗓️
+# Nxt_Planner - Seu Hub de Conexão e Organização de Eventos 🔗🗓️
 
-[![Vercel](https://vercel.com/button)](https://web-crm-nine.vercel.app/)
+[![Vercel](https://vercel.com/button)](https://nxtplanner.vercel.app/)
 
-Connexus é uma plataforma web construída com Next.js para facilitar a organização e o acompanhamento de eventos 📅, além de gerenciar seu diretório de contatos 🧑‍🤝‍🧑 e tarefas ✅. Acesse a versão online em [https://web-crm-nine.vercel.app/](https://web-crm-nine.vercel.app/).
+Nxt_Planner é uma plataforma web construída com React e Vite para facilitar a organização e o acompanhamento de eventos 📅, além de gerenciar seu diretório de contatos 🧑‍🤝‍🧑 e tarefas ✅. Acesse a versão online em [https://nxtplanner.vercel.app/](https://nxtplanner.vercel.app/).
 
-## Funcionalidades Atuais (v0.1.4)
+## Funcionalidades Atuais (v2.0.1)
 
 * **Dashboard de Eventos Futuros:** Visualize de forma clara os próximos eventos 🗓️.
 * **Diretório de Pessoas:** Gerencie seus contatos 🧑‍🤝‍🧑 com informações relevantes.
@@ -18,24 +18,25 @@ Connexus é uma plataforma web construída com Next.js para facilitar a organiza
 * **Tarefas com Subníveis:** Divida tarefas complexas em subtarefas gerenciáveis 🪜.
 * **Opções Personalizadas** Eventos e Pessoas com novos campos para adicionar ✍️
 
-## Próximas Funcionalidades (v0.1.5 - Em Desenvolvimento 🛠️)
+## Próximas Funcionalidades
 
-A próxima versão do Connexus trará ainda mais poder para sua organização:
+A próxima versão do Nxt_Planner trará ainda mais poder para sua organização:
 
 * **Filtros e Pesquisa:** Encontre rapidamente eventos, pessoas e tarefas específicas 🔍.
 * **Rotinas:** Organize seu passo a passo 🏹 até atingir suas metas. 🎯
 
 ## Tecnologias Utilizadas 💻
 
-* [Next.js](https://nextjs.org/): Framework React para aplicações web com renderização server-side e muito mais.
+* [React](https://react.dev/): Biblioteca para construção da interface.
+* [Vite](https://vite.dev/): Build tool e servidor de desenvolvimento.
+* [React Router](https://reactrouter.com/): Roteamento client-side da aplicação.
 * [Tailwind CSS](https://tailwindcss.com/): Framework CSS utilitário para estilização rápida e responsiva.
 * [Heroicons](https://heroicons.com/): Biblioteca de ícones SVG para interfaces de usuário modernas.
 * [Firebase](https://firebase.google.com/): Plataforma de desenvolvimento da Google Cloud para persistência de dados na nuvem (Firestore) e autenticação de usuários (Firebase Authentication).
-* [create-next-app](https://create-next-app.dev/): Ferramenta utilizada para inicializar o projeto Next.js.
 
 ## Como Executar Localmente (Para Desenvolvedores 🧑‍💻)
 
-Se você deseja executar o Connexus localmente para desenvolvimento ou contribuição, siga estas etapas:
+Se você deseja executar o Nxt_Planner localmente para desenvolvimento ou contribuição, siga estas etapas:
 
 1.  **Clone o repositório (se o código for público):**
     ```bash
@@ -43,7 +44,7 @@ Se você deseja executar o Connexus localmente para desenvolvimento ou contribui
     ```
 2.  **Navegue até o diretório do projeto:**
     ```bash
-    cd connexus
+    cd web-hubsocial
     ```
 3.  **Instale as dependências:**
     ```bash
@@ -75,7 +76,7 @@ Se você deseja executar o Connexus localmente para desenvolvimento ou contribui
     # ou
     pnpm dev
     ```
-6.  **Abra seu navegador em `http://localhost:3000` para visualizar o Connexus.**
+6.  **Abra seu navegador em `http://localhost:5173` para visualizar o Nxt_Planner.**
 
 ## Contribuição 🙏
 
@@ -97,8 +98,8 @@ Este projeto está sob a licença [INSERIR LICENÇA AQUI - Ex: MIT]. Consulte o 
 
 ## Status do Projeto 🚦
 
-Em desenvolvimento ativo. A versão `0.1.1` está em andamento com as novas funcionalidades planejadas.
+Em desenvolvimento ativo. Versão atual: `2.0.1`.
 
 ---
 
-Feito com ❤️ usando Next.js, Tailwind CSS e Firebase.
+Feito com ❤️ usando React, Vite, Tailwind CSS e Firebase.
