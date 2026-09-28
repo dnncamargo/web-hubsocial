@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router'
 import { useAuth } from '../components/auth/AuthProvider'
 import { instance } from '../config/instance'
 import { auth } from '../utils/firebaseConfig'
-import './login.css'
+import styles from './LoginPage.module.css'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -57,21 +57,23 @@ export default function LoginPage() {
   })
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1 className="login-title title-logo">{instance.name}</h1>
+    <main className={styles.page}>
+      <section className={styles.panel} aria-labelledby="login-title">
+        <div className={styles.brandBlock}>
+          <h1 id="login-title" className={styles.brand}>{instance.name}</h1>
+          <p className={styles.description}>{instance.description}</p>
+        </div>
 
         <button
           type="button"
           onClick={() => loginWithGoogle()}
-          className="group relative w-full overflow-hidden rounded-md bg-blue-600 px-6 py-3 text-white transition-colors duration-1000 hover:bg-red-600 focus:outline-none"
+          className={styles.googleButton}
         >
-          <span className="relative z-10">Entrar com Google</span>
-          <div className="absolute inset-x-0 bottom-0 h-0 text-white bg-red-600 transition-all duration-300 group-hover:h-full"></div>
+          Entrar com Google
         </button>
 
-        <p className="text-gray-300 sm:text-sm text-center mt-4">version 2.0.1</p>
-      </div>
-    </div>
+        <p className={styles.version}>Versão 2.0.1</p>
+      </section>
+    </main>
   )
 }

@@ -407,7 +407,7 @@ small shared global foundation
 
 ### 6.4. Visual 2 — Migrate representative surfaces
 
-**Status: IN PROGRESS**
+**Status: DONE**
 
 Use representative surfaces to prove the visual contracts before a full sweep.
 
@@ -419,10 +419,23 @@ Execution checkpoints:
   - mobile top bar + bottom navigation;
   - responsive behavior owned by CSS rather than device detection;
   - navigation rendered once instead of once per page.
-- **Visual 2B — Dashboard / Actions of the Day: NEXT**
-- **Visual 2C — authentication/login: QUEUED**
-- **Visual 2D — representative form/modal: QUEUED**
-- **Visual 2E — representative operational list/card: QUEUED**
+- **Visual 2B — Dashboard / Actions of the Day: DONE**
+  - Tailwind-free Dashboard page shell;
+  - Actions of the Day remains primary;
+  - weather remains supporting context;
+  - suggestions moved from floating action to contextual page action.
+- **Visual 2C — authentication/login: DONE**
+  - CSS Module surface;
+  - no Tailwind dependency in the login page;
+  - primary action preserves semantic color on hover.
+- **Visual 2D — representative form/modal: DONE**
+  - Add Event modal structure migrated to CSS Module;
+  - semantic toolbar, fields, switch, actions, focus, and responsive presentation;
+  - nested domain controls remain unchanged for later Visual 3 migration.
+- **Visual 2E — representative operational list/card: DONE**
+  - Event card migrated to CSS Module;
+  - compact scan-oriented presentation;
+  - keyboard-accessible card navigation and preserved edit action.
 
 Validate both desktop and mobile before expanding the migration.
 
@@ -630,12 +643,11 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 2B — migrate Dashboard / Actions of the Day
+Visual 3 — complete Tailwind removal
 ```
 
 After that:
 
 ```text
-Visual 2C–2E — migrate login, one form/modal, and one operational list/card
-→ Visual 3–4 — complete Tailwind removal and finalize the canonical workspace shell
+Visual 4 — finalize the canonical workspace shell
 ```

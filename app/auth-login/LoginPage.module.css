@@ -1,0 +1,75 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--color-background);
+}
+
+.panel {
+  width: min(100%, 24rem);
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.brandBlock {
+  margin-bottom: var(--space-8);
+  text-align: center;
+}
+
+.brand {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-family: var(--font-brand);
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.description {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.googleButton {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.googleButton:hover {
+  border-color: var(--color-accent-hover);
+  background: var(--color-accent-hover);
+}
+
+.googleButton:active {
+  transform: translateY(1px);
+}
+
+.googleButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+.version {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  text-align: center;
+}
