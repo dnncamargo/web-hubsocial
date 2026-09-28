@@ -307,7 +307,7 @@ export default function AutomationRulesEditor({
         <label className={styles.ruleToggle}>
           <input
             type="checkbox"
-            checked={Boolean(upcomingEventRule)
+            checked={Boolean(upcomingEventRule)}
             disabled={!upcomingEventRule && events.length === 0}
             onChange={(event) =>
               toggleUpcomingEventRule(event.currentTarget.checked)
