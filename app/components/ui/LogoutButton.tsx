@@ -2,7 +2,7 @@
 
 import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
-import { ArrowRightEndOnRectangleIcon } from '@heroicons/react/24/outline'
+import { LogOut } from 'lucide-react'
 
 export default function LogoutButton() {
   const { setUid, setUser, setGoogleAccessToken } = useAuth();
@@ -24,7 +24,7 @@ export default function LogoutButton() {
       onClick={handleLogout}
       className="flex items-center gap-2 px-3 rounded-md text-sm text-gray-600 hover:text-red-600 transition"
     >
-      <ArrowRightEndOnRectangleIcon className="w-5 h-5" />
+      <LogOut className="w-5 h-5" />
       Sair
     </button>
   )

@@ -5,14 +5,14 @@ import { motion } from 'motion/react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
-  ArrowTurnDownRightIcon,
-  ArrowTurnLeftUpIcon,
-  PencilSquareIcon,
-  CheckCircleIcon,
-  FlagIcon,
-  PlayCircleIcon
-} from '@heroicons/react/24/outline'
-import { GripVerticalIcon } from 'lucide-react'
+  ArrowDownRight,
+  ArrowUpLeft,
+  CircleCheck,
+  CirclePlay,
+  Flag,
+  GripVertical,
+  SquarePen,
+} from 'lucide-react'
 import { Task } from '../../utils/interfaces'
 import { useAuth } from '../../components/auth/AuthProvider'
 
@@ -89,11 +89,11 @@ export default function TaskCard({ task, onEditTask, onPromoteSubtask, onMakeSub
                 <>
                   <button onClick={() => statusSwitch(2)}>
                     {/* Switch: Checked */}
-                    <CheckCircleIcon className="w-5 h-5 text-green-600 mr-2" />
+                    <CircleCheck className="w-5 h-5 text-green-600 mr-2" />
                   </button>
                   <button onClick={() => statusSwitch(1)}>
                     {/* Switch: Processing */}
-                    <PlayCircleIcon className="w-5 h-5 text-blue-600" />
+                    <CirclePlay className="w-5 h-5 text-blue-600" />
                   </button>
                 </>
               )}
@@ -102,11 +102,11 @@ export default function TaskCard({ task, onEditTask, onPromoteSubtask, onMakeSub
                 <>
                   <button onClick={() => statusSwitch(0)}>
                     {/* Switch: Not Started */}
-                    <FlagIcon className="w-5 h-5 text-gray-400 mr-2" />
+                    <Flag className="w-5 h-5 text-gray-400 mr-2" />
                   </button>
                   <button onClick={() => statusSwitch(2)}>
                     {/* Switch: Checked */}
-                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                    <CircleCheck className="w-5 h-5 text-green-600" />
                   </button>
                 </>
               )}
@@ -115,11 +115,11 @@ export default function TaskCard({ task, onEditTask, onPromoteSubtask, onMakeSub
                 <>
                   <button onClick={() => statusSwitch(0)}>
                     {/* Switch: Not Started */}
-                    <FlagIcon className="w-5 h-5 text-gray-500 mr-2" />
+                    <Flag className="w-5 h-5 text-gray-500 mr-2" />
                   </button>
                   <button onClick={() => statusSwitch(1)}>
                     {/* Switch: Processing */}
-                    <PlayCircleIcon className="w-5 h-5 text-blue-600" />
+                    <CirclePlay className="w-5 h-5 text-blue-600" />
                   </button>
                 </>
               )}
@@ -132,7 +132,7 @@ export default function TaskCard({ task, onEditTask, onPromoteSubtask, onMakeSub
               {/* Switch: Subtask / Task Parent */}
               {parentTaskId ? (
                 <button onClick={promoteSubtask}>
-                  <ArrowTurnLeftUpIcon className="w-5 h-5 text-purple-500" />
+                  <ArrowUpLeft className="w-5 h-5 text-purple-500" />
                 </button>
               ) : (
                 <button
@@ -145,13 +145,13 @@ export default function TaskCard({ task, onEditTask, onPromoteSubtask, onMakeSub
                     makeSubtask();
                   }}
                 >
-                  <ArrowTurnDownRightIcon className="w-5 h-5 text-purple-500" />
+                  <ArrowDownRight className="w-5 h-5 text-purple-500" />
                 </button>
               )}
 
               {/* Modal Editar Task */}
               <button onClick={editTask}>
-                <PencilSquareIcon className="w-5 h-5 text-yellow-600" />
+                <SquarePen className="w-5 h-5 text-yellow-600" />
               </button>
             </>
           )}
@@ -200,7 +200,7 @@ export default function TaskCard({ task, onEditTask, onPromoteSubtask, onMakeSub
           {...listeners}
           className="cursor-grab active:cursor-grabbing"
         >
-          <GripVerticalIcon className="w-7 h-7  text-gray-500" />
+          <GripVertical className="w-7 h-7  text-gray-500" />
         </div>
 
         {/* Texto */}

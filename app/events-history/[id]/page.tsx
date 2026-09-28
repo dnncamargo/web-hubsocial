@@ -10,9 +10,7 @@ import { OptionalField } from '@/app/types/optionalFields';
 import { createGoogleCalendarEvent } from '@/app/utils/googleCalendar';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import MainMenu from '../../components/ui/MainMenu';
-import { StarIcon as StarOutline } from '@heroicons/react/24/outline';
-import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle, Circle, Star } from 'lucide-react';
 
 /**
  * @component
@@ -191,13 +189,14 @@ const EventDetails = () => {
           <div className="flex items-center ml-2 space-x-2">
             {[1, 2, 3, 4, 5].map((star) =>
               star <= currentRating ? (
-                <StarSolid
+                <Star
                   key={star}
                   className="h-5 w-5 text-yellow-500 mb-2 cursor-pointer"
+                  fill="currentColor"
                   onClick={() => handleRatingChange(star)}
                 />
               ) : (
-                <StarOutline
+                <Star
                   key={star}
                   className="h-5 w-5 text-gray-500 mb-2 cursor-pointer"
                   onClick={() => handleRatingChange(star)}

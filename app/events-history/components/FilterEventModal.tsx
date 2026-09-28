@@ -1,7 +1,6 @@
 'use client';
 
-import { StarIcon as StarOutline } from '@heroicons/react/24/outline';
-import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
+import { Star } from 'lucide-react';
 
 export interface EventFilter {
   enabled: boolean;
@@ -100,9 +99,10 @@ export default function EventFilterModal({
               <div className="flex space-x-1">
                 {[1, 2, 3, 4, 5].map((star) =>
                   star <= filters.hasRating ? (
-                    <StarSolid
+                    <Star
                       key={star}
                       className="h-5 w-5 text-yellow-500 cursor-pointer"
+                      fill="currentColor"
                       onClick={() =>
                         setFilters({
                           ...filters,
@@ -111,7 +111,7 @@ export default function EventFilterModal({
                       }
                     />
                   ) : (
-                    <StarOutline
+                    <Star
                       key={star}
                       className="h-5 w-5 text-gray-400 cursor-pointer"
                       onClick={() =>

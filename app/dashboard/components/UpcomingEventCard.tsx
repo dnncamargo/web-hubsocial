@@ -4,8 +4,7 @@ import { JSX } from 'react';
 import { Event, Person } from '@/app/utils/interfaces';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDaysIcon as CalendarIcon, UserIcon, PencilSquareIcon, LinkIcon, MapPinIcon } from '@heroicons/react/24/outline';
-import { LucideCalendarCheck2 as CheckIcon } from 'lucide-react';
+import { CalendarCheck2 as CheckIcon, CalendarDays as CalendarIcon, Link, MapPin, SquarePen, User } from 'lucide-react';
 
 /**
  * @interface EventSummaryCardProps
@@ -71,7 +70,7 @@ export default function UpcomingEventCard({ event, person, onToggleStatus }: Upc
         {person && (
           <div className="card-content-info text-gray-600">
             <div className="w-4 h-4 mr-2 mb-1 flex-shrink-0">
-              <UserIcon className="w-full h-full" />
+              <User className="w-full h-full" />
             </div>
             <div className='mb-1'>
               {person.name}
@@ -84,9 +83,9 @@ export default function UpcomingEventCard({ event, person, onToggleStatus }: Upc
           <div className="card-content-info text-gray-500">
             <div className="w-4 h-4 mr-2 mb-1 flex-shrink-0">
               {event.location.startsWith('http') ? (
-                <LinkIcon className="w-full h-full" />
+                <Link className="w-full h-full" />
               ) : (
-                <MapPinIcon className="w-full h-full" />
+                <MapPin className="w-full h-full" />
               )}
             </div>
             <div className="text-pretty truncate overflow-x-auto mb-1">
@@ -105,7 +104,7 @@ export default function UpcomingEventCard({ event, person, onToggleStatus }: Upc
                 {field.label === 'Descrição' && typeof field.value === 'string' ? (
                   <div className="card-content-info text-gray-500">
                     <div className="w-4 h-4 mr-2 mb-1 flex-shrink-0">
-                      <PencilSquareIcon className="w-full h-full" />
+                      <SquarePen className="w-full h-full" />
                     </div>
                     <div className="truncate">
                       {field.value}

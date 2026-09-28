@@ -11,7 +11,7 @@ import { AutomationEventContext, evaluateAutomation } from '../utils/automation'
 import { getCurrentBrowserWeather, WeatherSnapshot } from '../utils/weather';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
-import { StarIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Star } from 'lucide-react';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import MainMenu from '../components/ui/MainMenu';
 import UpcomingEventCard from './components/UpcomingEventCard';
@@ -392,7 +392,7 @@ export default function Dashboard(): JSX.Element {
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg z-50"
           aria-label="Ver sugestões"
         >
-          <StarIcon className="w-6 h-6" />
+          <Star className="w-6 h-6" />
 
         </button>
       </main>

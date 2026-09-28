@@ -3,8 +3,7 @@
 import { JSX } from 'react';
 import { useNavigate } from 'react-router';
 import { Person } from '../../utils/interfaces';
-import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
-import { HeartIcon as HeartOutline, CalendarDaysIcon as CalendarIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { Heart, Mail, Phone } from 'lucide-react';
 
 /**
  * @interface PersonCardProps
@@ -44,9 +43,9 @@ const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps)
           }}
           className="card-header-far-right color-pd-base">
           {person.favorite ? (
-            <HeartSolid className="w-6 h-6" />
+            <Heart className="w-6 h-6" fill="currentColor" />
           ) : (
-            <HeartOutline className="w-6 h-6" />
+            <Heart className="w-6 h-6" />
           )}
         </button>
       </div>
@@ -56,14 +55,14 @@ const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps)
         {/* Telefone */}
         {person.phone && (
           <div className="card-content-info-large text-gray-500 mb-2">
-            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0"><PhoneIcon className="w-4 h-4 mr-2 mt-0.5" /></div>
+            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0"><Phone className="w-4 h-4 mr-2 mt-0.5" /></div>
             {person.phone}
           </div>
         )}
         {/* E-mail */}
         {person.email && (
           <div className="card-content-info-large text-gray-500">
-            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0 truncate"><EnvelopeIcon className="w-4 h-4 mr-2 mt-0.5" /></div>
+            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0 truncate"><Mail className="w-4 h-4 mr-2 mt-0.5" /></div>
             {person.email}
           </div>
         )}
