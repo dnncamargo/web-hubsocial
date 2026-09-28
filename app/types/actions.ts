@@ -16,3 +16,17 @@ export interface ActionPlanning {
    */
   month?: string
 }
+
+export type ActionSourceType = 'event' | 'task'
+
+export interface ActionProjectionItem {
+  key: string
+  sourceType: ActionSourceType
+  sourceId: string
+  title: string
+  completed: boolean
+  date?: string
+  time?: string
+}
+
+export type ActionProjection = Record<ActionHorizon, ActionProjectionItem[]>
