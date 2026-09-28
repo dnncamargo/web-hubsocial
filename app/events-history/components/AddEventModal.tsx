@@ -4,7 +4,6 @@ import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { motion } from 'motion/react';
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
-import clsx from 'clsx';
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
 import useEventDate from '../../hooks/useEventDate';
 import { useEventForm } from '../../hooks/useEventForm';
@@ -20,6 +19,7 @@ import { useEventCategories } from '@/app/hooks/useEventCategories';
 import { EventCategoriesRenderer } from './EventCategoriesRenderer';
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl';
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor';
+import styles from './AddEventModal.module.css';
 
 /**
  * @interface AddEventModalProps
@@ -169,7 +169,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
         // Framer-Motion
         id="add-event-modal"
         ref={modalRef}
-        className="fixed inset-0 bg-white overflow-y-auto h-full w-full z-50"
+        className={styles.modal}
         //drag={isDraggable ? "y" : false}
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.2}
@@ -181,47 +181,47 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
         exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       >
-        <div className="h-1.5 w-14 bg-gray-300 rounded-full mx-auto my-4"></div>
+        <div className={styles.handle} aria-hidden="true"></div>
         {/* Formulário */}
-        <form onSubmit={handleSubmit}>
-          <div className="p-4 space-y-4 mb-16">
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.content}>
             {/* Topo do Modal de Inclusão de Evento */}
-            <div className="flex justify-between items-center mb-6">
-              <button onClick={onClose} className="color-eh-base text-lg">
+            <div className={styles.toolbar}>
+              <button type="button" onClick={onClose} className={styles.toolbarButton}>
                 Cancelar
               </button>
-              <h3 className="text-lg font-semibold">
+              <h3 className={styles.toolbarTitle}>
                 Novo Evento
               </h3>
               <button
                 type="submit"
                 disabled={!!error}
-                className="color-eh-base text-lg">
+                className={styles.toolbarButton}>
                 Salvar
               </button>
             </div>
 
             {/* Título e Local */}
 
-            <div className="bg-gray-50 rounded-lg overflow-hidden border">
+            <div className={styles.fieldGroup}>
               <input
                 type="text"
                 placeholder="Título"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full p-4 bg-transparent border-b border-gray-200 focus:outline-none"
+                className={styles.textInput}
               />
               <input
                 type="text"
                 placeholder="Local ou chamada de vídeo"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full p-4 bg-transparent focus:outline-none"
+                className={styles.textInput}
               />
             </div>
 
             {/* All-day e Data */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg overflow-hidden border">
+            <div className={styles.dateGroup}>
 
               <CalendarEventCreator
                 {...dateControl} />
@@ -239,20 +239,24 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
             />
 
             {/* Switch Mostrar Mais */}
-            <div className="flex justify-between items-center py-4 border-gray-200">
+            <div className={styles.moreRow}>
               <span>Mostrar mais campos</span>
               <button
                 type="button"
+                role="switch"
+                aria-checked={showMore}
                 onClick={() => setShowMore(!showMore)}
-                className={clsx('w-12 h-6 rounded-full transition flex items-center p-1',
-                  showMore ? 'bg-blue-500' : 'bg-gray-300')}
+                className={showMore ? `${styles.switch} ${styles.switchActive}` : styles.switch}
               >
-                <div className={clsx('bg-white w-4 h-4 rounded-full shadow transform transition', showMore ? 'translate-x-6' : 'translate-x-0')} />
+                <span
+                  className={showMore ? `${styles.switchThumb} ${styles.switchThumbActive}` : styles.switchThumb}
+                  aria-hidden="true"
+                />
               </button>
             </div>
             {/* Switch habilitado */}
             {showMore && (
-              <>
+              <div className={styles.moreContent}>
 
                 {/* Pessoas Associadas   */}
                 <AssociatePersonRenderer
@@ -267,10 +271,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
                     <OptionalFieldRenderer
                       field={field}
                       onChange={(updatedValue) => {
-                        console.log('[updatedValue]:', updatedValue);
                         updateOptionalField(field.id, { value: updatedValue })
-                      }
-                      }
+                      }}
                       onLabelChange={(newLabel) => updateLabel(field.id, newLabel)}
                       onRemove={() => removeOptionalField(field.id)}
                     />
@@ -319,12 +321,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
                   />
                 )}
 
-                <div className='flex flex-col items-start'>
+                <div className={styles.actions}>
                   {/* Associar Pessoa */}
                   <button
                     type="button"
                     onClick={handleOpenAssociatePerson}
-                    className="text-blue-600 font-medium text-sm underline mb-2"
+                    className={styles.textAction}
                   >
                     + Associar Pessoa
                   </button>
@@ -333,7 +335,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
                   <button
                     type="button"
                     onClick={() => setShowCategoriesModal(true)}
-                    className="text-blue-600 font-medium text-sm underline mb-2"
+                    className={styles.textAction}
                   >
                     + Adicionar Categoria
                   </button>
@@ -342,16 +344,16 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
                   <button
                     type="button"
                     onClick={() => setShowOptionalFieldModal(true)}
-                    className="text-blue-600 font-medium text-sm underline mb-2"
+                    className={styles.textAction}
                   >
                     + Adicionar Campo Opcional
                   </button>
                 </div>
-              </>
+              </div>
             )}
 
             {error && (
-              <p className="text-sm text-red-600 mt-1">{error}</p>
+              <p className={styles.error}>{error}</p>
             )}
           </div>
         </form>

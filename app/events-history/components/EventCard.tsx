@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router';
 import { Event } from '../../utils/interfaces';
 import { Clock, Link, MapPin, SquarePen } from 'lucide-react';
 import { formatDate } from '../../utils/services';
+import styles from './EventCard.module.css';
 
 /**
  * @interface EventCardProps
@@ -26,100 +27,84 @@ interface EventCardProps {
 const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
   const navigate = useNavigate();
 
-  return (
-    <div
-      onClick={() => navigate(`/events-history/${event.id}`)}
-      className="card-container-large card-container-bg">
+  const description = event.optionalFields?.find(
+    (field) => field.label === 'Descrição' && typeof field.value === 'string',
+  )
 
-      {/* Título do card */}
-      <div className="card-header-large card-header-bg">
-        <h2 className="card-header-title-large flex-1 break-words color-eh-dark">{event.title}</h2>
-        {/* Data */}
-        <span
-          className="card-header-far-right h- flex items-center color-eh-light">
+  const openEvent = () => navigate(`/events-history/${event.id}`)
+
+  return (
+    <article
+      className={styles.card}
+      role="link"
+      tabIndex={0}
+      aria-label={`Abrir evento ${event.title}`}
+      onClick={openEvent}
+      onKeyDown={(eventKey) => {
+        if (eventKey.key === 'Enter' || eventKey.key === ' ') {
+          eventKey.preventDefault()
+          openEvent()
+        }
+      }}
+    >
+      <header className={styles.header}>
+        <h2 className={styles.title}>{event.title}</h2>
+        <span className={styles.date}>
           {formatDate(event.startDate, event.endDate, event.startTime, event.endTime, event.allDay)}
         </span>
-      </div>
+      </header>
 
-      {/* Conteúdo */}
-      <div className="card-content-large">
-        {/* Hora */}
+      <div className={styles.metaList}>
         {event.startTime && (
-          <div className="card-content-info-large text-gray-500 mb-2">
-            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0"><Clock className="w-full h-full" /></div>
-            {/* {event.hour && `${event.hour} - `}{event.address} */}
-            <div>{event.startTime}</div>
+          <div className={styles.metaRow}>
+            <Clock className={styles.metaIcon} aria-hidden="true" />
+            <span className={styles.metaText}>{event.startTime}</span>
           </div>
         )}
-        {/* Localidade */}
+
         {event.location && (
-          <div className="card-content-info-large text-gray-500 mb-2">
-            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0">
-              {event.location.startsWith('http') ? (
-                <Link className="w-full h-full" />
-              ) : (
-                <MapPin className="w-full h-full" />
-              )}
-            </div>
-            <div className="text-pretty truncate overflow-x-auto">
-              {event.location}
-            </div>
+          <div className={styles.metaRow}>
+            {event.location.startsWith('http') ? (
+              <Link className={styles.metaIcon} aria-hidden="true" />
+            ) : (
+              <MapPin className={styles.metaIcon} aria-hidden="true" />
+            )}
+            <span className={styles.metaText}>{event.location}</span>
           </div>
         )}
 
-        {/* Campos Opcionais */}
-
-        {event.optionalFields && event.optionalFields.length > 0 && (
-          <div className="space-y-4">
-
-            {event.optionalFields.map((field) => (
-              <div key={field.id} >
-                {field.label === 'Descrição' && typeof field.value === 'string' ? (
-                  <div className="card-content-info-large text-gray-500 mb-2">
-                    <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0 flex items-start">
-                      <SquarePen className="w-full h-full" />
-                    </div>
-                    <div className='text-pretty truncate'>
-                      {field.value}
-                    </div>
-                  </div>
-                ) : ('')}
-              </div>
-            ))}
+        {description && (
+          <div className={styles.metaRow}>
+            <SquarePen className={styles.metaIcon} aria-hidden="true" />
+            <span className={`${styles.metaText} ${styles.description}`}>
+              {description.value as string}
+            </span>
           </div>
         )}
       </div>
 
-      {/* Categorias */}
-      <div className='mt-2 ml-2'>
-        {event.categories && event.categories.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {event.categories.map((cat: string, index: number) => (
-              <span
-                key={index}
-                className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full"
-              >
-                {cat}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Botão de editar */}
-        <div className="card-bottom-end">
-          <button
-            className="color-eh-base"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditEvent(event);
-            }}>
-            Editar
-          </button>
+      <footer className={styles.footer}>
+        <div className={styles.categories}>
+          {event.categories?.map((category) => (
+            <span key={category} className={styles.category}>
+              {category}
+            </span>
+          ))}
         </div>
-      </div>
-    </div >
 
-  );
-};
+        <button
+          type="button"
+          className={styles.editButton}
+          onClick={(clickEvent) => {
+            clickEvent.stopPropagation()
+            onEditEvent(event)
+          }}
+        >
+          Editar
+        </button>
+      </footer>
+    </article>
+  )
+}
 
-export default EventCard;
+export default EventCard

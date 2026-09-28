@@ -11,12 +11,13 @@ import { AutomationEventContext, evaluateAutomation } from '../utils/automation'
 import { getCurrentBrowserWeather, WeatherSnapshot } from '../utils/weather';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Star } from 'lucide-react';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import UpcomingEventCard from './components/UpcomingEventCard';
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
-import Masonry from 'react-masonry-css'
+import styles from './Dashboard.module.css'
 
 type GroupedEvents = {
   today: Event[],
@@ -332,67 +333,78 @@ export default function Dashboard(): JSX.Element {
     )
   }
 
+  const groupLabels: Record<keyof GroupedEvents, string> = {
+    today: 'Hoje',
+    tomorrow: 'Amanhã',
+    thisWeek: 'Esta semana',
+    thisMonth: 'Este mês',
+    nextMonth: 'Próximo mês',
+    future: 'Futuro',
+  }
+
+  const totalUpcomingEvents = Object.values(events).flat().length
+  const todayText = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
+  const formattedToday = todayText.charAt(0).toUpperCase() + todayText.slice(1)
+
   return (
-
     <ProtectedRoute>
+      <main className={styles.page}>
+        <header className={styles.pageHeader}>
+          <div>
+            <p className={styles.eyebrow}>Hoje</p>
+            <h1 className={styles.pageTitle}>{formattedToday}</h1>
+          </div>
 
-      <main className="main-container-body main-container-bg">
-
-        {/* Renderiza o menu principal da aplicação. */}
+          <button
+            type="button"
+            className={styles.contextAction}
+            onClick={() => setShowSuggestions(true)}
+          >
+            <Star className={styles.contextActionIcon} aria-hidden="true" />
+            Sugestões
+          </button>
+        </header>
 
         <ActionsOverview actions={actions} weather={weather} />
 
-        <h1 className="title-1">Próximos Eventos</h1>
+        <section className={styles.eventsSection} aria-labelledby="upcoming-events-title">
+          <div className={styles.sectionHeading}>
+            <h2 id="upcoming-events-title" className={styles.sectionTitle}>
+              Próximos eventos
+            </h2>
+            <span className={styles.sectionCount}>
+              {totalUpcomingEvents} {totalUpcomingEvents === 1 ? 'evento' : 'eventos'}
+            </span>
+          </div>
 
-        {Object.entries(events).map(([groupName, groupEvents]) => (
-          groupEvents.length > 0 && (
-            <section key={groupName}>
-              <h2 className="title-2">
-                {groupName === 'today' && `Hoje (${groupEvents.length})`} {/* Eventos do dia */}
-                {groupName === 'tomorrow' && `Amanhã (${groupEvents.length})`} {/* Eventos Amanhã */}
-                {groupName === 'thisWeek' && `Esta Semana (${groupEvents.length})`} {/* Eventos da Semana */}
-                {groupName === 'thisMonth' && `Este Mês (${groupEvents.length})`} {/* Eventos do Mês */}
-                {groupName === 'nextMonth' && `Próximo Mês (${groupEvents.length})`} {/* Eventos do Próximo Mês */}
-                {groupName === 'future' && `Futuro (${groupEvents.length})`} {/* Eventos sem Data Específica */}
-              </h2>
-              <Masonry
-                breakpointCols={{ default: 3, 1024: 2, 640: 1 }}
-                className="flex gap-4"
-                columnClassName="flex flex-col gap-4"
-              >
+          {Object.entries(events).map(([groupName, groupEvents]) => {
+            if (groupEvents.length === 0) return null
 
-                {groupEvents.map(renderEvent)}
+            const groupKey = groupName as keyof GroupedEvents
+            return (
+              <section key={groupName} className={styles.eventGroup}>
+                <h3 className={styles.groupTitle}>
+                  {groupLabels[groupKey]} ({groupEvents.length})
+                </h3>
+                <div className={styles.eventGrid}>
+                  {groupEvents.map(renderEvent)}
+                </div>
+              </section>
+            )
+          })}
 
-              </Masonry>
-            </section>
-          )
-        ))}
+          {totalUpcomingEvents === 0 && (
+            <p className={styles.emptyState}>Nenhum evento futuro agendado.</p>
+          )}
+        </section>
 
-        {Object.values(events).flat().length === 0 && (
-          <p className="text-gray-600">Nenhum evento futuro agendado.</p>
-        )}
-
-        {/* Renderiza o painel de sugestões de eventos. Abre quando showSuggestions é verdadeiro. */}
         {showSuggestions && (
           <SuggestionPanel
             onClose={() => setShowSuggestions(false)}
-            onEventCreated={refreshDashboardEvents} // Passa a função de atualização para o painel de sugestões
+            onEventCreated={refreshDashboardEvents}
           />
         )}
-
-        {/* Botão flutuante de Sugestão de Eventos */}
-        <button
-          onClick={() => {
-            setShowSuggestions(true); // Abre o painel de sugestões
-          }}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg z-50"
-          aria-label="Ver sugestões"
-        >
-          <Star className="w-6 h-6" />
-
-        </button>
       </main>
-
     </ProtectedRoute>
-  );
+  )
 }

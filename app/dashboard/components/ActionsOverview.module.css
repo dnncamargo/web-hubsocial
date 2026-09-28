@@ -1,20 +1,20 @@
 .container {
   display: grid;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
 }
 
 .weatherContext {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  color: #374151;
-  font-size: 0.875rem;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
 }
 
 .weatherAttribution {
-  color: #9ca3af;
-  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
 }
 
 .weatherAttribution a {
@@ -24,61 +24,61 @@
 }
 
 .weatherAttribution a:hover {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .primarySection,
 .secondarySection {
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  background: #ffffff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .primarySection {
-  padding: 1rem;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
 }
 
 .secondarySection {
-  padding: 0.875rem;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
 }
 
 .secondaryGrid {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .sectionHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .sectionTitle {
   margin: 0;
-  font-size: 1rem;
+  color: var(--color-text-primary);
+  font-size: 0.9375rem;
   font-weight: 650;
-  color: #111827;
 }
 
 .primarySection .sectionTitle {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
 }
 
 .count {
   min-width: 1.75rem;
-  border-radius: 999px;
-  background: #f3f4f6;
-  padding: 0.125rem 0.5rem;
-  color: #4b5563;
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--radius-round);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
   font-size: 0.75rem;
   text-align: center;
 }
 
 .list {
   display: grid;
-  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -87,10 +87,10 @@
 .row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.75rem;
   align-items: start;
-  padding: 0.75rem 0;
-  border-top: 1px solid #f3f4f6;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border);
 }
 
 .row:first-child {
@@ -98,11 +98,11 @@
 }
 
 .highlightedRow {
-  margin-inline: -0.5rem;
-  border-radius: 0.5rem;
-  background: #eff6ff;
-  box-shadow: inset 3px 0 0 #2563eb;
-  padding-inline: 0.5rem;
+  margin-inline: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-events-soft);
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .pendingMarker,
@@ -110,35 +110,34 @@
   width: 0.625rem;
   height: 0.625rem;
   margin-top: 0.3rem;
+  border: 1.5px solid var(--color-text-muted);
   border-radius: 50%;
-  border: 1.5px solid #9ca3af;
 }
 
 .completedMarker {
-  border-color: #6b7280;
-  background: #6b7280;
+  background: var(--color-text-muted);
 }
 
 .rowContent {
   display: grid;
-  gap: 0.2rem;
   min-width: 0;
+  gap: 0.2rem;
 }
 
 .title,
 .completedTitle {
-  color: #1f2937;
+  color: var(--color-text-primary);
   font-size: 0.9375rem;
   line-height: 1.35;
 }
 
 .completedTitle {
-  color: #9ca3af;
+  color: var(--color-text-muted);
   text-decoration: line-through;
 }
 
 .meta {
-  color: #6b7280;
+  color: var(--color-text-muted);
   font-size: 0.75rem;
 }
 
@@ -146,15 +145,15 @@
 .automationPending,
 .automationNotMatched {
   width: fit-content;
-  border-radius: 999px;
   padding: 0.125rem 0.45rem;
-  font-size: 0.7rem;
+  border-radius: var(--radius-round);
+  font-size: 0.6875rem;
   font-weight: 600;
 }
 
 .automationMatched {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--color-events-soft);
+  color: var(--color-events-strong);
 }
 
 .automationPending {
@@ -163,22 +162,22 @@
 }
 
 .automationNotMatched {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
 }
 
 .empty {
   margin: 0;
-  color: #9ca3af;
-  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 768px) {
   .weatherContext {
     flex-direction: row;
     align-items: baseline;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-4);
   }
 
   .secondaryGrid {
