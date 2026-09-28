@@ -4,13 +4,16 @@ import { useState, useEffect, JSX } from 'react';
 import { getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
-import { Event, Person } from '../utils/interfaces';
+import { Event, Person, Task } from '../utils/interfaces';
+import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
+import { getActionPeriodKeys } from '../utils/actionPlanning';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
 import { StarIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import MainMenu from '../components/ui/MainMenu';
 import UpcomingEventCard from './components/UpcomingEventCard';
 import SuggestionPanel from './components/SuggestionPanel';
+import ActionsOverview from './components/ActionsOverview';
 import Masonry from 'react-masonry-css'
 
 type GroupedEvents = {
@@ -38,6 +41,11 @@ export default function Dashboard(): JSX.Element {
     nextMonth: [],
     future: []
   }); /** @state {GroupedEvents} events - Array de eventos agrupados por data. */
+  const [actions, setActions] = useState<ActionProjection>({
+    day: [],
+    week: [],
+    month: [],
+  });
   const [showSuggestions, setShowSuggestions] = useState(false); /** @state {boolean} showSuggestions - Controla a visibilidade do painel de sugestões de eventos. */
   const [menuCloseTrigger, setMenuCloseTrigger] = useState<boolean>(false)  /** @state {boolean} closeMenu - Controla a visibilidade do menu principal. */
 
@@ -46,6 +54,7 @@ export default function Dashboard(): JSX.Element {
     // Isso garante que a lista de pessoas e eventos seja carregada assim que o componente for exibido.
     if (uid) {
       fetchAndGroupEvents()
+      fetchPlannedActions()
       fetchPerson();
     }
   }, [uid]); // <- Executa quando user estiver pronto
@@ -63,6 +72,65 @@ export default function Dashboard(): JSX.Element {
       ...doc.data()
     })) as Person[];
     setPerson(personData);
+  };
+
+  const fetchPlannedActions = async (): Promise<void> => {
+    if (!uid) return
+
+    const periods = getActionPeriodKeys()
+    const horizons: ActionHorizon[] = ['day', 'week', 'month']
+
+    const entries = await Promise.all(
+      horizons.map(async (horizon) => {
+        const [eventSnapshot, taskSnapshot] = await Promise.all([
+          getDocs(
+            query(
+              collection(db, `users/${uid}/events-history`),
+              where(`actionPlanning.${horizon}`, '==', periods[horizon]),
+            ),
+          ),
+          getDocs(
+            query(
+              collection(db, `users/${uid}/tasks-list`),
+              where(`actionPlanning.${horizon}`, '==', periods[horizon]),
+            ),
+          ),
+        ])
+
+        const eventActions: ActionProjectionItem[] = eventSnapshot.docs.map((snapshot) => {
+          const event = { id: snapshot.id, ...snapshot.data() } as Event
+          return {
+            key: `event:${event.id}`,
+            sourceType: 'event',
+            sourceId: event.id,
+            title: event.title,
+            completed: event.status === 1,
+            date: event.startDate,
+            ...(event.startTime ? { time: event.startTime } : {}),
+          }
+        })
+
+        const taskActions: ActionProjectionItem[] = taskSnapshot.docs.map((snapshot) => {
+          const task = { id: snapshot.id, ...snapshot.data() } as Task
+          return {
+            key: `task:${task.id}`,
+            sourceType: 'task',
+            sourceId: task.id,
+            title: task.content,
+            completed: task.status === 2,
+          }
+        })
+
+        const items = [...eventActions, ...taskActions].sort((a, b) => {
+          const timeOrder = (a.time ?? '99:99').localeCompare(b.time ?? '99:99')
+          return timeOrder !== 0 ? timeOrder : a.title.localeCompare(b.title, 'pt-BR')
+        })
+
+        return [horizon, items] as const
+      }),
+    )
+
+    setActions(Object.fromEntries(entries) as ActionProjection)
   };
 
   /**
@@ -156,6 +224,8 @@ export default function Dashboard(): JSX.Element {
 
         return updated;
       });
+
+      await fetchPlannedActions();
     } catch (error) {
       console.error('Erro ao atualizar status do evento:', error);
     }
@@ -189,6 +259,9 @@ export default function Dashboard(): JSX.Element {
 
         {/* Renderiza o menu principal da aplicação. */}
         <MainMenu externalCloseTrigger={menuCloseTrigger} />
+
+        <ActionsOverview actions={actions} />
+
         <h1 className="title-1">Próximos Eventos</h1>
 
         {Object.entries(events).map(([groupName, groupEvents]) => (
