@@ -18,6 +18,7 @@ import { AssociatedPeopleModal } from './AssociatedPeopleModal';
 import { EventCategoriesModal } from './EventCategoriesModal';
 import { useEventCategories } from '@/app/hooks/useEventCategories';
 import { EventCategoriesRenderer } from './EventCategoriesRenderer';
+import ActionPlanningControl from '../../components/actions/ActionPlanningControl';
 
 /**
  * @interface AddEventModalProps
@@ -83,6 +84,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
   const {
     title, setTitle,
     location, setLocation,
+    actionPlanning, setActionPlanning,
     error, setError,
     createEvent
   } = useEventForm({ uid: effectiveUid, initialPersonId, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
@@ -222,6 +224,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
               <CalendarEventCreator
                 {...dateControl} />
             </div>
+
+            <ActionPlanningControl
+              planning={actionPlanning}
+              onChange={setActionPlanning}
+            />
 
             {/* Switch Mostrar Mais */}
             <div className="flex justify-between items-center py-4 border-gray-200">

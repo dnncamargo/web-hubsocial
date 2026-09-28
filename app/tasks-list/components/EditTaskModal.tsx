@@ -6,6 +6,8 @@ import { updateDoc, doc, addDoc, deleteDoc, collection } from 'firebase/firestor
 import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
 import { Task } from '../../utils/interfaces'
+import { ActionPlanning } from '../../types/actions'
+import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import { OptionalField, TaskItem } from '../../types/optionalFields'
 import { buildEventPayload } from '../../utils/eventPayload'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
@@ -22,12 +24,14 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
   const [content, setContent] = useState(task.content || '')
   const [addingDate, setAddingDate] = useState(false)
+  const [actionPlanning, setActionPlanning] = useState<ActionPlanning>(task.actionPlanning ?? {})
   const dateControl = useEventDate()
   const { allDay, startDate, endDate, startTime, endTime } = dateControl
 
   useEffect(() => {
     if (task) {
       setContent(task.content)
+      setActionPlanning(task.actionPlanning ?? {})
     }
   }, [task])
 
@@ -85,6 +89,7 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
         ...(!allDay ? { startTime, endTime } : {}),
         createdAt: new Date(),
         optionalFields,
+        actionPlanning,
       });
 
       try {
@@ -101,6 +106,7 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
     try {
       await updateDoc(doc(db, `users/${uid}/tasks-list/${task.id}`), {
         content: content.trim(),
+        actionPlanning,
       });
       onUpdated();
       onClose();
@@ -146,6 +152,10 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
           <CalendarEventCreator {...dateControl} />
         )}
 
+        <ActionPlanningControl
+          planning={actionPlanning}
+          onChange={setActionPlanning}
+        />
 
         <div className="flex justify-end gap-2 mt-4">
           <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-black">Cancelar</button>

@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
+import { ActionPlanning } from '../../types/actions'
+import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 
 interface AddTaskModalProps {
   isOpen: boolean
@@ -16,6 +18,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
   const [content, setContent] = useState('')
   const [adding, setAdding] = useState(false)
+  const [actionPlanning, setActionPlanning] = useState<ActionPlanning>({})
 
   if (!isOpen || !uid) return null
 
@@ -41,9 +44,11 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
         status: 0,
         order: currentTasksCount, // <----- aqui!!
         createdAt: new Date(),
+        actionPlanning,
       });
 
       onAdded();
+      setActionPlanning({});
       onClose();
     } catch (error) {
       console.error('Erro ao adicionar tarefa:', error)
@@ -55,6 +60,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
 
   const handleCancel = () => {
     setContent('') // 🧹 limpa o campo
+    setActionPlanning({})
     onClose()
   }
 
@@ -79,6 +85,11 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
           placeholder="Descrição da tarefa"
           className="border w-full p-2 rounded mb-4"
         />
+        <ActionPlanningControl
+          planning={actionPlanning}
+          onChange={setActionPlanning}
+        />
+
         <div className="flex justify-end gap-2">
           <button onClick={handleCancel} className="px-4 py-2 text-gray-600 hover:text-black">
             Cancelar

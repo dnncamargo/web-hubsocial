@@ -1,5 +1,6 @@
 // hooks/useEventForm.ts
 import { Event } from '../utils/interfaces'
+import { ActionPlanning } from '../types/actions';
 import { useState, useEffect } from 'react';
 import { db } from '../utils/firebaseConfig';
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
@@ -23,6 +24,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
 
     const [title, setTitle] = useState(''); /** @state {string} title - Título do evento. */
     const [location, setLocation] = useState(''); /** @state {string} location - Localidade do evento. */
+    const [actionPlanning, setActionPlanning] = useState<ActionPlanning>({});
 
     const [error, setError] = useState<string | null>(null); /** @state {string | null} error - Mensagem de erro, se houver. */
 
@@ -58,6 +60,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         if (event) {
             setTitle(event.title || '');
             setLocation(event.location || '');
+            setActionPlanning(event.actionPlanning ?? {});
 
             dateControl.setAllDay(event.allDay || false);
             dateControl.setStartDate(event.startDate);
@@ -78,6 +81,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
             return;
         }
 
+        setActionPlanning({});
         associatePersonControl.resetAssociatedPeople();
         if (initialPersonId) {
             associatePersonControl.setAssociatedPersonIds([initialPersonId]);
@@ -107,6 +111,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
             optionalFields,
             personIds: associatedPersonIds,
             categories: selectedCategories,
+            actionPlanning,
             status: event?.status,
             createdAt: event?.createdAt || new Date(),
         })
@@ -124,6 +129,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
             await addDoc(collection(db, `users/${uid}/events-history`), eventRef);
 
             resetOptionalFields();
+            setActionPlanning({});
             return true;
 
         } catch (e) {
@@ -156,6 +162,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
     return {
         title, setTitle,
         location, setLocation,
+        actionPlanning, setActionPlanning,
         error, setError,
         createEvent,
         updateEvent,

@@ -1,4 +1,5 @@
 import { Timestamp } from 'firebase/firestore'
+import { ActionPlanning } from '../types/actions'
 import { OptionalField } from '../types/optionalFields'
 import { Event } from './interfaces'
 
@@ -26,6 +27,7 @@ export interface EventPayloadInput {
   status?: 0 | 1
   timeZone?: string
   optionalFields?: OptionalField[] | null
+  actionPlanning?: ActionPlanning
   createdAt?: Date | Timestamp
 }
 
@@ -39,6 +41,7 @@ export function buildEventPayload(input: EventPayloadInput): EventPayload {
     personIds: input.personIds ?? [],
     categories: input.categories ?? [],
     optionalFields: input.optionalFields ?? [],
+    actionPlanning: input.actionPlanning ?? {},
     createdAt: input.createdAt ?? new Date(),
     ...(input.location !== undefined ? { location: input.location } : {}),
     ...(!input.allDay && input.startTime !== undefined ? { startTime: input.startTime } : {}),

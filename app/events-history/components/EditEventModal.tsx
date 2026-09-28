@@ -21,6 +21,7 @@ import { OptionalFieldModal } from '@/app/components/optional-fields/OptionalFie
 import { EventCategoriesRenderer } from './EventCategoriesRenderer';
 import { OptionalFieldRenderer } from '@/app/components/optional-fields/OptionalFieldRenderer';
 import { AssociatePersonRenderer } from './AssociatePersonRenderer';
+import ActionPlanningControl from '../../components/actions/ActionPlanningControl';
 
 /**
  * @interface EditEventModalProps
@@ -93,6 +94,7 @@ const EditEventModal = ({ event, isOpen, onClose, onUpdated }: EditEventModalPro
   const {
     title, setTitle,
     location, setLocation,
+    actionPlanning, setActionPlanning,
     error, setError,
     updateEvent
   } = useEventForm({ uid: effectiveUid, event, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
@@ -258,6 +260,11 @@ const EditEventModal = ({ event, isOpen, onClose, onUpdated }: EditEventModalPro
               <CalendarEventCreator
                 {...dateControl} />
             </div>
+
+            <ActionPlanningControl
+              planning={actionPlanning}
+              onChange={setActionPlanning}
+            />
 
 
             {/* Switch Mostrar Mais */}
