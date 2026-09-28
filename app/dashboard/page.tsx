@@ -8,6 +8,7 @@ import { Event, Person, Task } from '../utils/interfaces';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
 import { AutomationRuleSet } from '../types/automation';
 import { AutomationEventContext, evaluateAutomation } from '../utils/automation';
+import { getCurrentBrowserWeather, WeatherSnapshot } from '../utils/weather';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
 import { StarIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -53,6 +54,7 @@ export default function Dashboard(): JSX.Element {
     week: [],
     month: [],
   });
+  const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false); /** @state {boolean} showSuggestions - Controla a visibilidade do painel de sugestões de eventos. */
   const [menuCloseTrigger, setMenuCloseTrigger] = useState<boolean>(false)  /** @state {boolean} closeMenu - Controla a visibilidade do menu principal. */
 
@@ -139,6 +141,24 @@ export default function Dashboard(): JSX.Element {
       }),
     )
 
+    const needsWeather = sourcesByHorizon.some(([, sources]) =>
+      sources.some((source) =>
+        source.automation?.rules.some((rule) => rule.type === 'weather'),
+      ),
+    )
+
+    let currentWeather: WeatherSnapshot | null = null
+
+    if (needsWeather) {
+      try {
+        currentWeather = await getCurrentBrowserWeather()
+      } catch (error) {
+        console.warn('Contexto de clima indisponível para automação:', error)
+      }
+    }
+
+    setWeather(currentWeather)
+
     const referencedEventIds = new Set<string>()
 
     for (const [, sources] of sourcesByHorizon) {
@@ -176,6 +196,9 @@ export default function Dashboard(): JSX.Element {
           automation: evaluateAutomation(automation, {
             referenceDate,
             events: linkedEvents,
+            ...(currentWeather
+              ? { weather: { condition: currentWeather.condition } }
+              : {}),
           }),
         }))
         .sort((a, b) => {
@@ -320,7 +343,7 @@ export default function Dashboard(): JSX.Element {
         {/* Renderiza o menu principal da aplicação. */}
         <MainMenu externalCloseTrigger={menuCloseTrigger} />
 
-        <ActionsOverview actions={actions} />
+        <ActionsOverview actions={actions} weather={weather} />
 
         <h1 className="title-1">Próximos Eventos</h1>
 
