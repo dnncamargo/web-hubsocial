@@ -7,7 +7,9 @@ import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
 import { Task } from '../../utils/interfaces'
 import { ActionPlanning } from '../../types/actions'
+import { AutomationRuleSet } from '../../types/automation'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
+import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
 import { OptionalField, TaskItem } from '../../types/optionalFields'
 import { buildEventPayload } from '../../utils/eventPayload'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
@@ -25,6 +27,7 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
   const [content, setContent] = useState(task.content || '')
   const [addingDate, setAddingDate] = useState(false)
   const [actionPlanning, setActionPlanning] = useState<ActionPlanning>(task.actionPlanning ?? {})
+  const [automation, setAutomation] = useState<AutomationRuleSet>(task.automation ?? { match: 'all', rules: [] })
   const dateControl = useEventDate()
   const { allDay, startDate, endDate, startTime, endTime } = dateControl
 
@@ -32,6 +35,7 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
     if (task) {
       setContent(task.content)
       setActionPlanning(task.actionPlanning ?? {})
+      setAutomation(task.automation ?? { match: 'all', rules: [] })
     }
   }, [task])
 
@@ -90,6 +94,7 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
         createdAt: new Date(),
         optionalFields,
         actionPlanning,
+        automation,
       });
 
       try {
@@ -107,6 +112,7 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
       await updateDoc(doc(db, `users/${uid}/tasks-list/${task.id}`), {
         content: content.trim(),
         actionPlanning,
+        automation,
       });
       onUpdated();
       onClose();
@@ -155,6 +161,12 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
         <ActionPlanningControl
           planning={actionPlanning}
           onChange={setActionPlanning}
+        />
+
+        <AutomationRulesEditor
+          uid={uid}
+          value={automation}
+          onChange={setAutomation}
         />
 
         <div className="flex justify-end gap-2 mt-4">

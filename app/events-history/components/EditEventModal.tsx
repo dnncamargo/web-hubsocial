@@ -22,6 +22,7 @@ import { EventCategoriesRenderer } from './EventCategoriesRenderer';
 import { OptionalFieldRenderer } from '@/app/components/optional-fields/OptionalFieldRenderer';
 import { AssociatePersonRenderer } from './AssociatePersonRenderer';
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl';
+import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor';
 
 /**
  * @interface EditEventModalProps
@@ -95,6 +96,7 @@ const EditEventModal = ({ event, isOpen, onClose, onUpdated }: EditEventModalPro
     title, setTitle,
     location, setLocation,
     actionPlanning, setActionPlanning,
+    automation, setAutomation,
     error, setError,
     updateEvent
   } = useEventForm({ uid: effectiveUid, event, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
@@ -266,6 +268,12 @@ const EditEventModal = ({ event, isOpen, onClose, onUpdated }: EditEventModalPro
               onChange={setActionPlanning}
             />
 
+            <AutomationRulesEditor
+              uid={effectiveUid}
+              value={automation}
+              onChange={setAutomation}
+              excludeEventId={event.id}
+            />
 
             {/* Switch Mostrar Mais */}
             <div className="flex justify-between items-center py-4 border-gray-200">
