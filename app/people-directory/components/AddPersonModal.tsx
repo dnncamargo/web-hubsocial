@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../../components/auth/AuthProvider'
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import clsx from 'clsx';
 import { useOptionalFields } from '@/app/hooks/useOptionalFields';
 import { usePersonRelationships } from '@/app/hooks/usePersonRelationships';

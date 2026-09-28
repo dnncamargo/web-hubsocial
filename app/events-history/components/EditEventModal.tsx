@@ -5,7 +5,7 @@ import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebaseConfig';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { Event } from '../../utils/interfaces';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import clsx from 'clsx';
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator';

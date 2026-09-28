@@ -1,7 +1,7 @@
 // 'use client'
 
 import { JSX, useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '../auth/AuthProvider'
 import { useDeviceType } from '../../hooks/useDeviceType'

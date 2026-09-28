@@ -6,7 +6,7 @@ import { Contact, fetchAllContacts, parseGoogleContact } from '../../utils/googl
 import { useRouter } from 'next/navigation'
 import { db } from '../../utils/firebaseConfig'
 import { addDoc, collection } from 'firebase/firestore'
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { Timestamp } from 'firebase/firestore'
 
 interface ImportContactsModalProps {
