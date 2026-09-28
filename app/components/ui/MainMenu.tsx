@@ -8,6 +8,7 @@ import { useDeviceType } from '../../hooks/useDeviceType'
 import Link from 'next/link'
 import LogoutButton from './LogoutButton'
 import ImportContactsModal from './ImportContactsModal'
+import { instance } from '../../config/instance'
 
 interface MainMenuProps {
   externalCloseTrigger?: boolean;
@@ -52,7 +53,7 @@ export default function MainMenu({ externalCloseTrigger }: MainMenuProps): JSX.E
     <>
       <header className="fixed top-0 left-0 w-full backdrop-blur bg-white/80 z-50 border-b">
         <div className="grid grid-cols-2 items-center max-w-5xl mx-auto px-4 h-14">
-          <Link href="/" className="title-logo mb-2">connexus</Link>
+          <Link href="/" className="title-logo mb-2">{instance.name}</Link>
 
           <div className="flex justify-end items-center gap-4">
             <div className="hidden md:flex items-center gap-4">
