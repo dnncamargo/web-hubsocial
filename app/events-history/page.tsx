@@ -51,7 +51,7 @@ const EventsHistory = (): JSX.Element => {
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
 
-  const {availableCategories, setAvailableCategories} = useEventCategories(); /** @const {string[]} availableCategories - Categorias de eventos disponíveis. */
+  const { availableCategories, handleAddCategory } = useEventCategories(); /** @const {string[]} availableCategories - Categorias de eventos disponíveis. */
 
   useEffect(() => {
     // Buscar os eventos do Firestore
@@ -86,29 +86,19 @@ const EventsHistory = (): JSX.Element => {
       }
     };
 
-    const fetchCategories = async () => {
-      const docRef = doc(db, `users/${uid}/settings`, 'userCategories');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const availableCategories = data?.category || [];
-        setAvailableCategories(availableCategories);
-
-        // Atualiza os filtros apenas se ainda estiverem vazios
-        setFilters(prev => ({
-          ...prev,
-          selectedCategories: Array.isArray(prev.selectedCategories) && prev.selectedCategories.length === 0
-            ? availableCategories
-            : (Array.isArray(prev.selectedCategories) ? prev.selectedCategories : [])
-        }));
-
-      }
-    };
-
-    fetchCategories();
-
     init();
   }, [uid]);
+
+  useEffect(() => {
+    if (availableCategories.length === 0) return;
+
+    setFilters(prev => ({
+      ...prev,
+      selectedCategories: prev.selectedCategories.length === 0
+        ? availableCategories
+        : prev.selectedCategories,
+    }));
+  }, [availableCategories]);
 
   /**
    * @async
@@ -204,32 +194,6 @@ const EventsHistory = (): JSX.Element => {
       );
     }
     );
-
-  const handleAddCategory = async (newCategory: string) => {
-    if (!uid) return;
-
-    const trimmed = newCategory.trim();
-    if (!trimmed || availableCategories.includes(trimmed)) return;
-
-    const updatedCategories = [...availableCategories, trimmed];
-
-    try {
-      // Salva no Firestore
-      const EventsSettingRef = doc(db, `users/${uid}/settings`, 'userCategories');
-      await setDoc(EventsSettingRef, { category: updatedCategories }, { merge: true });
-
-      // Atualiza o estado local
-      setAvailableCategories(updatedCategories);
-
-      // (Opcional) Atualiza o filtro para já incluir a nova categoria
-      setFilters(prev => ({
-        ...prev,
-        selectedCategories: [...prev.selectedCategories, trimmed],
-      }));
-    } catch (error) {
-      console.error('Erro ao adicionar nova categoria:', error);
-    }
-  };
 
   const updateFilters = (updated: EventFilter) => {
     setFilters(updated)

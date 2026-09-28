@@ -14,6 +14,7 @@ import { UserPlusIcon } from '@heroicons/react/24/outline';
 import { ListFilterIcon, SearchIcon } from 'lucide-react';
 import FilterPersonModal from './components/FilterPersonModal';
 import type { PersonFilter } from './components/FilterPersonModal';
+import { usePersonRelationships } from '../hooks/usePersonRelationships';
 import Masonry from 'react-masonry-css'
 
 const defaultFilters: PersonFilter = {
@@ -47,7 +48,7 @@ const PeopleDirectory = (): JSX.Element => {
     ...defaultFilters,
     selectedRelationships: [],
   });
-  const [availableRelationships, setAvailableRelationships] = useState<string[]>([]);
+  const { availableRelationships } = usePersonRelationships();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -84,29 +85,19 @@ const PeopleDirectory = (): JSX.Element => {
     };
 
 
-    const fetchRelationships = async () => {
-      const docRef = doc(db, `users/${uid}/settings`, 'userRelationships');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const availableRelationships = data?.relationship || [];
-        setAvailableRelationships(availableRelationships);
-
-        // Atualiza os filtros apenas se ainda estiverem vazios
-        setFilters(prev => ({
-          ...prev,
-          selectedRelationships: Array.isArray(prev.selectedRelationships) && prev.selectedRelationships.length === 0
-            ? availableRelationships
-            : (Array.isArray(prev.selectedRelationships) ? prev.selectedRelationships : [])
-        }));
-
-      }
-    };
-
-    fetchRelationships();
-
     init();
   }, [uid]);
+
+  useEffect(() => {
+    if (availableRelationships.length === 0) return;
+
+    setFilters(prev => ({
+      ...prev,
+      selectedRelationships: prev.selectedRelationships.length === 0
+        ? availableRelationships
+        : prev.selectedRelationships,
+    }));
+  }, [availableRelationships]);
 
   /**
  * @async

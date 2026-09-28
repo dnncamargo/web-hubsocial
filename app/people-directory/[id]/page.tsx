@@ -2,7 +2,7 @@
 
 import { useState, useEffect, JSX } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, getDocs, query, where, collection, setDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, where, collection } from 'firebase/firestore';
 import { db } from '../../utils/firebaseConfig';
 import { useAuth } from '@/app/components/auth/AuthProvider';
 import { Event, Person } from '@/app/utils/interfaces';
@@ -22,13 +22,11 @@ const PersonDetails = (): JSX.Element => {
   const [person, setPerson] = useState<Person | null>(null); /** @state {Person | null} person - Os detalhes da pessoa buscada do Firestore. Inicialmente null. */
   const [events, setEvents] = useState<Event[]>([]); /** @state {Event[]} events - A lista de eventos associados à pessoa, buscados do Firestore. Inicialmente um array vazio. */
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false); /** @state {boolean} isAddEventModalOpen - Controla a visibilidade do modal para adicionar um novo evento para esta pessoa. */
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (uid && id) {
       fetchPerson();
       fetchEvents();
-      fetchCategories();
     }
   }, [uid, id]);
 
@@ -59,36 +57,6 @@ const PersonDetails = (): JSX.Element => {
       ...doc.data()
     })) as Event[];
     setEvents(eventData);
-  };
-
-  const fetchCategories = async () => {
-    const EventsSettingRef = doc(db, `users/${uid}/settings`, 'userCategories');
-    const docSnap = await getDoc(EventsSettingRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      setAvailableCategories(data.category ?? []);
-    }
-  };
-
-  const handleAddCategory = async (newCategory: string) => {
-    if (!uid) return;
-
-    const trimmed = newCategory.trim();
-    if (!trimmed || availableCategories.includes(trimmed)) return;
-
-    const updatedCategories = [...availableCategories, trimmed];
-
-    try {
-      // Salva no Firestore
-      const EventsSettingRef = doc(db, `users/${uid}/settings`, 'userCategories');
-      await setDoc(EventsSettingRef, { category: updatedCategories }, { merge: true });
-
-      // Atualiza o estado local
-      setAvailableCategories(updatedCategories);
-
-    } catch (error) {
-      console.error('Erro ao adicionar nova categoria:', error);
-    }
   };
 
   if (!person) return <div className="animate-pulse text-gray-500 m-6">Carregando as informações da Pessoa...</div>;
