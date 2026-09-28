@@ -1,6 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
 import { OptionalField as OptionalFieldType } from '../types/optionalFields';
 import { ActionPlanning } from '../types/actions';
+import { AutomationRuleSet } from '../types/automation';
 
 export interface Person {
   id: string;
@@ -33,6 +34,7 @@ export interface Event {
   optionalFields?: OptionalFieldType[];
   createdAt?: Date | Timestamp;
   actionPlanning?: ActionPlanning;
+  automation?: AutomationRuleSet;
 }
 
 export interface Task {
@@ -44,6 +46,7 @@ export interface Task {
   parentTaskId?: string | null
   createdAt?: Date | Timestamp;
   actionPlanning?: ActionPlanning;
+  automation?: AutomationRuleSet;
 }
 
 export interface EventSuggestion {
