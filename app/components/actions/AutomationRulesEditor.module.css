@@ -1,0 +1,101 @@
+.fieldset {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.legend {
+  padding: 0 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.description,
+.hint {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.matchMode,
+.field {
+  display: grid;
+  gap: 0.4rem;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.rule {
+  display: grid;
+  gap: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.875rem;
+}
+
+.ruleToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.weekday {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.eventRule {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.select,
+.numberInput {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background: #ffffff;
+  padding: 0.5rem 0.625rem;
+  color: #111827;
+  font: inherit;
+}
+
+.select:focus-visible,
+.numberInput:focus-visible,
+.ruleToggle input:focus-visible,
+.weekday input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.numberField {
+  display: grid;
+  grid-template-columns: minmax(5rem, 7rem) auto;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 40rem) {
+  .eventRule {
+    grid-template-columns: minmax(0, 1.5fr) minmax(10rem, 0.75fr);
+    align-items: end;
+  }
+}
