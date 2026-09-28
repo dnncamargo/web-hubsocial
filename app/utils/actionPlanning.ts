@@ -25,3 +25,21 @@ export function isPlannedForActionHorizon(
   const period = getActionPeriodKeys(referenceDate)
   return planning[horizon] === period[horizon]
 }
+
+export function setActionPlanningHorizon(
+  planning: ActionPlanning | undefined,
+  horizon: ActionHorizon,
+  selected: boolean,
+  referenceDate: Date = new Date(),
+): ActionPlanning {
+  const nextPlanning: ActionPlanning = { ...planning }
+
+  if (selected) {
+    const period = getActionPeriodKeys(referenceDate)
+    nextPlanning[horizon] = period[horizon]
+  } else {
+    delete nextPlanning[horizon]
+  }
+
+  return nextPlanning
+}
