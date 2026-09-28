@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useAuth } from '../components/auth/AuthProvider'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router'
 import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth'
 import { instance } from '../config/instance'
 import { auth } from '../utils/firebaseConfig'
@@ -13,7 +13,7 @@ const currentUser = auth.currentUser
 console.log('[currentUser]', currentUser)
 
 export default function LoginPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { setGoogleAccessToken, setUid } = useAuth()
   const tokenClientRef = useRef<any>(null)
 
@@ -63,7 +63,7 @@ export default function LoginPage() {
             setUid(userCredential.user.uid)
 
             // Redirecionar
-            router.push('/')
+            navigate('/')
           })
           .catch(error => {
             console.error('Erro ao autenticar com Firebase:', error)
@@ -71,7 +71,7 @@ export default function LoginPage() {
       
       }
     })
-  }, [setGoogleAccessToken, router])
+  }, [setGoogleAccessToken, navigate])
 
   const handleLogin = () => {
     if (tokenClientRef.current) {

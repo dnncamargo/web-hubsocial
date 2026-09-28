@@ -1,7 +1,7 @@
 'use client'
 
 import { JSX } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router';
 import { Event } from '../../utils/interfaces';
 import { ClockIcon, MapPinIcon, LinkIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { formatDate } from '../../utils/services';
@@ -24,12 +24,11 @@ interface EventCardProps {
  * @returns {JSX.Element} Um cartão representando as informações do evento.
  */
 const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
-  const router = useRouter(); /** @const {NextRouter} router - O roteador do Next.js para navegação entre páginas. */
+  const navigate = useNavigate();
 
   return (
     <div
-      // information: onClick={() => router.push(`/events-history/${event.id}`)}
-      onClick={() => router.push(`/events-history/${event.id}`)}
+      onClick={() => navigate(`/events-history/${event.id}`)}
       className="card-container-large card-container-bg">
 
       {/* Título do card */}

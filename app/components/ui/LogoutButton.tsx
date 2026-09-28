@@ -1,12 +1,12 @@
 'use client'
 
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { ArrowRightEndOnRectangleIcon } from '@heroicons/react/24/outline'
 
 export default function LogoutButton() {
   const { setUid, setUser, setGoogleAccessToken } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     setGoogleAccessToken(null)
@@ -15,7 +15,7 @@ export default function LogoutButton() {
     localStorage.removeItem('googleAccessToken')
     localStorage.removeItem('firebaseUid')
     localStorage.removeItem('userInfo')
-    router.push('/auth-login'); // Redireciona
+    navigate('/auth-login'); // Redireciona
   }
   
   
