@@ -18,7 +18,7 @@ interface UseEventFormProps {
     eventCategoriesControl: ReturnType<typeof useEventCategories>;
 }
 
-export function useEventForm({ uid, event, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }: UseEventFormProps) {
+export function useEventForm({ uid, event, initialPersonId, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }: UseEventFormProps) {
 
     const [title, setTitle] = useState(''); /** @state {string} title - Título do evento. */
     const [location, setLocation] = useState(''); /** @state {string} location - Localidade do evento. */
@@ -75,8 +75,14 @@ export function useEventForm({ uid, event, dateControl, optionalFieldsControl, a
 
             dateControl.setStartDate(event.startDate); // ✅ hidratar start
             dateControl.setEndDate(event.endDate);     // ✅ hidratar end
+            return;
         }
-    }, [event]);
+
+        associatePersonControl.resetAssociatedPeople();
+        if (initialPersonId) {
+            associatePersonControl.setAssociatedPersonIds([initialPersonId]);
+        }
+    }, [event, initialPersonId]);
 
 
     /**

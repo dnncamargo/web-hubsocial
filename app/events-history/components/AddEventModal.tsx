@@ -31,9 +31,10 @@ interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdded: () => void;
+  initialPersonId?: string;
 }
 
-const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded }) => {
+const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded, initialPersonId }) => {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
   const modalRef = useRef<HTMLDivElement>(null);  /** @ref {HTMLDivElement} modalRef - Referência ao elemento do modal para manipulação direta. */
 
@@ -84,7 +85,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded 
     location, setLocation,
     error, setError,
     createEvent
-  } = useEventForm({ uid: effectiveUid, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
+  } = useEventForm({ uid: effectiveUid, initialPersonId, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
 
   useLayoutEffect(() => {
     adjustModalDraggable(); // Ajusta a propriedade de arrastar do modal com base na altura do conteúdo.

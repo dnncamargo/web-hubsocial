@@ -19,16 +19,17 @@ const PersonDetails = (): JSX.Element => {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
   const { id } = useParams();  /** @const {string} id - O ID do evento a ser exibido, extraído da URL. */
   const router = useRouter(); /** @const {object} router - O objeto de roteamento do Next.js. */
+  const personId = Array.isArray(id) ? id[0] : id;
   const [person, setPerson] = useState<Person | null>(null); /** @state {Person | null} person - Os detalhes da pessoa buscada do Firestore. Inicialmente null. */
   const [events, setEvents] = useState<Event[]>([]); /** @state {Event[]} events - A lista de eventos associados à pessoa, buscados do Firestore. Inicialmente um array vazio. */
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false); /** @state {boolean} isAddEventModalOpen - Controla a visibilidade do modal para adicionar um novo evento para esta pessoa. */
 
   useEffect(() => {
-    if (uid && id) {
+    if (uid && personId) {
       fetchPerson();
       fetchEvents();
     }
-  }, [uid, id]);
+  }, [uid, personId]);
 
   /**
    * @async
@@ -38,7 +39,7 @@ const PersonDetails = (): JSX.Element => {
    */
   const fetchPerson = async (): Promise<void> => {
     try {
-      const docRef = doc(db, `users/${uid}/people-directory/${id}`);
+      const docRef = doc(db, `users/${uid}/people-directory/${personId}`);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setPerson({ id: docSnap.id, ...docSnap.data() } as Person);
@@ -50,7 +51,7 @@ const PersonDetails = (): JSX.Element => {
   };
 
   const fetchEvents = async () => {
-    const q = query(collection(db, `users/${uid}/events-history`), where('personId', '==', `${id}`));
+    const q = query(collection(db, `users/${uid}/events-history`), where('personIds', 'array-contains', personId));
     const querySnapshot = await getDocs(q);
     const eventData = querySnapshot.docs.map(doc => ({
       id: doc.id,
@@ -182,17 +183,9 @@ const PersonDetails = (): JSX.Element => {
             onAdded={() => {
               setIsAddEventModalOpen(false);
               // Refaz a lista de eventos depois de adicionar
-              const fetchEvents = async () => {
-                const q = query(collection(db, `users/${uid}/events-history`), where('personId', '==', id));
-                const querySnapshot = await getDocs(q);
-                const eventData = querySnapshot.docs.map(doc => ({
-                  id: doc.id,
-                  ...doc.data()
-                })) as Event[];
-                setEvents(eventData);
-              };
               fetchEvents();
             }}
+            initialPersonId={personId}
           />
           // associar pessoa ao abrir o modal
         )}
