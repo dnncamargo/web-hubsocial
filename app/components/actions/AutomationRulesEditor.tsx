@@ -8,6 +8,7 @@ import { Event } from '../../utils/interfaces'
 import {
   AutomationRule,
   AutomationRuleSet,
+  WeatherCondition,
   WeekdayName,
 } from '../../types/automation'
 import styles from './AutomationRulesEditor.module.css'
@@ -37,6 +38,14 @@ const weekdayByDateIndex: WeekdayName[] = [
   'thursday',
   'friday',
   'saturday',
+]
+
+const weatherOptions: Array<{ value: WeatherCondition; label: string }> = [
+  { value: 'sunny', label: 'Ensolarado' },
+  { value: 'cloudy', label: 'Nublado' },
+  { value: 'rainy', label: 'Chuvoso' },
+  { value: 'snowy', label: 'Nevando' },
+  { value: 'stormy', label: 'Tempestade' },
 ]
 
 function replaceRuleByType(
@@ -97,6 +106,11 @@ export default function AutomationRulesEditor({
     [value.rules],
   )
 
+  const weatherRule = useMemo(
+    () => value.rules.find((rule) => rule.type === 'weather'),
+    [value.rules],
+  )
+
   const upcomingEventRule = useMemo(
     () => value.rules.find((rule) => rule.type === 'upcomingEvent'),
     [value.rules],
@@ -130,6 +144,32 @@ export default function AutomationRulesEditor({
       replaceRuleByType(value, 'weekday', {
         ...weekdayRule,
         weekdays: nextWeekdays,
+      }),
+    )
+  }
+
+  const toggleWeatherRule = (enabled: boolean) => {
+    if (!enabled) {
+      onChange(replaceRuleByType(value, 'weather', null))
+      return
+    }
+
+    onChange(
+      replaceRuleByType(value, 'weather', {
+        id: crypto.randomUUID(),
+        type: 'weather',
+        condition: 'sunny',
+      }),
+    )
+  }
+
+  const updateWeatherCondition = (condition: WeatherCondition) => {
+    if (!weatherRule || weatherRule.type !== 'weather') return
+
+    onChange(
+      replaceRuleByType(value, 'weather', {
+        ...weatherRule,
+        condition,
       }),
     )
   }
@@ -235,7 +275,39 @@ export default function AutomationRulesEditor({
         <label className={styles.ruleToggle}>
           <input
             type="checkbox"
-            checked={Boolean(upcomingEventRule)}
+            checked={Boolean(weatherRule)}
+            onChange={(event) => toggleWeatherRule(event.currentTarget.checked)}
+          />
+          <span>Clima atual</span>
+        </label>
+
+        {weatherRule?.type === 'weather' && (
+          <label className={styles.field}>
+            <span>Destacar quando estiver</span>
+            <select
+              className={styles.select}
+              value={weatherRule.condition}
+              onChange={(event) =>
+                updateWeatherCondition(
+                  event.currentTarget.value as WeatherCondition,
+                )
+              }
+            >
+              {weatherOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      <div className={styles.rule}>
+        <label className={styles.ruleToggle}>
+          <input
+            type="checkbox"
+            checked={Boolean(upcomingEventRule)
             disabled={!upcomingEventRule && events.length === 0}
             onChange={(event) =>
               toggleUpcomingEventRule(event.currentTarget.checked)
