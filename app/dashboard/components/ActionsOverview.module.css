@@ -4,6 +4,29 @@
   margin-bottom: 2rem;
 }
 
+.weatherContext {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.weatherAttribution {
+  color: #9ca3af;
+  font-size: 0.7rem;
+}
+
+.weatherAttribution a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.weatherAttribution a:hover {
+  color: #6b7280;
+}
+
 .primarySection,
 .secondarySection {
   border: 1px solid #e5e7eb;
@@ -151,6 +174,13 @@
 }
 
 @media (min-width: 48rem) {
+  .weatherContext {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
   .secondaryGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
