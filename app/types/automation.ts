@@ -9,7 +9,7 @@ export type WeekdayName =
   | 'saturday'
   | 'sunday'
 
-export type WeatherCondition = 'sunny' | 'cloudy' | 'rainy'
+export type WeatherCondition = 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'stormy'
 
 export type AutomationRule =
   | {
