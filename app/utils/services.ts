@@ -114,11 +114,11 @@ export function formatDate(
       return `${format(startFull, 'dd')} ${arrow} ${formatDM(endFull)}`
     }
 
-    if (!isSameMonth && sameYear) {
+    if (!sameMonth && sameYear) {
       return `${formatDM(startFull)} ${arrow} ${formatDM(endFull)}`
     }
 
-    if (!isSameYear && yearDiff === 1) {
+    if (!sameYear && yearDiff === 1) {
       return `${formatDM(startFull)} ${arrow} ${formatDMY(endFull)}`
     }
 

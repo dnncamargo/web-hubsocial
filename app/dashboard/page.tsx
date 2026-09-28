@@ -3,14 +3,14 @@
 import { useState, useEffect, JSX } from 'react';
 import { getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
-import { useAuth } from '../components/AuthProvider';
+import { useAuth } from '../components/auth/AuthProvider';
 import { Event, Person } from '../utils/interfaces';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
 import { StarIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import ProtectedRoute from '../components/ProtectedRoute'
-import MainMenu from '../components/MainMenu';
-import UpcomingEventCard from '../components/UpcomingEventCard';
-import SuggestionPanel from '../components/SuggestionPanel';
+import ProtectedRoute from '../components/auth/ProtectedRoute'
+import MainMenu from '../components/ui/MainMenu';
+import UpcomingEventCard from './components/UpcomingEventCard';
+import SuggestionPanel from './components/SuggestionPanel';
 import Masonry from 'react-masonry-css'
 
 type GroupedEvents = {
@@ -167,7 +167,7 @@ export default function Dashboard(): JSX.Element {
    * @param {Event}
    */
   const renderEvent = (event: Event) => {
-    const associatedPerson = person.find(p => p.id === event.personId)
+    const associatedPerson = person.find(p => event.personIds?.includes(p.id))
     return (
       <div
         key={event.id}

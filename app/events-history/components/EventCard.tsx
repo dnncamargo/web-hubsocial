@@ -1,0 +1,126 @@
+'use client'
+
+import { JSX } from 'react';
+import { useRouter } from 'next/navigation';
+import { Event } from '../../utils/interfaces';
+import { ClockIcon, MapPinIcon, LinkIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { formatDate } from '../../utils/services';
+
+/**
+ * @interface EventCardProps
+ * @description Props para o componente `EventCard`, que exibe informações resumidas de um evento e oferece ação de edição.
+ * @property {Event} event - O objeto do evento a ser exibido no cartão.
+ * @property {(event: Event) => void} onEditEvent - Função chamada ao solicitar a edição do evento. Recebe o objeto do evento como argumento.
+ */
+interface EventCardProps {
+  event: Event;
+  onEditEvent: (event: Event) => void;
+}
+
+/**
+ * @component
+ * @description Componente para exibir um cartão resumido de um evento, incluindo título, data, hora (opcional), endereço e descrição (opcional). Ao clicar no cartão, navega para a página de detalhes do evento.
+ * @param {EventCardProps} { event, onEditEvent } - Props para o componente.
+ * @returns {JSX.Element} Um cartão representando as informações do evento.
+ */
+const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
+  const router = useRouter(); /** @const {NextRouter} router - O roteador do Next.js para navegação entre páginas. */
+
+  return (
+    <div
+      // information: onClick={() => router.push(`/events-history/${event.id}`)}
+      onClick={() => router.push(`/events-history/${event.id}`)}
+      className="card-container-large card-container-bg">
+
+      {/* Título do card */}
+      <div className="card-header-large card-header-bg">
+        <h2 className="card-header-title-large flex-1 break-words color-eh-dark">{event.title}</h2>
+        {/* Data */}
+        <span
+          className="card-header-far-right h- flex items-center color-eh-light">
+          {formatDate(event.startDate, event.endDate, event.startTime, event.endTime, event.allDay)}
+        </span>
+      </div>
+
+      {/* Conteúdo */}
+      <div className="card-content-large">
+        {/* Hora */}
+        {event.startTime && (
+          <div className="card-content-info-large text-gray-500 mb-2">
+            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0"><ClockIcon className="w-full h-full" /></div>
+            {/* {event.hour && `${event.hour} - `}{event.address} */}
+            <div>{event.startTime}</div>
+          </div>
+        )}
+        {/* Localidade */}
+        {event.location && (
+          <div className="card-content-info-large text-gray-500 mb-2">
+            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0">
+              {event.location.startsWith('http') ? (
+                <LinkIcon className="w-full h-full" />
+              ) : (
+                <MapPinIcon className="w-full h-full" />
+              )}
+            </div>
+            <div className="text-pretty truncate overflow-x-auto">
+              {event.location}
+            </div>
+          </div>
+        )}
+
+        {/* Campos Opcionais */}
+
+        {event.optionalFields && event.optionalFields.length > 0 && (
+          <div className="space-y-4">
+
+            {event.optionalFields.map((field) => (
+              <div key={field.id} >
+                {field.label === 'Descrição' && typeof field.value === 'string' ? (
+                  <div className="card-content-info-large text-gray-500 mb-2">
+                    <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0 flex items-start">
+                      <PencilSquareIcon className="w-full h-full" />
+                    </div>
+                    <div className='text-pretty truncate'>
+                      {field.value}
+                    </div>
+                  </div>
+                ) : ('')}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Categorias */}
+      <div className='mt-2 ml-2'>
+        {event.categories && event.categories.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {event.categories.map((cat: string, index: number) => (
+              <span
+                key={index}
+                className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full"
+              >
+                {cat}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Botão de editar */}
+        <div className="card-bottom-end">
+          <button
+            className="color-eh-base"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditEvent(event);
+            }}>
+            Editar
+          </button>
+        </div>
+      </div>
+    </div >
+
+  );
+};
+
+export default EventCard;

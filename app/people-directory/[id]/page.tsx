@@ -2,13 +2,13 @@
 
 import { useState, useEffect, JSX } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, getDocs, query, where, collection, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, where, collection } from 'firebase/firestore';
 import { db } from '../../utils/firebaseConfig';
-import { useAuth } from '@/app/components/AuthProvider';
+import { useAuth } from '@/app/components/auth/AuthProvider';
 import { Event, Person } from '@/app/utils/interfaces';
-import ProtectedRoute from '@/app/components/ProtectedRoute';
-import MainMenu from '@/app/components/MainMenu';
-import AddEventModal from '@/app/components/AddEventModal'; // certifique-se do caminho correto
+import ProtectedRoute from '@/app/components/auth/ProtectedRoute';
+import MainMenu from '@/app/components/ui/MainMenu';
+import AddEventModal from '../../events-history/components/AddEventModal'; // certifique-se do caminho correto
 
 /**
  * @component
@@ -19,18 +19,17 @@ const PersonDetails = (): JSX.Element => {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
   const { id } = useParams();  /** @const {string} id - O ID do evento a ser exibido, extraído da URL. */
   const router = useRouter(); /** @const {object} router - O objeto de roteamento do Next.js. */
+  const personId = Array.isArray(id) ? id[0] : id;
   const [person, setPerson] = useState<Person | null>(null); /** @state {Person | null} person - Os detalhes da pessoa buscada do Firestore. Inicialmente null. */
   const [events, setEvents] = useState<Event[]>([]); /** @state {Event[]} events - A lista de eventos associados à pessoa, buscados do Firestore. Inicialmente um array vazio. */
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false); /** @state {boolean} isAddEventModalOpen - Controla a visibilidade do modal para adicionar um novo evento para esta pessoa. */
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    if (uid && id) {
+    if (uid && personId) {
       fetchPerson();
       fetchEvents();
-      fetchCategories();
     }
-  }, [uid, id]);
+  }, [uid, personId]);
 
   /**
    * @async
@@ -40,7 +39,7 @@ const PersonDetails = (): JSX.Element => {
    */
   const fetchPerson = async (): Promise<void> => {
     try {
-      const docRef = doc(db, `users/${uid}/people-directory/${id}`);
+      const docRef = doc(db, `users/${uid}/people-directory/${personId}`);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setPerson({ id: docSnap.id, ...docSnap.data() } as Person);
@@ -52,43 +51,13 @@ const PersonDetails = (): JSX.Element => {
   };
 
   const fetchEvents = async () => {
-    const q = query(collection(db, `users/${uid}/events-history`), where('personId', '==', `${id}`));
+    const q = query(collection(db, `users/${uid}/events-history`), where('personIds', 'array-contains', personId));
     const querySnapshot = await getDocs(q);
     const eventData = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Event[];
     setEvents(eventData);
-  };
-
-  const fetchCategories = async () => {
-    const EventsSettingRef = doc(db, `users/${uid}/settings`, 'userCategories');
-    const docSnap = await getDoc(EventsSettingRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      setAvailableCategories(data.category ?? []);
-    }
-  };
-
-  const handleAddCategory = async (newCategory: string) => {
-    if (!uid) return;
-
-    const trimmed = newCategory.trim();
-    if (!trimmed || availableCategories.includes(trimmed)) return;
-
-    const updatedCategories = [...availableCategories, trimmed];
-
-    try {
-      // Salva no Firestore
-      const EventsSettingRef = doc(db, `users/${uid}/settings`, 'userCategories');
-      await setDoc(EventsSettingRef, { category: updatedCategories }, { merge: true });
-
-      // Atualiza o estado local
-      setAvailableCategories(updatedCategories);
-
-    } catch (error) {
-      console.error('Erro ao adicionar nova categoria:', error);
-    }
   };
 
   if (!person) return <div className="animate-pulse text-gray-500 m-6">Carregando as informações da Pessoa...</div>;
@@ -112,7 +81,7 @@ const PersonDetails = (): JSX.Element => {
           {/* Outras informações */}
           {person.birthday && <p><strong>Aniversário:</strong> {person.birthday}</p>}
           {person.note && <p><strong>Notas:</strong> {person.note}</p>}
-          {person.relationship && <p><strong>Relacionamento:</strong> {person.relationship}</p>}
+          {person.relationships && <p><strong>Relacionamento:</strong> {person.relationships.join(', ')}</p>}
         </div>
 
         {/* Campos Opcionais */}
@@ -124,7 +93,7 @@ const PersonDetails = (): JSX.Element => {
 
                 <p className="font-semibold">{field.label}</p>
 
-                {field.type === 'note' && (
+                {field.type === 'text' && (
                   <p className="text-gray-700 whitespace-pre-wrap">{field.value}</p>
                 )}
 
@@ -134,11 +103,11 @@ const PersonDetails = (): JSX.Element => {
                   </a>
                 )}
 
-                {field.type === 'phone' && (
+                {field.type === 'additionalPhone' && (
                   <p className="text-gray-700">{field.value}</p>
                 )}
 
-                {field.type === 'email' && (
+                {field.type === 'additionalEmail' && (
                   <a href={`mailto:${field.value}`} className="text-blue-600 underline">
                     {field.value}
                   </a>
@@ -214,22 +183,11 @@ const PersonDetails = (): JSX.Element => {
             onAdded={() => {
               setIsAddEventModalOpen(false);
               // Refaz a lista de eventos depois de adicionar
-              const fetchEvents = async () => {
-                const q = query(collection(db, `users/${uid}/events-history`), where('personId', '==', id));
-                const querySnapshot = await getDocs(q);
-                const eventData = querySnapshot.docs.map(doc => ({
-                  id: doc.id,
-                  ...doc.data()
-                })) as Event[];
-                setEvents(eventData);
-              };
               fetchEvents();
             }}
-            initialPersonId={person.id}
-            availableCategories={availableCategories}
-            setAvailableCategories={setAvailableCategories}
-            onAddCategory={handleAddCategory}
+            initialPersonId={personId}
           />
+          // associar pessoa ao abrir o modal
         )}
       </div>
     </ProtectedRoute>
