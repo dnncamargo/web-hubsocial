@@ -66,7 +66,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
         for (const person of people) {
             const birthday = person.birthday ? parseISO(person.birthday) : null
             const lastEvent = events
-                .filter(e => e.personId === person.id)
+                .filter(e => e.personIds?.includes(person.id))
                 .sort((a, b) => (new Date(b.startDate)).getTime() - (new Date(a.startDate)).getTime())[0]
 
             {/* Aniversário nos próximos 7 dias */ }
@@ -123,13 +123,19 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
             return;
         }
 
+        const suggestedDate = suggestion.suggestedDate.split('T')[0];
+
         await addDoc(collection(db, `users/${uid}/events-history`), {
             title: suggestion.reason === 'belatedBirthday'
                 ? `Feliz aniversário atrasado para ${suggestion.person.name}`
                 : `Contato com ${suggestion.person.name}`,
-            personId: suggestion.person.id,
-            date: suggestion.suggestedDate.split('T')[0],
-            hour: '12:00',
+            personIds: [suggestion.person.id],
+            allDay: false,
+            startDate: suggestedDate,
+            endDate: suggestedDate,
+            startTime: '12:00',
+            endTime: '13:00',
+            status: 0,
             createdAt: new Date(),
         });
 

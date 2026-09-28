@@ -139,9 +139,9 @@ export default function UpcomingEventCard({ event, person, onToggleStatus }: Upc
           )} */}
 
           {/* Categorias */}
-          {event.category && event.category.length > 0 && (
+          {event.categories && event.categories.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-4">
-              {event.category.map((cat: string, index: number) => (
+              {event.categories.map((cat: string, index: number) => (
                 <span
                   key={index}
                   className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-full"

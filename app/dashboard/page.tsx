@@ -167,7 +167,7 @@ export default function Dashboard(): JSX.Element {
    * @param {Event}
    */
   const renderEvent = (event: Event) => {
-    const associatedPerson = person.find(p => p.id === event.personId)
+    const associatedPerson = person.find(p => event.personIds?.includes(p.id))
     return (
       <div
         key={event.id}
