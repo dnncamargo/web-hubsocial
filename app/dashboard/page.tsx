@@ -320,7 +320,20 @@ export default function Dashboard(): JSX.Element {
    */
   const renderEvent = (event: Event) => {
     const associatedPerson = person.find(p => event.personIds?.includes(p.id))
-    const groupLabels: Record<keyof GroupedEvents, string> = {
+    return (
+      <div
+        key={event.id}
+      >
+        <UpcomingEventCard
+          key={event.id}
+          event={event}
+          person={associatedPerson}
+          onToggleStatus={handleToggleEventStatus} />
+      </div>
+    )
+  }
+
+  const groupLabels: Record<keyof GroupedEvents, string> = {
     today: 'Hoje',
     tomorrow: 'Amanhã',
     thisWeek: 'Esta semana',
