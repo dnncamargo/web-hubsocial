@@ -41,8 +41,6 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
   const [endTime, setEndTime] = useState(defaultTime); /** @state {string} endTime - Hora de término do evento no formato 'HH:MM'. */
   const [error, setError] = useState('');
 
-  if (!isOpen || !uid || !task) return null
-
   useEffect(() => {
     if (task) {
       setContent(task.content)
@@ -175,6 +173,8 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
     }
     return null;
   }
+
+  if (!isOpen || !uid) return null
 
   return (
     <motion.div

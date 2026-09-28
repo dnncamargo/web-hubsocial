@@ -58,15 +58,6 @@ export function OptionalFieldRenderer({ field, onChange, onLabelChange, onRemove
                 />
             )}
 
-            {field.type === "additionalEmail" && (
-                <TextInputField
-                    label={field.label}
-                    value={field.value as string}
-                    onChange={onChange}
-                    onLabelChange={onLabelChange}
-                />
-            )}
-
             {field.type === "additionalPhone" && (
                 <TextInputField
                     label={field.label}

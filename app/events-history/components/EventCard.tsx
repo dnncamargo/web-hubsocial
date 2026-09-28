@@ -44,7 +44,7 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
         {/* Data */}
         <span
           className="card-header-far-right h- flex items-center color-eh-light">
-          {formatDate(event.startDate, event.endDate, event.startTime, event.startTime, event.allDay)}
+          {formatDate(event.startDate, event.endDate, event.startTime, event.endTime, event.allDay)}
         </span>
       </div>
 

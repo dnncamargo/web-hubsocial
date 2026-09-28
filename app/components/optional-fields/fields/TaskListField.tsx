@@ -26,9 +26,9 @@ export default function TaskListField({
     onChange(updated);
   };
 
-  const updateTaskText = (id: string, title: string) => {
+  const updateTaskText = (id: string, text: string) => {
     const updated = value.map(task =>
-      task.id === id ? { ...task, title } : task
+      task.id === id ? { ...task, text } : task
     );
     onChange(updated);
   };

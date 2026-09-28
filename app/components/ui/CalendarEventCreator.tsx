@@ -2,14 +2,32 @@
 
 import useEventDate from '../../hooks/useEventDate'
 
-type CalendarEventCreatorProps = ReturnType<typeof useEventDate>
+type DateControl = ReturnType<typeof useEventDate>
+
+type CalendarEventCreatorProps = Pick<
+  DateControl,
+  | 'allDay'
+  | 'setAllDay'
+  | 'startDate'
+  | 'setStartDate'
+  | 'endDate'
+  | 'setEndDate'
+  | 'startTime'
+  | 'endTime'
+  | 'setEndTime'
+> & {
+  setStartTime?: (value: string) => void
+  handleStartTimeChange?: (value: string) => void
+}
 
 export default function CalendarEventCreator({
   allDay,  setAllDay,
   startDate,  setStartDate,
   endDate,  setEndDate,
-  startTime = '',  
-  endTime = '',  setEndTime = () => {},
+  startTime = '',
+  setStartTime = () => {},
+  endTime = '',
+  setEndTime = () => {},
   handleStartTimeChange
 }: CalendarEventCreatorProps) {
  
@@ -43,7 +61,7 @@ export default function CalendarEventCreator({
             type="time"
             step="300"
             value={startTime}
-            onChange={(e) => handleStartTimeChange(e.target.value)}
+            onChange={(e) => (handleStartTimeChange ?? setStartTime)(e.target.value)}
             className="w-24 p-2 border rounded"
           />
         )}
