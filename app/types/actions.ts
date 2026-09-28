@@ -1,3 +1,5 @@
+import { AutomationEvaluation } from './automation'
+
 export type ActionHorizon = 'day' | 'week' | 'month'
 
 export interface ActionPlanning {
@@ -25,6 +27,7 @@ export interface ActionProjectionItem {
   sourceId: string
   title: string
   completed: boolean
+  automation: AutomationEvaluation
   date?: string
   time?: string
 }
