@@ -5,7 +5,7 @@
 @layer components {
 
   .title-logo {
-    font-family: var(--font-connexus);
+    font-family: var(--font-brand);
   }
 
   .login-container {
