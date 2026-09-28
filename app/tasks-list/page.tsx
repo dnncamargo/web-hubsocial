@@ -8,7 +8,6 @@ import { useAuth } from "../components/auth/AuthProvider"
 import { Task } from "../utils/interfaces"
 import { FileCheck2, Plus } from "lucide-react"
 import ProtectedRoute from '../components/auth/ProtectedRoute'
-import MainMenu from "../components/ui/MainMenu"
 import AddTaskModal from "./components/AddTaskModal"
 import TaskSection from "./components/TaskSection"
 import EditTaskModal from "./components/EditTaskModal"
@@ -66,7 +65,6 @@ export default function TasksList() {
 
 
             <main className="main-container-body main-container-bg">
-                <MainMenu />
 
                 <h1 className="text-2xl font-bold mb-4">Lista de Tarefas</h1>
                 <div className="space-y-6">

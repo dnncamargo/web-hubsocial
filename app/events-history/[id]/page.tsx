@@ -9,7 +9,6 @@ import { Event, Person } from '@/app/utils/interfaces';
 import { OptionalField } from '@/app/types/optionalFields';
 import { createGoogleCalendarEvent } from '@/app/utils/googleCalendar';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
-import MainMenu from '../../components/ui/MainMenu';
 import { CheckCircle, Circle, Star } from 'lucide-react';
 
 /**
@@ -138,8 +137,6 @@ const EventDetails = () => {
     <ProtectedRoute>
       <div className="p-6 space-y-6 gap-2">
 
-        {/* Renderiza o menu principal da aplicação. */}
-        <MainMenu />
         <h1 className="text-xl font-semibold">Detalhes do Evento</h1>
 
         {/* Dados principais */}

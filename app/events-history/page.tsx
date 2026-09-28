@@ -6,7 +6,6 @@ import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
 import { Event } from '../utils/interfaces';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import MainMenu from '../components/ui/MainMenu';
 import EventCard from './components/EventCard';
 import AddEventModal from './components/AddEventModal';
 import EditEventModal from './components/EditEventModal';
@@ -39,7 +38,6 @@ const EventsHistory = (): JSX.Element => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);  /** @state {Event | null} selectedEvent - O evento selecionado para edição. */
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);  /** @state {boolean} isAddEventModalOpen - Controla a visibilidade do modal de adicionar um novo evento. */
   const [isEditModalOpen, setIsEditModalOpen] = useState(false); /** @state {boolean} isEditModalOpen - Controla a visibilidade do modal de edição de um evento existente. */
-  const [menuCloseTrigger, setMenuCloseTrigger] = useState<boolean>(false)  /** @state {boolean} closeMenu - Controla a visibilidade do menu principal. */
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false); // para evitar renderização prematura
   const [filters, setFilters] = useState<EventFilter>({
@@ -213,7 +211,6 @@ const EventsHistory = (): JSX.Element => {
       <main className="main-container-body main-container-bg">
 
         {/* Renderiza o menu principal da aplicação. */}
-        <MainMenu externalCloseTrigger={menuCloseTrigger} />
 
         <div className="flex justify-between">
           <h1 className="title-1">Histórico de Eventos</h1>
@@ -337,7 +334,6 @@ const EventsHistory = (): JSX.Element => {
         <button
           onClick={() => {
             setIsAddEventModalOpen(true); // Abre o modal de adição
-            setMenuCloseTrigger(true); // Fecha o menu principal ao abrir o modal
           }}
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg text-3xl hover:bg-blue-600 transition"
         >

@@ -13,7 +13,6 @@ import { getActionPeriodKeys } from '../utils/actionPlanning';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
 import { Star } from 'lucide-react';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
-import MainMenu from '../components/ui/MainMenu';
 import UpcomingEventCard from './components/UpcomingEventCard';
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
@@ -56,7 +55,6 @@ export default function Dashboard(): JSX.Element {
   });
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false); /** @state {boolean} showSuggestions - Controla a visibilidade do painel de sugestões de eventos. */
-  const [menuCloseTrigger, setMenuCloseTrigger] = useState<boolean>(false)  /** @state {boolean} closeMenu - Controla a visibilidade do menu principal. */
 
   useEffect(() => {
     // Chama as funções fetchPerson e fetchAndGroupEvents quando o componente é montado.
@@ -341,7 +339,6 @@ export default function Dashboard(): JSX.Element {
       <main className="main-container-body main-container-bg">
 
         {/* Renderiza o menu principal da aplicação. */}
-        <MainMenu externalCloseTrigger={menuCloseTrigger} />
 
         <ActionsOverview actions={actions} weather={weather} />
 
@@ -387,7 +384,6 @@ export default function Dashboard(): JSX.Element {
         <button
           onClick={() => {
             setShowSuggestions(true); // Abre o painel de sugestões
-            setMenuCloseTrigger(true); // Fecha o menu principal ao abrir o painel de sugestões
           }}
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg z-50"
           aria-label="Ver sugestões"
