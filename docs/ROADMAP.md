@@ -326,7 +326,7 @@ The following sequence is the current required roadmap.
 
 ### 6.1. Platform 6A — Fix the Vite development port
 
-**Status: NEXT**
+**Status: DONE**
 
 Add an explicit dev-server contract:
 
@@ -625,12 +625,11 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Platform 6A — pin Vite dev server to port 5173 with strictPort: true
+Platform 6B — migrate Heroicons to Lucide
 ```
 
 After that:
 
 ```text
-Platform 6B — migrate Heroicons to Lucide
-→ Visual 1–4 — complete the native CSS / CSS Modules migration and canonical workspace shell
+Visual 1–4 — complete the native CSS / CSS Modules migration and canonical workspace shell
 ```
