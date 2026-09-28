@@ -7,6 +7,7 @@ import useEventDate from './useEventDate';
 import { useOptionalFields } from './useOptionalFields';
 import { useAssociatePerson } from './useAssociatePerson';
 import { useEventCategories } from './useEventCategories';
+import { buildEventPayload, EventPayload } from '../utils/eventPayload';
 
 interface UseEventFormProps {
     uid: string;
@@ -31,7 +32,6 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         endDate,
         startTime,
         endTime,
-        getNextDay,
         timeZone,
     } = dateControl;
 
@@ -97,8 +97,8 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         return null;
     }
 
-    function formatEvent(): any {
-        const base = {
+    function buildCurrentEventPayload(): EventPayload {
+        return buildEventPayload({
             title: title.trim(),
             location,
             allDay, timeZone,
@@ -106,11 +106,10 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
             startTime, endTime,
             optionalFields,
             personIds: associatedPersonIds,
-            categories: selectedCategories.length > 0 ? selectedCategories : null,
+            categories: selectedCategories,
+            status: event?.status,
             createdAt: event?.createdAt || new Date(),
-        }
-
-        return base
+        })
     }
 
     async function createEvent() {
@@ -121,7 +120,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         }
 
         try {
-            const eventRef = formatEvent();
+            const eventRef = buildCurrentEventPayload();
             await addDoc(collection(db, `users/${uid}/events-history`), eventRef);
 
             resetOptionalFields();
@@ -142,7 +141,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         }
 
         try {
-            const eventRef = formatEvent();
+            const eventRef = buildCurrentEventPayload();
             await updateDoc(doc(db, `users/${uid}/events-history/${event?.id}`), { ...eventRef });
             resetOptionalFields();
             return true;

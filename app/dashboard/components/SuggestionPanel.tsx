@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { differenceInDays, isAfter, parseISO, add } from 'date-fns'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Person, Event, EventSuggestion } from '../../utils/interfaces'
+import { buildEventPayload } from '../../utils/eventPayload'
 import SuggestionCard from './SuggestionCard';
 
 interface SuggestionPanelProps {
@@ -125,7 +126,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
 
         const suggestedDate = suggestion.suggestedDate.split('T')[0];
 
-        await addDoc(collection(db, `users/${uid}/events-history`), {
+        await addDoc(collection(db, `users/${uid}/events-history`), buildEventPayload({
             title: suggestion.reason === 'belatedBirthday'
                 ? `Feliz aniversário atrasado para ${suggestion.person.name}`
                 : `Contato com ${suggestion.person.name}`,
@@ -137,7 +138,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
             endTime: '13:00',
             status: 0,
             createdAt: new Date(),
-        });
+        }));
 
         onEventCreated();
         setSuggestions(prev => prev.filter(s => s !== suggestion));

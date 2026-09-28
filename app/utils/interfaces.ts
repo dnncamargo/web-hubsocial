@@ -28,8 +28,9 @@ export interface Event {
   rating?: number;
   categories?: string[];
   status: 0 | 1;
+  timeZone?: string;
   optionalFields?: OptionalFieldType[];
-  createdAt?: Date;
+  createdAt?: Date | Timestamp;
 }
 
 export interface Task {

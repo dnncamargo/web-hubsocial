@@ -7,6 +7,7 @@ import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
 import { Task } from '../../utils/interfaces'
 import { OptionalField, TaskItem } from '../../types/optionalFields'
+import { buildEventPayload } from '../../utils/eventPayload'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
 import useEventDate from '../../hooks/useEventDate'
 
@@ -76,14 +77,15 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
         });
       }
 
-      const newEvent = {
+      const newEvent = buildEventPayload({
         title: content.trim(),
         startDate,
         endDate,
-        ...(allDay ? { allDay: true } : { startTime, endTime }),
-        createdAt: new Date().toISOString(),
+        allDay,
+        ...(!allDay ? { startTime, endTime } : {}),
+        createdAt: new Date(),
         optionalFields,
-      };
+      });
 
       try {
         await addDoc(collection(db, `users/${uid}/events-history`), newEvent);
