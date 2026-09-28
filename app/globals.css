@@ -22,5 +22,5 @@
 body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
-  padding: 30px;
+  padding: 0;
 }
