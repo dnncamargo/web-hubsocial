@@ -1,7 +1,7 @@
 'use client';
 
 import { JSX } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router';
 import { Person } from '../../utils/interfaces';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartOutline, CalendarDaysIcon as CalendarIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
@@ -26,12 +26,11 @@ interface PersonCardProps {
  * @returns {JSX.Element} Um cartão representando as informações da pessoa.
  */
 const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps): JSX.Element => {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   return (
     <div
-      // information: onClick={() => router.push(`/people-directory/${person.id}`)}
-      onClick={() => router.push(`/people-directory/${person.id}`)}
+      onClick={() => navigate(`/people-directory/${person.id}`)}
       className="card-container-large card-container-bg">
 
       {/* Título do card */}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, JSX } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useNavigate, useParams } from 'react-router';
 import { doc, getDoc, getDocs, query, where, collection } from 'firebase/firestore';
 import { db } from '../../utils/firebaseConfig';
 import { useAuth } from '@/app/components/auth/AuthProvider';
@@ -17,9 +17,8 @@ import AddEventModal from '../../events-history/components/AddEventModal'; // ce
  */
 const PersonDetails = (): JSX.Element => {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
-  const { id } = useParams();  /** @const {string} id - O ID do evento a ser exibido, extraído da URL. */
-  const router = useRouter(); /** @const {object} router - O objeto de roteamento do Next.js. */
-  const personId = Array.isArray(id) ? id[0] : id;
+  const { id: personId } = useParams<{ id: string }>(); /** @const {string} personId - O ID da pessoa a ser exibida, extraído da URL. */
+  const navigate = useNavigate();
   const [person, setPerson] = useState<Person | null>(null); /** @state {Person | null} person - Os detalhes da pessoa buscada do Firestore. Inicialmente null. */
   const [events, setEvents] = useState<Event[]>([]); /** @state {Event[]} events - A lista de eventos associados à pessoa, buscados do Firestore. Inicialmente um array vazio. */
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false); /** @state {boolean} isAddEventModalOpen - Controla a visibilidade do modal para adicionar um novo evento para esta pessoa. */
@@ -171,7 +170,7 @@ const PersonDetails = (): JSX.Element => {
         </button>
 
         {/* Botão Voltar */}
-        <button onClick={() => router.back()} className="w-full items-center rounded-md border py-2  border-gray-300 bg-white">
+        <button onClick={() => navigate(-1)} className="w-full items-center rounded-md border py-2  border-gray-300 bg-white">
           Voltar
         </button>
 

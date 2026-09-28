@@ -1,6 +1,3 @@
-@tailwind base;
-@tailwind components;
-
 @import '../app/styles/layout.css';
 @import '../app/styles/menu.css';
 @import '../app/styles/cards.css';
@@ -9,6 +6,18 @@
 @import '../app/styles/buttons.css';
 @import '../app/styles/forms.css';
 
+@tailwind base;
+@tailwind components;
+
+@font-face {
+  font-family: 'Brand';
+  src: url('./assets/Connexus.ttf') format('truetype');
+  font-display: swap;
+}
+
+:root {
+  --font-brand: 'Brand', sans-serif;
+}
 
 @tailwind utilities;
 

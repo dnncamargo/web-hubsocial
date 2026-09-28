@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from './AuthProvider'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router'
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { uid, googleAccessToken, loading } = useAuth()
-  const router = useRouter()
+  const navigate = useNavigate()
   const [checked, setChecked] = useState(false)
 
   useEffect(() => {
@@ -17,13 +17,13 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
     if (!googleAccessToken || !uid) {
       console.warn('[ProtectedRoute] ❌ Sessão inválida — redirecionando para login...')
-      router.replace('/auth-login')
+      navigate('/auth-login', { replace: true })
       return
     }
 
     console.log('[ProtectedRoute] ✅ Sessão válida com token e uid — prosseguindo')
     setChecked(true)
-  }, [loading, uid, googleAccessToken, router])
+  }, [loading, uid, googleAccessToken, navigate])
 
   if (loading || !checked) {
     return <div className="animate-pulse text-gray-500 m-6">Verificando autenticação...</div>

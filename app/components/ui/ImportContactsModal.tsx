@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider';
 import { Contact, fetchAllContacts, parseGoogleContact } from '../../utils/googleContacts'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router'
 import { db } from '../../utils/firebaseConfig'
 import { addDoc, collection } from 'firebase/firestore'
 import { motion } from 'motion/react'
@@ -16,7 +16,7 @@ interface ImportContactsModalProps {
 
 export default function ImportContactsPage({ onClose }: ImportContactsModalProps) {
   const { uid, googleAccessToken } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase e do Google autenticado. */
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -87,7 +87,7 @@ export default function ImportContactsPage({ onClose }: ImportContactsModalProps
 
       alert('Contatos importados!');
       onClose();
-      router.push('/people-directory');
+      navigate('/people-directory');
     } catch (error) {
       console.error('Erro ao importar:', error);
       alert('Erro ao importar contatos.');

@@ -2,10 +2,9 @@
 
 import { JSX, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { usePathname } from 'next/navigation'
+import { Link, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { useDeviceType } from '../../hooks/useDeviceType'
-import Link from 'next/link'
 import LogoutButton from './LogoutButton'
 import ImportContactsModal from './ImportContactsModal'
 import { instance } from '../../config/instance'
@@ -21,7 +20,7 @@ export default function MainMenu({ externalCloseTrigger }: MainMenuProps): JSX.E
   const [isOpen, setIsOpen] = useState(false);
   const [showImportContacts, setShowImportContacts] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const toggleMenu = (): void => setIsOpen(!isOpen);
   const device = useDeviceType()
 
@@ -53,13 +52,13 @@ export default function MainMenu({ externalCloseTrigger }: MainMenuProps): JSX.E
     <>
       <header className="fixed top-0 left-0 w-full backdrop-blur bg-white/80 z-50 border-b">
         <div className="grid grid-cols-2 items-center max-w-5xl mx-auto px-4 h-14">
-          <Link href="/" className="title-logo mb-2">{instance.name}</Link>
+          <Link to="/" className="title-logo mb-2">{instance.name}</Link>
 
           <div className="flex justify-end items-center gap-4">
             <div className="hidden md:flex items-center gap-4">
-              <Link href="/people-directory" className={linkClass('/people-directory')}>Pessoas</Link>
-              <Link href="/events-history" className={linkClass('/events-history')}>Eventos</Link>
-              <Link href="/tasks-list" className={linkClass('/tasks-list')}>Tarefas</Link>
+              <Link to="/people-directory" className={linkClass('/people-directory')}>Pessoas</Link>
+              <Link to="/events-history" className={linkClass('/events-history')}>Eventos</Link>
+              <Link to="/tasks-list" className={linkClass('/tasks-list')}>Tarefas</Link>
             </div>
 
             <motion.button
@@ -88,9 +87,9 @@ export default function MainMenu({ externalCloseTrigger }: MainMenuProps): JSX.E
               {device === 'mobile' ? (
                 <div className="grid grid-cols-2 gap-4 p-4 text-center">
                   <div className="flex flex-col gap-2">
-                    <Link href="/people-directory" className={linkClass('/people-directory')} onClick={toggleMenu}>Pessoas</Link>
-                    <Link href="/events-history" className={linkClass('/events-history')} onClick={toggleMenu}>Eventos</Link>
-                    <Link href="/tasks-list" className={linkClass('/tasks-list')} onClick={toggleMenu}>Tarefas</Link>
+                    <Link to="/people-directory" className={linkClass('/people-directory')} onClick={toggleMenu}>Pessoas</Link>
+                    <Link to="/events-history" className={linkClass('/events-history')} onClick={toggleMenu}>Eventos</Link>
+                    <Link to="/tasks-list" className={linkClass('/tasks-list')} onClick={toggleMenu}>Tarefas</Link>
                   </div>
 
                   <div className="flex flex-col gap-2">

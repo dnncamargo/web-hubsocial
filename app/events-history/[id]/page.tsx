@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useNavigate, useParams } from 'react-router';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebaseConfig';
 import { useAuth } from '@/app/components/auth/AuthProvider';
@@ -21,9 +21,8 @@ import { CheckCircle, Circle } from 'lucide-react';
  */
 const EventDetails = () => {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
-  const params = useParams();
-  const id = typeof params.id === 'string' ? params.id : params.id?.[0];  /** @const {string} id - O ID do evento a ser exibido, extraído da URL. */
-  const router = useRouter(); /** @const {object} router - O objeto de roteamento do Next.js. */
+  const { id } = useParams<{ id: string }>(); /** @const {string} id - O ID do evento a ser exibido, extraído da URL. */
+  const navigate = useNavigate();
 
   const [event, setEvent] = useState<Event | null>(null); /** @state {Event | null} event - Os detalhes do evento buscado do Firestore. Inicialmente null. */
   const [person, setPerson] = useState<Person[] | null>(null); /** @state {Person[] | null} person - Os detalhes das pessoas associadas ao evento, buscados do Firestore. Inicialmente null. */
@@ -217,7 +216,7 @@ const EventDetails = () => {
 
         {/* Botão Voltar */}
         <button
-          onClick={() => router.back()}
+          onClick={() => navigate(-1)}
           className="btn-secondary w-full">
           Voltar
         </button>
