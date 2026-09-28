@@ -11,7 +11,7 @@ import { AutomationEventContext, evaluateAutomation } from '../utils/automation'
 import { getCurrentBrowserWeather, WeatherSnapshot } from '../utils/weather';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
-import { Star, X } from 'lucide-react';
+import { Star } from 'lucide-react';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import MainMenu from '../components/ui/MainMenu';
 import UpcomingEventCard from './components/UpcomingEventCard';
