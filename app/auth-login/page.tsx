@@ -1,93 +1,69 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { useAuth } from '../components/auth/AuthProvider'
+import { useGoogleLogin } from '@react-oauth/google'
+import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth'
 import { useNavigate } from 'react-router'
-import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth'
+import { useAuth } from '../components/auth/AuthProvider'
 import { instance } from '../config/instance'
 import { auth } from '../utils/firebaseConfig'
 import './login.css'
 
-//const auth = getAuth()
-const currentUser = auth.currentUser
-console.log('[currentUser]', currentUser)
-
 export default function LoginPage() {
   const navigate = useNavigate()
   const { setGoogleAccessToken, setUid } = useAuth()
-  const tokenClientRef = useRef<any>(null)
 
-  useEffect(() => {
-    if (!window.google || tokenClientRef.current) return
+  const loginWithGoogle = useGoogleLogin({
+    scope: [
+      'openid',
+      'profile',
+      'email',
+      'https://www.googleapis.com/auth/calendar',
+      'https://www.googleapis.com/auth/contacts.readonly',
+    ].join(' '),
+    onSuccess: async tokenResponse => {
+      const accessToken = tokenResponse.access_token
 
-    // scripts da Google Identity API
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
-      client_id: '996833302397-gsksfg2ujfqgt27jg5ulti0ffrnmje9a.apps.googleusercontent.com',
-      scope: [
-        'openid',
-        'profile',
-        'email',
-        'https://www.googleapis.com/auth/calendar',
-        'https://www.googleapis.com/auth/contacts.readonly'
-      ].join(' '),
-      callback: async (tokenResponse: { access_token: string }) => {
-        const accessToken = tokenResponse.access_token
-      
-        // Buscar dados do usuário (opcional, se quiser customizar UI)
+      try {
         const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         })
+
+        if (!res.ok) {
+          throw new Error(`Falha ao buscar perfil Google: ${res.status}`)
+        }
+
         const userInfo = await res.json()
-      
-        // Salvar no localStorage e contexto
+
         localStorage.setItem('googleAccessToken', accessToken)
         localStorage.setItem('userInfo', JSON.stringify(userInfo))
         setGoogleAccessToken(accessToken)
-      
-        // ✅ Criar a credencial Firebase com o access_token do Google
+
         const credential = GoogleAuthProvider.credential(null, accessToken)
-      
-        // 🔐 Autenticar com Firebase
-        signInWithCredential(auth, credential)
-          .then(userCredential => {
-            console.log('🪪 Usuário autenticado no Firebase:', userCredential.user)
-            localStorage.setItem('firebaseUid', userCredential.user.uid) // Salvar o uid no localStorage
-            setUid(userCredential.user.uid)
+        const userCredential = await signInWithCredential(auth, credential)
 
-            // Redirecionar
-            navigate('/')
-          })
-          .catch(error => {
-            console.error('Erro ao autenticar com Firebase:', error)
-          })
-      
+        localStorage.setItem('firebaseUid', userCredential.user.uid)
+        setUid(userCredential.user.uid)
+
+        navigate('/')
+      } catch (error) {
+        console.error('Erro ao autenticar com Google/Firebase:', error)
       }
-    })
-  }, [setGoogleAccessToken, navigate])
-
-  const handleLogin = () => {
-    if (tokenClientRef.current) {
-      tokenClientRef.current.requestAccessToken()
-    }
-  }
+    },
+    onError: errorResponse => {
+      console.error('Erro no login Google:', errorResponse)
+    },
+  })
 
   return (
     <div className="login-container">
       <div className="login-card">
         <h1 className="login-title title-logo">{instance.name}</h1>
 
-        {/* Botão customizado para login */}
         <button
           type="button"
-          onClick={handleLogin}
+          onClick={() => loginWithGoogle()}
           className="group relative w-full overflow-hidden rounded-md bg-blue-600 px-6 py-3 text-white transition-colors duration-1000 hover:bg-red-600 focus:outline-none"
         >
           <span className="relative z-10">Entrar com Google</span>
