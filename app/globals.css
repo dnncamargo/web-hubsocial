@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600&display=swap');
 @import '../app/styles/layout.css';
 @import '../app/styles/menu.css';
 @import '../app/styles/cards.css';
@@ -9,14 +10,8 @@
 @tailwind base;
 @tailwind components;
 
-@font-face {
-  font-family: 'Brand';
-  src: url('./assets/Connexus.ttf') format('truetype');
-  font-display: swap;
-}
-
 :root {
-  --font-brand: 'Brand', sans-serif;
+  --font-brand: 'Oxanium', sans-serif;
 }
 
 @tailwind utilities;
