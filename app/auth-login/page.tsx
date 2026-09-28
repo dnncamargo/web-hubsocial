@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useAuth } from '../components/auth/AuthProvider'
 import { useRouter } from 'next/navigation'
 import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth'
+import { instance } from '../config/instance'
 import { auth } from '../utils/firebaseConfig'
 import './login.css'
 
@@ -81,7 +82,7 @@ export default function LoginPage() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1 className="login-title title-logo">Connexus</h1>
+        <h1 className="login-title title-logo">{instance.name}</h1>
 
         {/* Botão customizado para login */}
         <button
