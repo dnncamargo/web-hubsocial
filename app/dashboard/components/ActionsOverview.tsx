@@ -1,8 +1,10 @@
 import { ActionProjection, ActionProjectionItem } from '../../types/actions'
+import { getWeatherConditionLabel, WeatherSnapshot } from '../../utils/weather'
 import styles from './ActionsOverview.module.css'
 
 interface ActionsOverviewProps {
   actions: ActionProjection
+  weather: WeatherSnapshot | null
 }
 
 function getAutomationStatus(item: ActionProjectionItem) {
@@ -88,9 +90,28 @@ function ActionSection({
   )
 }
 
-export default function ActionsOverview({ actions }: ActionsOverviewProps) {
+export default function ActionsOverview({ actions, weather }: ActionsOverviewProps) {
   return (
     <div className={styles.container}>
+      {weather && (
+        <div className={styles.weatherContext}>
+          <span>
+            {getWeatherConditionLabel(weather.condition)} · {Math.round(weather.temperatureC)}°C
+          </span>
+          <span className={styles.weatherAttribution}>
+            Dados meteorológicos:{' '}
+            <a
+              href="https://open-meteo.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open-Meteo
+            </a>
+            {' '}· condição simplificada pelo app
+          </span>
+        </div>
+      )}
+
       <ActionSection title="Ações do dia" items={actions.day} primary />
 
       <div className={styles.secondaryGrid}>
