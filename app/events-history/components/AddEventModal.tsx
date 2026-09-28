@@ -19,6 +19,7 @@ import { EventCategoriesModal } from './EventCategoriesModal';
 import { useEventCategories } from '@/app/hooks/useEventCategories';
 import { EventCategoriesRenderer } from './EventCategoriesRenderer';
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl';
+import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor';
 
 /**
  * @interface AddEventModalProps
@@ -85,6 +86,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
     title, setTitle,
     location, setLocation,
     actionPlanning, setActionPlanning,
+    automation, setAutomation,
     error, setError,
     createEvent
   } = useEventForm({ uid: effectiveUid, initialPersonId, dateControl, optionalFieldsControl, associatePersonControl, eventCategoriesControl }); // Hook para gerenciar o formulário de evento
@@ -228,6 +230,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onAdded,
             <ActionPlanningControl
               planning={actionPlanning}
               onChange={setActionPlanning}
+            />
+
+            <AutomationRulesEditor
+              uid={effectiveUid}
+              value={automation}
+              onChange={setAutomation}
             />
 
             {/* Switch Mostrar Mais */}
