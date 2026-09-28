@@ -3,6 +3,24 @@ import { WeatherCondition } from '../types/automation'
 const WEATHER_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
 const CACHE_DURATION_MS = 15 * 60 * 1000
 
+export const weatherConditions: Array<{
+  value: WeatherCondition
+  label: string
+}> = [
+  { value: 'sunny', label: 'Ensolarado' },
+  { value: 'cloudy', label: 'Nublado' },
+  { value: 'rainy', label: 'Chuvoso' },
+  { value: 'snowy', label: 'Nevando' },
+  { value: 'stormy', label: 'Tempestade' },
+]
+
+export function getWeatherConditionLabel(condition: WeatherCondition): string {
+  return (
+    weatherConditions.find((option) => option.value === condition)?.label ??
+    condition
+  )
+}
+
 export interface WeatherSnapshot {
   condition: WeatherCondition
   temperatureC: number
