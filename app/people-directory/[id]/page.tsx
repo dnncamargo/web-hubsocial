@@ -7,7 +7,6 @@ import { db } from '../../utils/firebaseConfig';
 import { useAuth } from '@/app/components/auth/AuthProvider';
 import { Event, Person } from '@/app/utils/interfaces';
 import ProtectedRoute from '@/app/components/auth/ProtectedRoute';
-import MainMenu from '@/app/components/ui/MainMenu';
 import AddEventModal from '../../events-history/components/AddEventModal'; // certifique-se do caminho correto
 
 /**
@@ -68,7 +67,6 @@ const PersonDetails = (): JSX.Element => {
       <div className="p-6 space-y-6">
 
         {/* Renderiza o menu principal da aplicação. */}
-        <MainMenu />
         <h1 className="text-2xl font-semibold">Detalhes da Pessoa</h1>
 
         {/* Dados principais */}

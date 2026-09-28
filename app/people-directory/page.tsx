@@ -6,7 +6,6 @@ import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
 import { Person } from '../utils/interfaces';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import MainMenu from '../components/ui/MainMenu';
 import PersonCard from './components/PersonCard';
 import AddPersonModal from './components/AddPersonModal';
 import EditPersonModal from './components/EditPersonModal';
@@ -38,7 +37,6 @@ const defaultFilters: PersonFilter = {
 const PeopleDirectory = (): JSX.Element => {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
   const [people, setPeople] = useState<Person[]>([]);  /** @state {Person[]} people - Array de pessoas buscadas do Firestore. */
-  const [menuCloseTrigger, setMenuCloseTrigger] = useState<boolean>(false)  /** @state {boolean} closeMenu - Controla a visibilidade do menu principal. */
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);  /** @state {boolean} isAddPersonModalOpen - Controla a visibilidade do modal de adicionar uma nova pessoa. */
   const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);  /** @state {boolean} isEditModalOpen - Controla a visibilidade do modal de edição de uma pessoa existente. */
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);  /** @state {Person | null} selectedPerson - A pessoa selecionada para edição. */
@@ -250,7 +248,6 @@ const PeopleDirectory = (): JSX.Element => {
       <main className="main-container-body main-container-bg">
 
         {/* Renderiza o menu principal da aplicação. */}
-        <MainMenu externalCloseTrigger={menuCloseTrigger} />
 
         <div className="flex justify-between">
           <h1 className="title-1">Diretório de Pessoas</h1>
@@ -380,7 +377,6 @@ const PeopleDirectory = (): JSX.Element => {
         <button
           onClick={() => {
             setIsAddPersonModalOpen(true); // Abre o modal de adição
-            setMenuCloseTrigger(true)
           } // Fecha o menu principal ao abrir o modal de adição
           }
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg text-3xl hover:bg-green-600 transition"
