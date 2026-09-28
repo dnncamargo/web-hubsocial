@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../../components/auth/AuthProvider';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
 import clsx from 'clsx';
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
