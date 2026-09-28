@@ -74,6 +74,14 @@
   border-top: 0;
 }
 
+.highlightedRow {
+  margin-inline: -0.5rem;
+  border-radius: 0.5rem;
+  background: #eff6ff;
+  box-shadow: inset 3px 0 0 #2563eb;
+  padding-inline: 0.5rem;
+}
+
 .pendingMarker,
 .completedMarker {
   width: 0.625rem;
@@ -109,6 +117,31 @@
 .meta {
   color: #6b7280;
   font-size: 0.75rem;
+}
+
+.automationMatched,
+.automationPending,
+.automationNotMatched {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.125rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.automationMatched {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.automationPending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.automationNotMatched {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .empty {

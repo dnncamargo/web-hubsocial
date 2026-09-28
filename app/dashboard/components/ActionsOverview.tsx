@@ -5,9 +5,37 @@ interface ActionsOverviewProps {
   actions: ActionProjection
 }
 
+function getAutomationStatus(item: ActionProjectionItem) {
+  if (item.automation.rules.length === 0) return null
+
+  if (item.automation.highlighted) {
+    return {
+      label: 'Condição atendida',
+      className: styles.automationMatched,
+    }
+  }
+
+  if (item.automation.rules.some((rule) => rule.status === 'unresolved')) {
+    return {
+      label: 'Contexto pendente',
+      className: styles.automationPending,
+    }
+  }
+
+  return {
+    label: 'Condição não atendida',
+    className: styles.automationNotMatched,
+  }
+}
+
 function ActionRow({ item }: { item: ActionProjectionItem }) {
+  const automationStatus = getAutomationStatus(item)
+  const rowClassName = item.automation.highlighted
+    ? `${styles.row} ${styles.highlightedRow}`
+    : styles.row
+
   return (
-    <li className={styles.row}>
+    <li className={rowClassName}>
       <span
         className={item.completed ? styles.completedMarker : styles.pendingMarker}
         aria-hidden="true"
@@ -21,6 +49,11 @@ function ActionRow({ item }: { item: ActionProjectionItem }) {
           {item.date ? ` · ${item.date}` : ''}
           {item.time ? ` · ${item.time}` : ''}
         </span>
+        {automationStatus && (
+          <span className={automationStatus.className}>
+            {automationStatus.label}
+          </span>
+        )}
       </div>
     </li>
   )
