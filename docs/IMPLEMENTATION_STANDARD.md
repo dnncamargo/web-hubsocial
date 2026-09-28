@@ -68,7 +68,7 @@ Vite is the canonical build tool after the platform migration.
 
 Public environment variables use `VITE_*`.
 
-During the transition from Next.js, existing `NEXT_PUBLIC_*` variables remain valid until the framework migration checkpoint replaces them atomically.
+Legacy `NEXT_PUBLIC_*` variables are not supported. Public client configuration must use the canonical `VITE_*` prefix.
 
 ### React Router
 React Router owns client-side routing.

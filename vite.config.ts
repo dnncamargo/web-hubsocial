@@ -10,6 +10,4 @@ export default defineConfig({
       '@': fileURLToPath(new URL('.', import.meta.url)),
     },
   },
-
-  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
 })

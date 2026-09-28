@@ -61,12 +61,12 @@ Se você deseja executar o Nxt_Planner localmente para desenvolvimento ou contri
     * Obtenha as configurações do seu projeto Firebase (apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId).
     * Crie um arquivo `.env.local` na raiz do seu projeto e adicione suas configurações do Firebase como variáveis de ambiente:
         ```env
-        NEXT_PUBLIC_FIREBASE_API_KEY=SUA_API_KEY
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=SEU_AUTH_DOMAIN
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID=SEU_PROJECT_ID
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=SEU_STORAGE_BUCKET
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=SEU_MESSAGING_SENDER_ID
-        NEXT_PUBLIC_FIREBASE_APP_ID=SEU_APP_ID
+        VITE_FIREBASE_API_KEY=SUA_API_KEY
+        VITE_FIREBASE_AUTH_DOMAIN=SEU_AUTH_DOMAIN
+        VITE_FIREBASE_PROJECT_ID=SEU_PROJECT_ID
+        VITE_FIREBASE_STORAGE_BUCKET=SEU_STORAGE_BUCKET
+        VITE_FIREBASE_MESSAGING_SENDER_ID=SEU_MESSAGING_SENDER_ID
+        VITE_FIREBASE_APP_ID=SEU_APP_ID
         ```
 5.  **Execute o servidor de desenvolvimento:**
     ```bash
