@@ -1,0 +1,136 @@
+.page {
+  min-height: 100vh;
+  padding: var(--space-4);
+  background: var(--color-background);
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pageTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: clamp(1.25rem, 3vw, 1.6rem);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.contextAction {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.contextAction:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+}
+
+.contextAction:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.contextActionIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.eventsSection {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.sectionCount {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.eventGroup {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.eventGrid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.emptyState {
+  margin: 0;
+  padding: var(--space-4) 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: var(--space-6) var(--space-8) var(--space-8);
+  }
+
+  .pageHeader {
+    align-items: center;
+  }
+
+  .eventGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .eventGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

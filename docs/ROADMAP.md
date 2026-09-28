@@ -407,17 +407,35 @@ small shared global foundation
 
 ### 6.4. Visual 2 — Migrate representative surfaces
 
-**Status: QUEUED**
+**Status: DONE**
 
 Use representative surfaces to prove the visual contracts before a full sweep.
 
-Preferred order:
+Execution checkpoints:
 
-1. application shell/navigation;
-2. Dashboard / Actions of the Day;
-3. authentication/login;
-4. one representative form/modal;
-5. one representative operational list/card.
+- **Visual 2A — application shell/navigation: DONE**
+  - shared routed AppShell;
+  - desktop sidebar;
+  - mobile top bar + bottom navigation;
+  - responsive behavior owned by CSS rather than device detection;
+  - navigation rendered once instead of once per page.
+- **Visual 2B — Dashboard / Actions of the Day: DONE**
+  - Tailwind-free Dashboard page shell;
+  - Actions of the Day remains primary;
+  - weather remains supporting context;
+  - suggestions moved from floating action to contextual page action.
+- **Visual 2C — authentication/login: DONE**
+  - CSS Module surface;
+  - no Tailwind dependency in the login page;
+  - primary action preserves semantic color on hover.
+- **Visual 2D — representative form/modal: DONE**
+  - Add Event modal structure migrated to CSS Module;
+  - semantic toolbar, fields, switch, actions, focus, and responsive presentation;
+  - nested domain controls remain unchanged for later Visual 3 migration.
+- **Visual 2E — representative operational list/card: DONE**
+  - Event card migrated to CSS Module;
+  - compact scan-oriented presentation;
+  - keyboard-accessible card navigation and preserved edit action.
 
 Validate both desktop and mobile before expanding the migration.
 
@@ -625,11 +643,11 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 2 — migrate representative surfaces
+Visual 3 — complete Tailwind removal
 ```
 
 After that:
 
 ```text
-Visual 3–4 — complete Tailwind removal and implement the canonical workspace shell
+Visual 4 — finalize the canonical workspace shell
 ```
