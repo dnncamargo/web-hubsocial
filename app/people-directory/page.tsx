@@ -10,7 +10,7 @@ import MainMenu from '../components/ui/MainMenu';
 import PersonCard from './components/PersonCard';
 import AddPersonModal from './components/AddPersonModal';
 import EditPersonModal from './components/EditPersonModal';
-import { UserPlusIcon } from '@heroicons/react/24/outline';
+import { UserPlus } from 'lucide-react';
 import { ListFilterIcon, SearchIcon } from 'lucide-react';
 import FilterPersonModal from './components/FilterPersonModal';
 import type { PersonFilter } from './components/FilterPersonModal';
@@ -385,7 +385,7 @@ const PeopleDirectory = (): JSX.Element => {
           }
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg text-3xl hover:bg-green-600 transition"
         >
-          <UserPlusIcon className="w-6 h-6" />
+          <UserPlus className="w-6 h-6" />
         </button>
       </main>
 

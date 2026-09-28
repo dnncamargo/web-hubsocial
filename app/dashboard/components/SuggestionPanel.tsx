@@ -7,7 +7,7 @@ import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider';
 import { motion } from 'motion/react';
 import { differenceInDays, format, isAfter, parseISO, add } from 'date-fns'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { X } from 'lucide-react'
 import { Person, Event, EventSuggestion } from '../../utils/interfaces'
 import { buildEventPayload } from '../../utils/eventPayload'
 import SuggestionCard from './SuggestionCard';
@@ -165,7 +165,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
                     <button
                         className='flex-none mr-2'
                         onClick={onClose}>
-                        <XMarkIcon className="h-6 w-6 text-gray-500" />
+                        <X className="h-6 w-6 text-gray-500" />
                     </button>
                     <h2 className="text-lg font-semibold flex-1">Sugestões de Evento</h2>
                 </div>

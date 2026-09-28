@@ -354,7 +354,7 @@ This checkpoint should remain isolated from icon/CSS work.
 
 ### 6.2. Platform 6B — Heroicons → Lucide
 
-**Status: QUEUED**
+**Status: DONE**
 
 Lucide is the canonical icon library, but Heroicons still has active consumers.
 
@@ -625,11 +625,11 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Platform 6B — migrate Heroicons to Lucide
+Visual 1 — Tailwind migration foundation
 ```
 
 After that:
 
 ```text
-Visual 1–4 — complete the native CSS / CSS Modules migration and canonical workspace shell
+Visual 2–4 — migrate representative surfaces, complete Tailwind removal, and implement the canonical workspace shell
 ```

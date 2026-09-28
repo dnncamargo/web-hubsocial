@@ -10,8 +10,7 @@ import MainMenu from '../components/ui/MainMenu';
 import EventCard from './components/EventCard';
 import AddEventModal from './components/AddEventModal';
 import EditEventModal from './components/EditEventModal';
-import { CalendarDaysIcon } from '@heroicons/react/24/outline';
-import { PlusIcon } from '@heroicons/react/16/solid';
+import { CalendarDays, Plus } from 'lucide-react';
 import { ListFilterIcon, SearchIcon } from 'lucide-react';
 import EventFilterModal from './components/FilterEventModal';
 import type { EventFilter } from './components/FilterEventModal'
@@ -342,8 +341,8 @@ const EventsHistory = (): JSX.Element => {
           }}
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg text-3xl hover:bg-blue-600 transition"
         >
-          <CalendarDaysIcon className="w-6 h-6 absolute mr-1" />
-          <PlusIcon className="w-4 h-4 absolute ml-5 mb-5" />
+          <CalendarDays className="w-6 h-6 absolute mr-1" />
+          <Plus className="w-4 h-4 absolute ml-5 mb-5" />
         </button>
       </main>
 

@@ -3,7 +3,7 @@
 import { JSX } from 'react';
 import { useNavigate } from 'react-router';
 import { Event } from '../../utils/interfaces';
-import { ClockIcon, MapPinIcon, LinkIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { Clock, Link, MapPin, SquarePen } from 'lucide-react';
 import { formatDate } from '../../utils/services';
 
 /**
@@ -46,7 +46,7 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
         {/* Hora */}
         {event.startTime && (
           <div className="card-content-info-large text-gray-500 mb-2">
-            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0"><ClockIcon className="w-full h-full" /></div>
+            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0"><Clock className="w-full h-full" /></div>
             {/* {event.hour && `${event.hour} - `}{event.address} */}
             <div>{event.startTime}</div>
           </div>
@@ -56,9 +56,9 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
           <div className="card-content-info-large text-gray-500 mb-2">
             <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0">
               {event.location.startsWith('http') ? (
-                <LinkIcon className="w-full h-full" />
+                <Link className="w-full h-full" />
               ) : (
-                <MapPinIcon className="w-full h-full" />
+                <MapPin className="w-full h-full" />
               )}
             </div>
             <div className="text-pretty truncate overflow-x-auto">
@@ -77,7 +77,7 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
                 {field.label === 'Descrição' && typeof field.value === 'string' ? (
                   <div className="card-content-info-large text-gray-500 mb-2">
                     <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0 flex items-start">
-                      <PencilSquareIcon className="w-full h-full" />
+                      <SquarePen className="w-full h-full" />
                     </div>
                     <div className='text-pretty truncate'>
                       {field.value}

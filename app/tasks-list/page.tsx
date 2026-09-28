@@ -6,8 +6,7 @@ import { collection, doc, getDocs, orderBy, query } from "firebase/firestore"
 import { db } from "../utils/firebaseConfig"
 import { useAuth } from "../components/auth/AuthProvider"
 import { Task } from "../utils/interfaces"
-import { DocumentCheckIcon } from "@heroicons/react/24/outline"
-import { PlusIcon } from "lucide-react"
+import { FileCheck2, Plus } from "lucide-react"
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import MainMenu from "../components/ui/MainMenu"
 import AddTaskModal from "./components/AddTaskModal"
@@ -135,8 +134,8 @@ export default function TasksList() {
 
                     aria-label="Nova Tarefa"
                 >
-                    <DocumentCheckIcon className="w-6 h-6 absolute mr-1" />
-                    <PlusIcon className="w-4 h-4 absolute ml-5 mb-5" />
+                    <FileCheck2 className="w-6 h-6 absolute mr-1" />
+                    <Plus className="w-4 h-4 absolute ml-5 mb-5" />
                 </button>
             </main>
         </ProtectedRoute>

@@ -31,7 +31,7 @@ A próxima versão do Nxt_Planner trará ainda mais poder para sua organização
 * [Vite](https://vite.dev/): Build tool e servidor de desenvolvimento.
 * [React Router](https://reactrouter.com/): Roteamento client-side da aplicação.
 * [Tailwind CSS](https://tailwindcss.com/): Framework CSS utilitário para estilização rápida e responsiva.
-* [Heroicons](https://heroicons.com/): Biblioteca de ícones SVG para interfaces de usuário modernas.
+* [Lucide](https://lucide.dev/): Biblioteca canônica de ícones SVG.
 * [Firebase](https://firebase.google.com/): Plataforma de desenvolvimento da Google Cloud para persistência de dados na nuvem (Firestore) e autenticação de usuários (Firebase Authentication).
 
 ## Como Executar Localmente (Para Desenvolvedores 🧑‍💻)
