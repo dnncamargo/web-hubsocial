@@ -1,38 +1,59 @@
 .title-logo {
-    font-family: var(--font-brand);
-    font-size: 2rem;
-    font-weight: 600;
-    color: var(--primary);
-  }
+  font-family: var(--font-brand);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--color-accent);
+}
 
 .title-1 {
-    @apply text-2xl font-bold mb-4
+  margin-bottom: var(--space-4);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
 }
 
 .title-2 {
-    @apply text-lg font-semibold mb-3
+  margin-bottom: var(--space-3);
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
 }
 
 .title-3 {
-    @apply text-base font-semibold mb-2
+  margin-bottom: var(--space-2);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
 }
 
 .content-1 {
-    @apply text-base font-normal mb-2
+  margin-bottom: var(--space-2);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 400;
 }
 
 .card-header-title {
-    @apply text-sm font-semibold
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
 }
 
 .card-header-title-large {
-    @apply text-base font-semibold ml-4;
+  margin-left: var(--space-4);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
 }
 
 .card-content-info {
-    @apply flex text-sm;
+  display: flex;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }
 
 .card-content-info-large {
-    @apply flex text-base;
+  display: flex;
+  font-size: 1rem;
+  line-height: 1.5rem;
 }

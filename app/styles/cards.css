@@ -1,45 +1,67 @@
 /* Cards */
 
-.card-spacing-bellow {
-  @apply space-y-2;
+.card-spacing-bellow > :not([hidden]) ~ :not([hidden]) {
+  margin-top: var(--space-2);
+}
+
+.card-container,
+.card-container-large {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .card-container {
-  @apply overflow-hidden relative shadow-sm border rounded-lg;
+  border-radius: var(--radius-md);
 }
 
 .card-container-large {
-  @apply overflow-hidden relative shadow-sm border rounded-xl;
-} 
+  border-radius: var(--radius-lg);
+}
+
+.card-header,
+.card-header-large {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+}
 
 .card-header {
-  @apply flex justify-between items-start px-4 py-1 rounded-t-lg;
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .card-header-large {
-  @apply flex justify-between items-start px-1 py-1 rounded-t-xl;
+  padding-left: var(--space-1);
+  padding-right: var(--space-1);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .card-content {
-  @apply p-3;
+  padding: var(--space-3);
 }
 
 .card-content-large {
-  @apply pt-4;
+  padding-top: var(--space-4);
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }
 
 .card-bottom-end {
-  @apply flex justify-end mb-2 mr-2
+  display: flex;
+  justify-content: flex-end;
+  margin-right: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .card-header-far-right {
-  @apply px-3 rounded-full
-}
-
-
-
-
-
-.card-content-large {
-  @apply text-sm px-4;
+  padding-left: var(--space-3);
+  padding-right: var(--space-3);
+  border-radius: var(--radius-round);
 }

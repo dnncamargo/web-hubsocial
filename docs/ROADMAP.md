@@ -377,7 +377,7 @@ Acceptance:
 
 ### 6.3. Visual 1 — Tailwind migration foundation
 
-**Status: QUEUED**
+**Status: DONE**
 
 Tailwind remains the largest intentional platform/visual migration debt.
 
@@ -625,11 +625,11 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 1 — Tailwind migration foundation
+Visual 2 — migrate representative surfaces
 ```
 
 After that:
 
 ```text
-Visual 2–4 — migrate representative surfaces, complete Tailwind removal, and implement the canonical workspace shell
+Visual 3–4 — complete Tailwind removal and implement the canonical workspace shell
 ```
