@@ -13,22 +13,19 @@ type CalendarEventCreatorProps = Pick<
   | 'endDate'
   | 'setEndDate'
   | 'startTime'
+  | 'handleStartTimeChange'
   | 'endTime'
   | 'setEndTime'
-> & {
-  setStartTime?: (value: string) => void
-  handleStartTimeChange?: (value: string) => void
-}
+>
 
 export default function CalendarEventCreator({
   allDay,  setAllDay,
   startDate,  setStartDate,
   endDate,  setEndDate,
-  startTime = '',
-  setStartTime = () => {},
-  endTime = '',
-  setEndTime = () => {},
-  handleStartTimeChange
+  startTime,
+  handleStartTimeChange,
+  endTime,
+  setEndTime,
 }: CalendarEventCreatorProps) {
  
   return (
@@ -61,7 +58,7 @@ export default function CalendarEventCreator({
             type="time"
             step="300"
             value={startTime}
-            onChange={(e) => (handleStartTimeChange ?? setStartTime)(e.target.value)}
+            onChange={(e) => handleStartTimeChange(e.target.value)}
             className="w-24 p-2 border rounded"
           />
         )}

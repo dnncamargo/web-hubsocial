@@ -8,6 +8,7 @@ import { useAuth } from '../../components/auth/AuthProvider'
 import { Task } from '../../utils/interfaces'
 import { OptionalField, TaskItem } from '../../types/optionalFields'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
+import useEventDate from '../../hooks/useEventDate'
 
 interface EditTaskModalProps {
   task: Task
@@ -18,23 +19,16 @@ interface EditTaskModalProps {
 
 export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: EditTaskModalProps) {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
-  const today = new Date().toISOString().split('T')[0]; // "2025-04-25"
-  const defaultTime = new Date().toTimeString().slice(0, 5); // "14:00"
   const [content, setContent] = useState(task.content || '')
   const [addingDate, setAddingDate] = useState(false)
-  const [allDay, setAllDay] = useState(false); /** @state {boolean} allDay - Indica se o evento é de dia inteiro (sem hora específica). */
-  const [startDate, setStartDate] = useState(today); /** @state {string} startDate - Data de início do evento no formato 'YYYY-MM-DD'. */
-  const [endDate, setEndDate] = useState(today); /** @state {string} endDate - Data de término do evento no formato 'YYYY-MM-DD'. */
-  const [startTime, setStartTime] = useState(defaultTime); /** @state {string} startTime - Hora de início do evento no formato 'HH:MM'. */
-  const [endTime, setEndTime] = useState(defaultTime); /** @state {string} endTime - Hora de término do evento no formato 'HH:MM'. */
-  const [error, setError] = useState('');
+  const dateControl = useEventDate()
+  const { allDay, startDate, endDate, startTime, endTime } = dateControl
 
   useEffect(() => {
     if (task) {
       setContent(task.content)
-      dateControl(); // Chama a função de controle de data para garantir que as datas estejam corretas.
     }
-  }, [task, startDate, startTime, endDate, endTime, allDay])
+  }, [task])
 
   const handleUpdate = async () => {
     if (!content.trim()) {
@@ -113,55 +107,6 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
     }
   };
 
-  const dateControl = () => {
-    // Só faz a checagem se não for all-day (ou seja, está lidando com horário)
-    if (allDay) {
-      // All-day: endDate sempre ≥ startDate
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      if (end < start) {
-        setEndDate(startDate);
-      }
-      setStartTime('');
-      setEndTime('');
-      setError('');
-      return;
-    }
-
-    // Horário: monta as datas completas
-    const start = new Date(`${startDate}T${startTime}`);
-    const end = new Date(`${endDate}T${endTime}`);
-
-    if (start >= end) {
-      // Se end está inválido, define end para +30min após start
-      const newEnd = new Date(start.getTime() + 30 * 60000);
-      setEndDate(newEnd.toISOString().split('T')[0]);
-      setEndTime(newEnd.toTimeString().slice(0, 5));
-      setError('');
-    } else {
-      setError('');
-    }
-  }
-
-  /**
-   * @function validateEvent
-   * @description Valida os campos obrigarórios do formulário.
-   * @returns {string | null} Uma string contendo a mensagem de erro se a validação falhar, ou `null` se a validação for bem-sucedida.
-   */
-  function validateEvent(): string | null {
-    if (!content.trim()) return 'O título do evento é obrigatório';
-    if (!startDate || !endDate) return 'Informe as datas de início e término';
-
-    if (!allDay) {
-      if (!startTime || !endTime) return 'Informe os horários de início e término';
-
-      const start = new Date(`${startDate}T${startTime}`);
-      const end = new Date(`${endDate}T${endTime}`);
-      if (start >= end) return 'O horário de término deve ser após o horário de início';
-    }
-    return null;
-  }
-
   if (!isOpen || !uid) return null
 
   return (
@@ -196,18 +141,7 @@ export default function EditTaskModal({ task, isOpen, onClose, onUpdated }: Edit
         </label>
 
         {addingDate && (
-          <CalendarEventCreator
-            allDay={allDay}
-            setAllDay={setAllDay}
-            startDate={startDate}
-            setStartDate={setStartDate}
-            endDate={endDate}
-            setEndDate={setEndDate}
-            startTime={startTime}
-            setStartTime={setStartTime}
-            endTime={endTime}
-            setEndTime={setEndTime}
-          />
+          <CalendarEventCreator {...dateControl} />
         )}
 
 
