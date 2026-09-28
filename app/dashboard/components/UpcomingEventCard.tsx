@@ -7,12 +7,6 @@ import { ptBR } from 'date-fns/locale';
 import { CalendarDaysIcon as CalendarIcon, UserIcon, PencilSquareIcon, LinkIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { LucideCalendarCheck2 as CheckIcon } from 'lucide-react';
 
-type OptionalField = {
-  id: string;                 // UUID para controle único
-  label: string;             // Ex: "Descrição", "URL", "Endereço Alternativo"
-  value: string;
-};
-
 /**
  * @interface EventSummaryCardProps
  * @description Props para o componente `EventSummaryCard`, que exibe um resumo de um evento.
@@ -106,7 +100,7 @@ export default function UpcomingEventCard({ event, person, onToggleStatus }: Upc
         {event.optionalFields && event.optionalFields.length > 0 && (
           <div className="space-y-4">
 
-            {event.optionalFields.map((field: OptionalField) => (
+            {event.optionalFields.map((field) => (
               <div key={field.id} >
                 {field.label === 'Descrição' && typeof field.value === 'string' ? (
                   <div className="card-content-info text-gray-500">

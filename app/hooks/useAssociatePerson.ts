@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { db } from '../utils/firebaseConfig';
 import { collection, getDocs } from 'firebase/firestore';
-
-export interface Person {
-  id: string;
-  name: string;
-  // outros campos se existirem
-}
+import { Person } from '../utils/interfaces';
 
 interface UseAssociatePersonProps {
   uid: string;

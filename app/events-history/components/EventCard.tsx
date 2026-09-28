@@ -6,12 +6,6 @@ import { Event } from '../../utils/interfaces';
 import { ClockIcon, MapPinIcon, LinkIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { formatDate } from '../../utils/services';
 
-type OptionalField = {
-  id: string;                 // UUID para controle único
-  label: string;             // Ex: "Descrição", "URL", "Endereço Alternativo"
-  value: string;
-};
-
 /**
  * @interface EventCardProps
  * @description Props para o componente `EventCard`, que exibe informações resumidas de um evento e oferece ação de edição.
@@ -79,7 +73,7 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
         {event.optionalFields && event.optionalFields.length > 0 && (
           <div className="space-y-4">
 
-            {event.optionalFields.map((field: OptionalField) => (
+            {event.optionalFields.map((field) => (
               <div key={field.id} >
                 {field.label === 'Descrição' && typeof field.value === 'string' ? (
                   <div className="card-content-info-large text-gray-500 mb-2">

@@ -6,20 +6,8 @@ import { updateDoc, doc, addDoc, deleteDoc, collection } from 'firebase/firestor
 import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
 import { Task } from '../../utils/interfaces'
+import { OptionalField, TaskItem } from '../../types/optionalFields'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
-
-type TaskItem = {
-  id: string;
-  text: string;
-  done: boolean;
-};
-
-type OptionalField = {
-  id: string;                 // UUID para controle único
-  type: 'text' | 'textarea' | 'url' | 'location' | 'person' | 'tasks';
-  label: string;             // Ex: "Descrição", "URL", "Endereço Alternativo"
-  value: string | TaskItem[]; // string para os outros tipos, array para tasks
-};
 
 interface EditTaskModalProps {
   task: Task

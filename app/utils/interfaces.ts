@@ -48,12 +48,3 @@ export interface EventSuggestion {
   suggestedDate: string // ISO
   message?: string;
 }
-
-//export type OptionalFieldType = 'address' | 'note' | 'url' | 'phone' | 'email';
-
-export interface OptionalField {
-  id: string;
-  type: 'address' | 'tasks' | 'note' | 'url' | 'phone' | 'email';
-  label: string;
-  value: any;
-}
