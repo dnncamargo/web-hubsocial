@@ -1,6 +1,7 @@
 // hooks/useEventForm.ts
 import { Event } from '../utils/interfaces'
 import { ActionPlanning } from '../types/actions';
+import { AutomationRuleSet } from '../types/automation';
 import { useState, useEffect } from 'react';
 import { db } from '../utils/firebaseConfig';
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
@@ -25,6 +26,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
     const [title, setTitle] = useState(''); /** @state {string} title - Título do evento. */
     const [location, setLocation] = useState(''); /** @state {string} location - Localidade do evento. */
     const [actionPlanning, setActionPlanning] = useState<ActionPlanning>({});
+    const [automation, setAutomation] = useState<AutomationRuleSet>({ match: 'all', rules: [] });
 
     const [error, setError] = useState<string | null>(null); /** @state {string | null} error - Mensagem de erro, se houver. */
 
@@ -61,6 +63,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
             setTitle(event.title || '');
             setLocation(event.location || '');
             setActionPlanning(event.actionPlanning ?? {});
+            setAutomation(event.automation ?? { match: 'all', rules: [] });
 
             dateControl.setAllDay(event.allDay || false);
             dateControl.setStartDate(event.startDate);
@@ -82,6 +85,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         }
 
         setActionPlanning({});
+        setAutomation({ match: 'all', rules: [] });
         associatePersonControl.resetAssociatedPeople();
         if (initialPersonId) {
             associatePersonControl.setAssociatedPersonIds([initialPersonId]);
@@ -112,6 +116,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
             personIds: associatedPersonIds,
             categories: selectedCategories,
             actionPlanning,
+            automation,
             status: event?.status,
             createdAt: event?.createdAt || new Date(),
         })
@@ -130,6 +135,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
 
             resetOptionalFields();
             setActionPlanning({});
+            setAutomation({ match: 'all', rules: [] });
             return true;
 
         } catch (e) {
@@ -163,6 +169,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         title, setTitle,
         location, setLocation,
         actionPlanning, setActionPlanning,
+        automation, setAutomation,
         error, setError,
         createEvent,
         updateEvent,
