@@ -1,5 +1,6 @@
 import { Timestamp } from 'firebase/firestore'
 import { ActionPlanning } from '../types/actions'
+import { AutomationRuleSet } from '../types/automation'
 import { OptionalField } from '../types/optionalFields'
 import { Event } from './interfaces'
 
@@ -28,6 +29,7 @@ export interface EventPayloadInput {
   timeZone?: string
   optionalFields?: OptionalField[] | null
   actionPlanning?: ActionPlanning
+  automation?: AutomationRuleSet
   createdAt?: Date | Timestamp
 }
 
@@ -42,6 +44,7 @@ export function buildEventPayload(input: EventPayloadInput): EventPayload {
     categories: input.categories ?? [],
     optionalFields: input.optionalFields ?? [],
     actionPlanning: input.actionPlanning ?? {},
+    automation: input.automation ?? { match: 'all', rules: [] },
     createdAt: input.createdAt ?? new Date(),
     ...(input.location !== undefined ? { location: input.location } : {}),
     ...(!input.allDay && input.startTime !== undefined ? { startTime: input.startTime } : {}),
