@@ -5,6 +5,7 @@ import { collection, getDocs, orderBy, query, where } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { db } from '../../utils/firebaseConfig'
 import { Event } from '../../utils/interfaces'
+import { weatherConditions } from '../../utils/weather'
 import {
   AutomationRule,
   AutomationRuleSet,
@@ -38,14 +39,6 @@ const weekdayByDateIndex: WeekdayName[] = [
   'thursday',
   'friday',
   'saturday',
-]
-
-const weatherOptions: Array<{ value: WeatherCondition; label: string }> = [
-  { value: 'sunny', label: 'Ensolarado' },
-  { value: 'cloudy', label: 'Nublado' },
-  { value: 'rainy', label: 'Chuvoso' },
-  { value: 'snowy', label: 'Nevando' },
-  { value: 'stormy', label: 'Tempestade' },
 ]
 
 function replaceRuleByType(
@@ -293,7 +286,7 @@ export default function AutomationRulesEditor({
                 )
               }
             >
-              {weatherOptions.map((option) => (
+              {weatherConditions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
