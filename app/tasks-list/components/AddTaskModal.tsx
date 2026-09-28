@@ -6,7 +6,9 @@ import { addDoc, collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
 import { ActionPlanning } from '../../types/actions'
+import { AutomationRuleSet } from '../../types/automation'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
+import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
 
 interface AddTaskModalProps {
   isOpen: boolean
@@ -19,6 +21,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
   const [content, setContent] = useState('')
   const [adding, setAdding] = useState(false)
   const [actionPlanning, setActionPlanning] = useState<ActionPlanning>({})
+  const [automation, setAutomation] = useState<AutomationRuleSet>({ match: 'all', rules: [] })
 
   if (!isOpen || !uid) return null
 
@@ -45,10 +48,12 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
         order: currentTasksCount, // <----- aqui!!
         createdAt: new Date(),
         actionPlanning,
+        automation,
       });
 
       onAdded();
       setActionPlanning({});
+      setAutomation({ match: 'all', rules: [] });
       onClose();
     } catch (error) {
       console.error('Erro ao adicionar tarefa:', error)
@@ -61,6 +66,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
   const handleCancel = () => {
     setContent('') // 🧹 limpa o campo
     setActionPlanning({})
+    setAutomation({ match: 'all', rules: [] })
     onClose()
   }
 
@@ -88,6 +94,12 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
         <ActionPlanningControl
           planning={actionPlanning}
           onChange={setActionPlanning}
+        />
+
+        <AutomationRulesEditor
+          uid={uid}
+          value={automation}
+          onChange={setAutomation}
         />
 
         <div className="flex justify-end gap-2">
