@@ -1,141 +1,125 @@
-// app/task-list/page.tsx
 'use client'
 
-import { useEffect, useState } from "react"
-import { collection, doc, getDocs, orderBy, query } from "firebase/firestore"
-import { db } from "../utils/firebaseConfig"
-import { useAuth } from "../components/auth/AuthProvider"
-import { Task } from "../utils/interfaces"
-import { FileCheck2, Plus } from "lucide-react"
+import { useEffect, useState } from 'react'
+import { collection, getDocs, orderBy, query } from 'firebase/firestore'
+import { db } from '../utils/firebaseConfig'
+import { useAuth } from '../components/auth/AuthProvider'
+import { Task } from '../utils/interfaces'
+import { Plus } from 'lucide-react'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
-import AddTaskModal from "./components/AddTaskModal"
-import TaskSection from "./components/TaskSection"
-import EditTaskModal from "./components/EditTaskModal"
-import Masonry from 'react-masonry-css'
+import AddTaskModal from './components/AddTaskModal'
+import TaskSection from './components/TaskSection'
+import EditTaskModal from './components/EditTaskModal'
+import styles from './TasksList.module.css'
 
 export default function TasksList() {
-    const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
-    const [tasks, setTasks] = useState<Task[]>([])
-    const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
-    const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false)
-    const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const { uid } = useAuth()
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
+  const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
-    useEffect(() => {
-        if (uid) fetchTasks()
-    }, [uid]);
-
-    const fetchTasks = async () => {
-        if (!uid) return
-
-        const q = query(
-            collection(db, `users/${uid}/tasks-list`),
-            orderBy('order')
-        )
-
-        const querySnapshot = await getDocs(q)
-        const fetchedTasks = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-        })) as Task[]
-
-        console.log('Fetched Tasks:', fetchedTasks)
-        setTasks(fetchedTasks)
+  useEffect(() => {
+    if (uid) {
+      fetchTasks()
     }
+  }, [uid])
 
-    const handleUpdateSectionTasks = (status: 0 | 1 | 2, updatedTasks: Task[]) => {
-        setTasks(prev => {
-            const filtered = prev.filter(t => t.status !== status)
-            return [...filtered, ...updatedTasks]
-        })
-    }
+  const fetchTasks = async () => {
+    if (!uid) return
 
-    /**
-     * @function openEditTaskModal
-     * @description Abre o modal de edição para a tarefa fornecida.
-     * @param {Task} task - O objeto da tarefa a ser editada.
-     * @returns {void}
-     */
-    const openEditTaskModal = (task: Task): void => {
-        setSelectedTask(task);
-        setIsEditTaskModalOpen(true);
-    };
-
-    return (
-        <ProtectedRoute>
-
-
-            <main className="main-container-body main-container-bg">
-
-                <h1 className="text-2xl font-bold mb-4">Lista de Tarefas</h1>
-                <div className="space-y-6">
-
-                    {tasks.length <= 0 ? (
-                        <p className="text-gray-500">Nenhuma tarefa.</p>
-                    ) : (
-                                <div className="flex flex-col gap-4 md:flex-row md:gap-6">
-
-                                    <div className="flex-1">
-                                        <TaskSection
-                                            section="Em Andamento"
-                                            status={1}
-                                            tasks={tasks.filter(t => t.status === 1)}
-                                            onEditTask={openEditTaskModal}
-                                            refreshTasks={fetchTasks}
-                                            updateTasksLocally={(updatedTasks) => handleUpdateSectionTasks(1, updatedTasks)}
-                                        />
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <TaskSection
-                                            section="Não Iniciadas"
-                                            status={0}
-                                            tasks={tasks.filter(t => t.status === 0)}
-                                            onEditTask={openEditTaskModal}
-                                            refreshTasks={fetchTasks}
-                                            updateTasksLocally={(updatedTasks) => handleUpdateSectionTasks(0, updatedTasks)}
-                                        />
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <TaskSection
-                                            section="Concluídas"
-                                            status={2}
-                                            tasks={tasks.filter(t => t.status === 2)}
-                                            onEditTask={openEditTaskModal}
-                                            refreshTasks={fetchTasks}
-                                            updateTasksLocally={(updatedTasks) => handleUpdateSectionTasks(2, updatedTasks)}
-                                        />
-                                    </div>
-                        </div>
-
-                    )}
-
-                </div>
-
-                {isAddTaskModalOpen && <AddTaskModal
-                    isOpen={isAddTaskModalOpen}
-                    onClose={() => setIsAddTaskModalOpen(false)}
-                    onAdded={fetchTasks}
-                />}
-
-                {isEditTaskModalOpen && selectedTask && <EditTaskModal
-                    task={selectedTask}
-                    isOpen={isEditTaskModalOpen}
-                    onClose={() => setIsEditTaskModalOpen(false)}
-                    onUpdated={fetchTasks}
-                />}
-
-                {/* Botão flutuante de Nova Tarefa */}
-                <button
-                    onClick={() => setIsAddTaskModalOpen(true)}
-                    className="fixed bottom-6 right-6 w-14 h-14 z-10 rounded-full bg-yellow-600 text-white flex items-center justify-center shadow-lg text-3xl hover:bg-yellow-800 transition"
-
-                    aria-label="Nova Tarefa"
-                >
-                    <FileCheck2 className="w-6 h-6 absolute mr-1" />
-                    <Plus className="w-4 h-4 absolute ml-5 mb-5" />
-                </button>
-            </main>
-        </ProtectedRoute>
+    const tasksQuery = query(
+      collection(db, `users/${uid}/tasks-list`),
+      orderBy('order'),
     )
+
+    const querySnapshot = await getDocs(tasksQuery)
+    const fetchedTasks = querySnapshot.docs.map(snapshot => ({
+      id: snapshot.id,
+      ...snapshot.data(),
+    })) as Task[]
+
+    setTasks(fetchedTasks)
+  }
+
+  const handleUpdateSectionTasks = (
+    status: 0 | 1 | 2,
+    updatedTasks: Task[],
+  ) => {
+    setTasks(previous => {
+      const otherTasks = previous.filter(task => task.status !== status)
+      return [...otherTasks, ...updatedTasks]
+    })
+  }
+
+  const openEditTaskModal = (task: Task): void => {
+    setSelectedTask(task)
+    setIsEditTaskModalOpen(true)
+  }
+
+  const sections = [
+    { label: 'Não iniciadas', status: 0 as const },
+    { label: 'Em andamento', status: 1 as const },
+    { label: 'Concluídas', status: 2 as const },
+  ]
+
+  return (
+    <ProtectedRoute>
+      <main className={styles.page}>
+        <header className={styles.header}>
+          <div className={styles.heading}>
+            <h1 className={styles.title}>Tarefas</h1>
+            <p className={styles.subtitle}>
+              Acompanhe o trabalho em fluxo, da entrada à conclusão.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsAddTaskModalOpen(true)}
+            className={styles.primaryButton}
+          >
+            <Plus className={styles.buttonIcon} aria-hidden="true" />
+            Nova tarefa
+          </button>
+        </header>
+
+        {tasks.length === 0 ? (
+          <p className={styles.emptyState}>Nenhuma tarefa cadastrada.</p>
+        ) : (
+          <div className={styles.board}>
+            {sections.map(({ label, status }) => (
+              <TaskSection
+                key={status}
+                section={label}
+                status={status}
+                tasks={tasks.filter(task => task.status === status)}
+                onEditTask={openEditTaskModal}
+                refreshTasks={fetchTasks}
+                updateTasksLocally={(updatedTasks) =>
+                  handleUpdateSectionTasks(status, updatedTasks)}
+              />
+            ))}
+          </div>
+        )}
+
+        {isAddTaskModalOpen && (
+          <AddTaskModal
+            isOpen={isAddTaskModalOpen}
+            onClose={() => setIsAddTaskModalOpen(false)}
+            onAdded={fetchTasks}
+          />
+        )}
+
+        {isEditTaskModalOpen && selectedTask && (
+          <EditTaskModal
+            task={selectedTask}
+            isOpen={isEditTaskModalOpen}
+            onClose={() => setIsEditTaskModalOpen(false)}
+            onUpdated={fetchTasks}
+          />
+        )}
+      </main>
+    </ProtectedRoute>
+  )
 }
