@@ -3,6 +3,7 @@
 import { useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { LogOut } from 'lucide-react'
+import styles from './MainMenu.module.css'
 
 export default function LogoutButton() {
   const { setUid, setUser, setGoogleAccessToken } = useAuth();
@@ -21,10 +22,11 @@ export default function LogoutButton() {
   
   return (
     <button
+      type="button"
       onClick={handleLogout}
-      className="flex items-center gap-2 px-3 rounded-md text-sm text-gray-600 hover:text-red-600 transition"
+      className={styles.logoutButton}
     >
-      <LogOut className="w-5 h-5" />
+      <LogOut width={18} height={18} aria-hidden="true" />
       Sair
     </button>
   )

@@ -8,13 +8,14 @@ import { db } from '../../utils/firebaseConfig'
 import { addDoc, collection } from 'firebase/firestore'
 import { motion } from 'motion/react'
 import { Timestamp } from 'firebase/firestore'
+import styles from './ImportContactsModal.module.css'
 
 interface ImportContactsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function ImportContactsPage({ onClose }: ImportContactsModalProps) {
+export default function ImportContactsPage({ isOpen, onClose }: ImportContactsModalProps) {
   const { uid, googleAccessToken } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase e do Google autenticado. */
   const navigate = useNavigate();
 
@@ -23,7 +24,8 @@ export default function ImportContactsPage({ onClose }: ImportContactsModalProps
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
 
-  if (!uid) return <p className="p-6">Carregando usuário...</p>;
+  if (!isOpen) return null;
+  if (!uid) return <p className={styles.loading}>Carregando usuário...</p>;
 
   async function loadContacts() {
     if (!googleAccessToken) {
@@ -34,7 +36,6 @@ export default function ImportContactsPage({ onClose }: ImportContactsModalProps
     setLoading(true);
     try {
       const loadedContacts = await fetchAllContacts(googleAccessToken);
-      console.log('[Loaded Contact]', JSON.stringify(loadedContacts))
       const mappedContacts = loadedContacts.map(parseGoogleContact);
 
       setContacts(mappedContacts);
@@ -98,31 +99,30 @@ export default function ImportContactsPage({ onClose }: ImportContactsModalProps
 
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6 h-screen overflow-y-auto">
-
-      {/* Topo */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Importar Contatos</h1>
-        <button onClick={onClose} className="text-gray-500 hover:text-black">
+    <div className={styles.overlay}>
+      <div className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="import-contacts-title">
+        <header className={styles.header}>
+          <h2 id="import-contacts-title" className={styles.title}>Importar contatos</h2>
+          <button type="button" onClick={onClose} className={styles.closeButton}>
           Voltar
-        </button>
+          </button>
+        </header>
 
-      </div>
-
-      {/* Botões principais */}
-      <div className="flex gap-4">
+        <div className={styles.toolbar}>
         <button
+          type="button"
           onClick={loadContacts}
           disabled={loading}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
+          className={styles.actionButton}
         >
           {loading ? 'Carregando...' : 'Carregar Contatos'}
         </button>
 
         {contacts.length > 0 && (
           <button
+            type="button"
             onClick={selectAll}
-            className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition"
+            className={styles.secondaryButton}
           >
             {selectedIds.length === contacts.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
           </button>
@@ -131,48 +131,57 @@ export default function ImportContactsPage({ onClose }: ImportContactsModalProps
         {/* Botão de Importar */}
         {contacts.length > 0 && (
           <button
+            type="button"
             onClick={importSelected}
             disabled={importing}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition"
+            className={styles.primaryButton}
           >
             {importing
               ? 'Importando...'
               : `Importar ${selectedIds.length} Contato(s)`}
           </button>
         )}
-      </div>
+        </div>
 
-      {/* Lista de Contatos */}
-      <div className="grid gap-4">
+        <div className={styles.body}>
         {contacts.length === 0 && (
-          <p className="text-gray-500">Nenhum contato carregado.</p>
+          <p className={styles.emptyState}>Nenhum contato carregado.</p>
         )}
-        {contacts.map((contact) => (
-          <motion.div
-            key={contact.resourceName}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex items-center justify-between border p-4 rounded-lg bg-white shadow-sm"
-          >
-            <div>
-              <p className="font-medium">{contact.displayName}</p>
-              {contact.phoneNumbers && (
-                <p className="text-sm text-gray-500">{contact.phoneNumbers}</p>
-              )}
-            </div>
-            <input
-              type="checkbox"
-              checked={selectedIds.includes(contact.resourceName)}
-              onChange={() => toggleSelect(contact.resourceName)}
-              className="w-5 h-5"
-            />
-          </motion.div>
-        ))}
+        <div className={styles.contacts}>
+          {contacts.map((contact) => {
+            const checkboxId = `contact-${contact.resourceName}`
+            const contactName = contact.displayName || 'Contato sem nome'
+
+            return (
+              <motion.div
+                key={contact.resourceName}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                className={styles.contactRow}
+              >
+                <div className={styles.contactInfo}>
+                  <p className={styles.contactName}>{contactName}</p>
+                  {contact.phoneNumbers && (
+                    <p className={styles.contactDetail}>{contact.phoneNumbers.join(', ')}</p>
+                  )}
+                </div>
+                <label htmlFor={checkboxId} className={styles.checkboxLabel}>
+                  <input
+                    id={checkboxId}
+                    type="checkbox"
+                    checked={selectedIds.includes(contact.resourceName)}
+                    onChange={() => toggleSelect(contact.resourceName)}
+                    className={styles.checkbox}
+                    aria-label={`Selecionar ${contactName}`}
+                  />
+                </label>
+              </motion.div>
+            )
+          })}
+        </div>
+        </div>
       </div>
-
-
-
     </div>
   )
 }

@@ -485,8 +485,16 @@ Execution checkpoints:
   - the person detail page became a line-separated operational record with preserved event association and contextual Add Event action;
   - People-local Tailwind utility styling was removed from `app/people-directory/**/*.tsx`;
   - PersonCard is visually prepared for a future relationship accent metadata contract through a People fallback border accent, without persistence or schema changes;
-- **Visual 3D — Optional fields and shared UI: NEXT**
-- **Visual 3E — Tailwind removal and dependency cleanup: QUEUED**
+- **Visual 3D — Optional fields and shared UI: DONE**
+  - Optional Fields now use one sober shared CSS Module visual contract across Event and Person editors;
+  - context-specific field availability is represented by one shared capability source, including the single-address rule;
+  - unused specialized email, phone, and URL field components were removed after confirming zero production consumers;
+  - `crypto.randomUUID()` replaced runtime UUID generation in Optional Fields;
+  - Import Contacts migrated to a neutral dialog surface and sensitive contact logging was removed;
+  - Logout and ProtectedRoute shared residues were migrated away from Tailwind utilities;
+  - retained `app/**/*.tsx` files contain zero Tailwind utility styling;
+  - dependency and configuration cleanup is intentionally deferred to Visual 3E;
+- **Visual 3E — Tailwind removal and dependency cleanup: NEXT**
 
 After zero utility dependence remains:
 
@@ -681,7 +689,7 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 3D — Optional fields and shared UI
+Visual 3E — Tailwind removal and dependency cleanup
 ```
 
-Then continue through Visual 3E — Tailwind removal and dependency cleanup, followed by Visual 4.
+Then continue with Visual 4.

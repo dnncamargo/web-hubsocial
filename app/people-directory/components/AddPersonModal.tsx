@@ -27,6 +27,7 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
   const {
     optionalFields,
     addOptionalField,
+    availableFieldOptions,
     removeOptionalField,
     updateOptionalField,
     updateLabel,
@@ -123,6 +124,7 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
               setContactFrequency={setContactFrequency}
               optionalFields={optionalFields}
               addOptionalField={addOptionalField}
+              availableFieldOptions={availableFieldOptions}
               removeOptionalField={removeOptionalField}
               updateOptionalField={updateOptionalField}
               updateLabel={updateLabel}

@@ -38,6 +38,7 @@ const EditPersonModal = ({
   const {
     optionalFields,
     addOptionalField,
+    availableFieldOptions,
     removeOptionalField,
     updateOptionalField,
     updateLabel,
@@ -142,6 +143,7 @@ const EditPersonModal = ({
               setContactFrequency={setContactFrequency}
               optionalFields={optionalFields}
               addOptionalField={addOptionalField}
+              availableFieldOptions={availableFieldOptions}
               removeOptionalField={removeOptionalField}
               updateOptionalField={updateOptionalField}
               updateLabel={updateLabel}

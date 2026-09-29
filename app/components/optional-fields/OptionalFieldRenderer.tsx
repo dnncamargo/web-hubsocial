@@ -2,6 +2,7 @@ import { OptionalField } from '../../types/optionalFields';
 import TextInputField from "./fields/TextInputField";
 import TaskListField from "./fields/TaskListField";
 import AddressField from "./fields/AddressField";
+import styles from './OptionalFields.module.css';
 
 type OptionalFieldRendererProps = {
     field: OptionalField;
@@ -13,9 +14,11 @@ type OptionalFieldRendererProps = {
 export function OptionalFieldRenderer({ field, onChange, onLabelChange, onRemove }: OptionalFieldRendererProps) {
 
     return (
-        <div className="mt-6 p-2 bg-gray-50 rounded-lg overflow-hidden border">
+        <div className={styles.container}>
 
-            {field.type === "text" && (
+            <div className={styles.fieldContent}>
+
+            {['text', 'additionalEmail', 'additionalPhone', 'url'].includes(field.type) && (
                 <TextInputField
                     label={field.label}
                     value={field.value as string}
@@ -49,40 +52,16 @@ export function OptionalFieldRenderer({ field, onChange, onLabelChange, onRemove
                 />
             )}
 
-            {field.type === "additionalEmail" && (
-                <TextInputField
-                    label={field.label}
-                    value={field.value as string}
-                    onChange={onChange}
-                    onLabelChange={onLabelChange}
-                />
-            )}
-
-            {field.type === "additionalPhone" && (
-                <TextInputField
-                    label={field.label}
-                    value={field.value as string}
-                    onChange={onChange}
-                    onLabelChange={onLabelChange}
-                />
-            )}
-
-            {field.type === "url" && (
-                <TextInputField
-                    label={field.label}
-                    value={field.value as string}
-                    onChange={onChange}
-                    onLabelChange={onLabelChange}
-                />
-            )}
+            </div>
 
             {onRemove && (
                 <button
+                    type="button"
                     onClick={(e) => {
                         e.preventDefault();
                         onRemove?.();
                     }}
-                    className="text-xs text-red-500 mt-2"
+                    className={styles.removeAction}
                 >
                     Remover
                 </button>

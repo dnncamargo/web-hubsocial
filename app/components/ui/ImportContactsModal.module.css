@@ -1,0 +1,201 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(22 26 29 / 0.42);
+}
+
+.dialog {
+  display: grid;
+  width: min(100%, 52rem);
+  max-height: min(90vh, 48rem);
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-md);
+}
+
+.header,
+.toolbar,
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.header {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+
+.closeButton,
+.actionButton,
+.secondaryButton,
+.primaryButton {
+  min-height: 2.5rem;
+  padding: 0.5625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease;
+}
+
+.closeButton,
+.secondaryButton {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.actionButton,
+.primaryButton {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-surface-elevated);
+}
+
+.closeButton:hover,
+.secondaryButton:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+}
+
+.actionButton:hover,
+.primaryButton:hover {
+  background: color-mix(in srgb, var(--color-accent) 88%, black);
+}
+
+.closeButton:focus-visible,
+.actionButton:focus-visible,
+.secondaryButton:focus-visible,
+.primaryButton:focus-visible,
+.checkbox:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.closeButton:disabled,
+.actionButton:disabled,
+.secondaryButton:disabled,
+.primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.actionButton:disabled:hover,
+.primaryButton:disabled:hover {
+  background: var(--color-accent);
+}
+
+.toolbar {
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.footer {
+  border-top: 1px solid var(--color-border);
+}
+
+.body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.emptyState {
+  margin: 0;
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.contacts {
+  display: grid;
+}
+
+.contactRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.contactInfo {
+  min-width: 0;
+}
+
+.contactName,
+.contactDetail {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactName {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.contactDetail {
+  margin-top: 0.125rem;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.checkboxLabel {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-accent);
+}
+
+.loading {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 560px) {
+  .overlay {
+    padding: 0;
+  }
+
+  .dialog {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-right: 0;
+    border-left: 0;
+  }
+
+  .toolbar,
+  .footer {
+    align-items: stretch;
+  }
+
+  .toolbar > button,
+  .footer > button {
+    flex: 1;
+  }
+}

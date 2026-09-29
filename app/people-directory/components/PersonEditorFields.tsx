@@ -1,7 +1,7 @@
 'use client';
 
 import { Person } from '../../utils/interfaces';
-import { OptionalField } from '../../types/optionalFields';
+import { OptionalField, OptionalFieldOption } from '../../types/optionalFields';
 import { OptionalFieldRenderer } from '../../components/optional-fields/OptionalFieldRenderer';
 import { OptionalFieldModal } from '../../components/optional-fields/OptionalFieldModal';
 import { PeopleRelationshipsRenderer } from './PeopleRelationshipsRenderer';
@@ -25,6 +25,7 @@ interface PersonEditorFieldsProps {
   setContactFrequency: (value: Person['contactFrequency']) => void;
   optionalFields: OptionalField[];
   addOptionalField: (type: OptionalField['type']) => Promise<void>;
+  availableFieldOptions: OptionalFieldOption[];
   removeOptionalField: (fieldId: string) => void;
   updateOptionalField: (fieldId: string, updates: Partial<OptionalField>) => void;
   updateLabel: (fieldId: string, label: string) => void;
@@ -55,6 +56,7 @@ export default function PersonEditorFields({
   setContactFrequency,
   optionalFields,
   addOptionalField,
+  availableFieldOptions,
   removeOptionalField,
   updateOptionalField,
   updateLabel,
@@ -166,6 +168,7 @@ export default function PersonEditorFields({
           {showOptionalFieldModal && (
             <OptionalFieldModal
               context="person"
+              availableFieldOptions={availableFieldOptions}
               onAddOptionalField={addOptionalField}
               onClose={() => setShowOptionalFieldModal(false)}
             />

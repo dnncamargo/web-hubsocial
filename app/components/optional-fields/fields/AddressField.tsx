@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef } from 'react';
+import { useId, useRef } from 'react';
 import { searchAddress } from '../../../utils/services';
+import styles from '../OptionalFields.module.css';
 
 type AddressValue = {
   address: string;
@@ -27,6 +28,7 @@ export default function AddressField({
 }: AddressFieldProps) {
 
   const numberInputRef = useRef<HTMLInputElement>(null);
+  const fieldId = useId();
 
   const handleSearchCep = async () => {
     if (!value.zipcode) return;
@@ -61,70 +63,89 @@ export default function AddressField({
   const hasAddressData = value.address || value.city || value.state || value.district;
 
   return (
-    <div className="grid grid-cols-1 gap-2">
+    <div className={styles.field}>
 
       {/* Label editável */}
       <input
+        id={`${fieldId}-label`}
         type="text"
         value={label}
         onChange={(e) => onLabelChange(e.target.value)}
-        className="font-semibold text-sm bg-gray-50 text-gray-700 mb-2 p-1"
+        className={styles.labelInput}
+        aria-label="Nome do campo de endereço"
         placeholder="Detalhes do endereço"
       />
 
-      {/* Campo CEP */}
-      <input
-        type="text"
-        placeholder="CEP"
-        value={value.zipcode}
-        onChange={(e) => handleFieldChange('zipcode', e.target.value)}
-        onBlur={handleSearchCep}
-        className="w-full p-2 border rounded"
-      />
+      <div className={styles.addressFields}>
+        <input
+          id={`${fieldId}-zipcode`}
+          type="text"
+          placeholder="CEP"
+          value={value.zipcode}
+          onChange={(e) => handleFieldChange('zipcode', e.target.value)}
+          onBlur={handleSearchCep}
+          className={styles.input}
+          inputMode="numeric"
+          autoComplete="postal-code"
+          aria-label="CEP"
+        />
 
-      {/* Campo Número sempre aparece */}
-      <input
-        type="text"
-        placeholder="Número"
-        value={value.number}
-        onChange={(e) => handleFieldChange('number', e.target.value)}
-        className="w-full p-2 border rounded"
-        ref={numberInputRef}
-      />
+        <input
+          id={`${fieldId}-number`}
+          type="text"
+          placeholder="Número"
+          value={value.number}
+          onChange={(e) => handleFieldChange('number', e.target.value)}
+          className={styles.input}
+          inputMode="numeric"
+          ref={numberInputRef}
+          aria-label="Número do endereço"
+        />
 
-      {/* Demais campos aparecem somente após preenchimento da API */}
-      {hasAddressData && (
-        <>
-          <input
-            type="text"
-            placeholder="Endereço"
-            value={value.address}
-            onChange={(e) => handleFieldChange('address', e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-          <input
-            type="text"
-            placeholder="Bairro"
-            value={value.district}
-            onChange={(e) => handleFieldChange('district', e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-          <input
-            type="text"
-            placeholder="Cidade"
-            value={value.city}
-            onChange={(e) => handleFieldChange('city', e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-          <input
-            type="text"
-            placeholder="Estado"
-            value={value.state}
-            onChange={(e) => handleFieldChange('state', e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-        </>
-      )}
+        {hasAddressData && (
+          <>
+            <input
+              id={`${fieldId}-address`}
+              type="text"
+              placeholder="Endereço"
+              value={value.address}
+              onChange={(e) => handleFieldChange('address', e.target.value)}
+              className={styles.input}
+              autoComplete="street-address"
+              aria-label="Endereço"
+            />
+            <input
+              id={`${fieldId}-district`}
+              type="text"
+              placeholder="Bairro"
+              value={value.district}
+              onChange={(e) => handleFieldChange('district', e.target.value)}
+              className={styles.input}
+              aria-label="Bairro"
+            />
+            <input
+              id={`${fieldId}-city`}
+              type="text"
+              placeholder="Cidade"
+              value={value.city}
+              onChange={(e) => handleFieldChange('city', e.target.value)}
+              className={styles.input}
+              autoComplete="address-level2"
+              aria-label="Cidade"
+            />
+            <input
+              id={`${fieldId}-state`}
+              type="text"
+              placeholder="Estado"
+              value={value.state}
+              onChange={(e) => handleFieldChange('state', e.target.value)}
+              className={styles.input}
+              autoComplete="address-level1"
+              aria-label="Estado"
+            />
+          </>
+        )}
+      </div>
 
     </div>
   );

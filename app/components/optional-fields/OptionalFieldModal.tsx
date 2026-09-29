@@ -1,103 +1,51 @@
-import { OptionalField } from '../../types/optionalFields';
+import { OptionalField, OptionalFieldOption } from '../../types/optionalFields';
+import styles from './OptionalFields.module.css';
 
 type OptionalFieldModalProps = {
   context: 'event' | 'person';
+  availableFieldOptions: OptionalFieldOption[];
   onClose: () => void;
   onAddOptionalField: (type: OptionalField["type"]) => Promise<void>
 };
 
-export function OptionalFieldModal({ context, onClose, onAddOptionalField }: OptionalFieldModalProps) {
+export function OptionalFieldModal({ availableFieldOptions, onClose, onAddOptionalField }: OptionalFieldModalProps) {
+  const handleAdd = async (type: OptionalField['type']) => {
+    await onAddOptionalField(type);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white p-4 rounded-lg w-full max-w-sm shadow-lg">
-        <h2 className="text-lg font-semibold mb-4">Adicionar campo opcional</h2>
+    <div className={styles.modalOverlay}>
+      <div
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="optional-field-title"
+      >
+        <header className={styles.modalHeader}>
+          <h2 id="optional-field-title" className={styles.modalTitle}>Adicionar campo opcional</h2>
+        </header>
 
-        <button
-          type="button"
-          onClick={() => {
-            onAddOptionalField(
-              'text',
-            );
-            onClose();
-          }}
-          className="w-full bg-blue-600 text-white px-4 py-2 mb-2 rounded hover:bg-blue-700"
-        >
-          Campo de texto
-        </button>
+        <div className={styles.options}>
+          {availableFieldOptions.length > 0 ? availableFieldOptions.map((option) => (
+            <button
+              key={option.type}
+              type="button"
+              onClick={() => void handleAdd(option.type)}
+              className={styles.option}
+            >
+              <span>{option.label}</span>
+              <span className={styles.optionHint}>Adicionar</span>
+            </button>
+          )) : (
+            <p className={styles.emptyState}>Nenhum campo opcional disponível neste contexto.</p>
+          )}
+        </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            onAddOptionalField(
-              'address',
-            );
-            onClose();
-          }}
-          className="w-full bg-blue-600 text-white px-4 py-2 mb-2 rounded hover:bg-blue-700"
-        >
-          Detalhes de Endereço
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            onAddOptionalField(
-              'tasks',
-            );
-
-            onClose();
-          }}
-          className="w-full bg-blue-600 text-white px-4 py-2 mb-2 rounded hover:bg-blue-700"
-        >
-          Lista de Tarefas
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            onAddOptionalField(
-              'additionalEmail',
-            );
-            onClose();
-          }}
-          className="w-full bg-blue-600 text-white px-4 py-2 mb-2 rounded hover:bg-blue-700"
-        >
-          E-mail adicional
-        </button>
-
-                <button
-          type="button"
-          onClick={() => {
-            onAddOptionalField(
-              'additionalPhone',
-            );
-            onClose();
-          }}
-          className="w-full bg-blue-600 text-white px-4 py-2 mb-2 rounded hover:bg-blue-700"
-        >
-          Telefone adicional
-        </button>
-
-                <button
-          type="button"
-          onClick={() => {
-            onAddOptionalField(
-              'url',
-            );
-            onClose();
-          }}
-          className="w-full bg-blue-600 text-white px-4 py-2 mb-2 rounded hover:bg-blue-700"
-        >
-          URL
-        </button>
-
-        <button
-          onClick={onClose}
-          className="mt-3 w-full px-4 py-2 text-sm text-gray-500 hover:text-black"
-        >
+        <button type="button" onClick={onClose} className={styles.cancelAction}>
           Cancelar
         </button>
       </div>
-    </div >
+    </div>
   );
 }
