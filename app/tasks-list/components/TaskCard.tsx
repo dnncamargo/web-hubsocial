@@ -31,9 +31,24 @@ interface TaskCardProps {
 }
 
 const statusMeta = {
-  0: { label: 'Não iniciada', icon: Flag, className: styles.statusPending },
-  1: { label: 'Em andamento', icon: CirclePlay, className: styles.statusProgress },
-  2: { label: 'Concluída', icon: CircleCheck, className: styles.statusDone },
+  0: {
+    label: 'Não iniciada',
+    icon: Flag,
+    iconClassName: styles.statusPending,
+    rowClassName: styles.rowStatusPending,
+  },
+  1: {
+    label: 'Em andamento',
+    icon: CirclePlay,
+    iconClassName: styles.statusProgress,
+    rowClassName: styles.rowStatusProgress,
+  },
+  2: {
+    label: 'Concluída',
+    icon: CircleCheck,
+    iconClassName: styles.statusDone,
+    rowClassName: styles.rowStatusDone,
+  },
 } as const
 
 export default function TaskCard({
@@ -115,6 +130,7 @@ export default function TaskCard({
   const CurrentStatusIcon = currentStatus.icon
   const rowClass = [
     styles.row,
+    currentStatus.rowClassName,
     parentTaskId ? styles.subtaskRow : '',
     isDragging ? styles.rowDragging : '',
   ].filter(Boolean).join(' ')
@@ -140,7 +156,7 @@ export default function TaskCard({
                     title={`Mover para ${meta.label}`}
                   >
                     <StatusIcon
-                      className={`${styles.actionIcon} ${meta.className}`}
+                      className={`${styles.actionIcon} ${meta.iconClassName}`}
                       aria-hidden="true"
                     />
                   </button>
@@ -249,7 +265,7 @@ export default function TaskCard({
 
         <button
           type="button"
-          className={`${styles.statusButton} ${currentStatus.className}`}
+          className={`${styles.statusButton} ${currentStatus.iconClassName}`}
           onClick={(event) => {
             event.stopPropagation()
             showStatusActions()

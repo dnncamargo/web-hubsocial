@@ -7,15 +7,15 @@
 }
 
 .notStarted {
-  border-top-color: var(--color-border-strong);
+  border-top-color: var(--color-task-status-not-started);
 }
 
 .inProgress {
-  border-top-color: var(--color-tasks);
+  border-top-color: var(--color-task-status-in-progress);
 }
 
 .completed {
-  border-top-color: var(--color-success);
+  border-top-color: var(--color-task-status-completed);
 }
 
 .header {

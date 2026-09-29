@@ -68,6 +68,7 @@
 
 .row {
   position: relative;
+  border-left: 2px solid transparent;
   z-index: 1;
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
@@ -142,16 +143,28 @@
   height: 0.95rem;
 }
 
+.rowStatusPending {
+  border-left-color: var(--color-task-status-not-started);
+}
+
+.rowStatusProgress {
+  border-left-color: var(--color-task-status-in-progress);
+}
+
+.rowStatusDone {
+  border-left-color: var(--color-task-status-completed);
+}
+
 .statusPending {
-  color: var(--color-text-muted);
+  color: var(--color-task-status-not-started);
 }
 
 .statusProgress {
-  color: var(--color-tasks);
+  color: var(--color-task-status-in-progress);
 }
 
 .statusDone {
-  color: var(--color-success);
+  color: var(--color-task-status-completed);
 }
 
 .content {
