@@ -538,7 +538,7 @@ These areas are valid future directions but should not interrupt the immediate m
 
 ### 7.1. Event calendar projection
 
-**Status: IN PROGRESS — Calendar 1**
+**Status: DONE — Calendar 1**
 
 The product decision is to keep calendar as a second view inside the existing Events workspace:
 
@@ -693,11 +693,6 @@ A roadmap checkpoint is complete only when:
 
 ## 11. Current next action
 
-Complete and validate Calendar 1:
+The next narrow product candidate is temporal navigation for the Event calendar.
 
-```text
-Events → List | Calendar
-basic current-month projection from canonical Event data
-```
-
-Then evaluate temporal navigation as the next narrow checkpoint.
+Audit the current Calendar 1 behavior before deciding the minimum interaction for moving between months. Preserve the existing Events workspace, canonical Event persistence, and civil-date semantics.
