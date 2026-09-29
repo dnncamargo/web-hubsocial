@@ -77,11 +77,12 @@ function ActionSection({
     : tertiary
       ? styles.tertiarySection
       : styles.secondarySection
+  const Heading = primary ? 'h1' : 'h2'
 
   return (
     <section className={sectionClassName}>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>{title}</h2>
+        <Heading className={styles.sectionTitle}>{title}</Heading>
         <span className={styles.count}>{items.length}</span>
       </div>
 

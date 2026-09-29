@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import { Plus } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
 import styles from './QuickCreateMenu.module.css'
@@ -18,6 +19,8 @@ const createOptions = [
 export default function QuickCreateMenu({ variant }: QuickCreateMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuItemRefs = useRef<Array<HTMLButtonElement | null>>([])
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
@@ -28,22 +31,46 @@ export default function QuickCreateMenu({ variant }: QuickCreateMenuProps) {
   useEffect(() => {
     if (!isOpen) return
 
+    menuItemRefs.current[0]?.focus()
+
     const handlePointerDown = (event: PointerEvent) => {
       if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsOpen(false)
-    }
 
     document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isOpen])
+
+  const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const currentIndex = menuItemRefs.current.findIndex(
+      (item) => item === document.activeElement,
+    )
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      setIsOpen(false)
+      triggerRef.current?.focus()
+      return
+    }
+
+    if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault()
+      const targetIndex = event.key === 'Home' ? 0 : createOptions.length - 1
+      menuItemRefs.current[targetIndex]?.focus()
+      return
+    }
+
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+
+    event.preventDefault()
+    const direction = event.key === 'ArrowDown' ? 1 : -1
+    const nextIndex = (currentIndex + direction + createOptions.length) % createOptions.length
+    menuItemRefs.current[nextIndex]?.focus()
+  }
 
   const handleCreate = (path: string) => {
     setIsOpen(false)
@@ -57,6 +84,7 @@ export default function QuickCreateMenu({ variant }: QuickCreateMenuProps) {
     >
       <button
         type="button"
+        ref={triggerRef}
         className={styles.trigger}
         onClick={() => setIsOpen((open) => !open)}
         aria-label="Criar novo item"
@@ -74,11 +102,15 @@ export default function QuickCreateMenu({ variant }: QuickCreateMenuProps) {
           className={styles.menu}
           role="menu"
           aria-label="Criar novo item"
+          onKeyDown={handleMenuKeyDown}
         >
-          {createOptions.map((option) => (
+          {createOptions.map((option, index) => (
             <button
               key={option.path}
               type="button"
+              ref={(element) => {
+                menuItemRefs.current[index] = element
+              }}
               className={styles.menuItem}
               role="menuitem"
               onClick={() => handleCreate(option.path)}
