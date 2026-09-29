@@ -22,7 +22,7 @@ export interface TaskScheduleOccurrence {
 }
 
 export interface TaskActionCandidate extends TaskScheduleOccurrence {
-  source: 'manual' | 'schedule'
+  source: 'manual' | 'schedule' | 'status'
 }
 
 const weekdayByIndex: WeekdayName[] = [
@@ -145,6 +145,15 @@ export function getTaskActionCandidates(
     candidates.set(scheduled.horizon, {
       ...scheduled,
       source: 'schedule',
+    })
+  }
+
+  // Em andamento is a presentation priority: keep the original planning and
+  // schedule candidates, while adding a day candidate for canonical display.
+  if (task.status === 1) {
+    candidates.set('day', {
+      horizon: 'day',
+      source: 'status',
     })
   }
 
