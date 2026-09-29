@@ -536,17 +536,25 @@ Quick create routes to the existing Task, Event, and Person creation editors thr
 
 These areas are valid future directions but should not interrupt the immediate migration queue without an explicit reprioritization.
 
-### 7.1. Agenda projection
+### 7.1. Event calendar projection
 
-**Status: FUTURE**
+**Status: IN PROGRESS — Calendar 1**
 
-Build Agenda as another projection of canonical Event data from:
+The product decision is to keep calendar as a second view inside the existing Events workspace:
+
+```text
+Events → List | Calendar
+```
+
+Both views project the same canonical Event data from:
 
 ```text
 users/{uid}/events-history
 ```
 
-Do not create a parallel persisted Agenda entity merely for presentation.
+Calendar 1 establishes the view switch and a basic current-month projection. It does not add a new route, primary navigation destination, persistence entity, or calendar dependency.
+
+Later checkpoints may add temporal navigation and deeper create/edit interactions from the calendar when justified by use.
 
 ---
 
@@ -685,8 +693,11 @@ A roadmap checkpoint is complete only when:
 
 ## 11. Current next action
 
-The next product decision is:
+Complete and validate Calendar 1:
 
 ```text
-TBD — pending product decision
+Events → List | Calendar
+basic current-month projection from canonical Event data
 ```
+
+Then evaluate temporal navigation as the next narrow checkpoint.

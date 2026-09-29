@@ -8,9 +8,10 @@ import { useSearchParams } from 'react-router'
 import { Event } from '../utils/interfaces'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import EventCard from './components/EventCard'
+import EventCalendarMonth from './components/EventCalendarMonth'
 import AddEventModal from './components/AddEventModal'
 import EditEventModal from './components/EditEventModal'
-import { ListFilter, Plus, Search } from 'lucide-react'
+import { CalendarDays, List, ListFilter, Plus, Search } from 'lucide-react'
 import EventFilterModal from './components/FilterEventModal'
 import type { EventFilter } from './components/FilterEventModal'
 import { useEventCategories } from '../hooks/useEventCategories'
@@ -26,6 +27,8 @@ const defaultFilters: EventFilter = {
   hasAddressByCEP: false,
   selectedCategories: [],
 }
+
+type EventViewMode = 'list' | 'calendar'
 
 const EventsHistory = (): JSX.Element => {
   const { uid } = useAuth()
@@ -43,6 +46,7 @@ const EventsHistory = (): JSX.Element => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [showSearchModal, setShowSearchModal] = useState(false)
+  const [viewMode, setViewMode] = useState<EventViewMode>('list')
 
   const { availableCategories } = useEventCategories()
 
@@ -179,11 +183,35 @@ const EventsHistory = (): JSX.Element => {
       <main className={styles.page}>
         <header className={styles.header}>
           <div className={styles.headingBlock}>
-            <h1 className={styles.title}>Histórico de eventos</h1>
-            <p className={styles.subtitle}>Agenda registrada e contexto dos eventos.</p>
+            <h1 className={styles.title}>Eventos</h1>
+            <p className={styles.subtitle}>Consulte seus eventos em lista ou calendário.</p>
           </div>
 
           <div className={styles.toolbar} aria-label="Ações de eventos">
+            <div className={styles.viewSwitch} aria-label="Visualização de eventos">
+              <button
+                type="button"
+                className={viewMode === 'list'
+                  ? `${styles.viewButton} ${styles.viewButtonActive}`
+                  : styles.viewButton}
+                onClick={() => setViewMode('list')}
+                aria-pressed={viewMode === 'list'}
+              >
+                <List className={styles.icon} aria-hidden="true" />
+                Lista
+              </button>
+              <button
+                type="button"
+                className={viewMode === 'calendar'
+                  ? `${styles.viewButton} ${styles.viewButtonActive}`
+                  : styles.viewButton}
+                onClick={() => setViewMode('calendar')}
+                aria-pressed={viewMode === 'calendar'}
+              >
+                <CalendarDays className={styles.icon} aria-hidden="true" />
+                Calendário
+              </button>
+            </div>
             <button
               type="button"
               className={searchIsActive
@@ -232,6 +260,8 @@ const EventsHistory = (): JSX.Element => {
           <p className={styles.emptyState}>
             Nenhum evento corresponde à pesquisa ou aos filtros atuais.
           </p>
+        ) : viewMode === 'calendar' ? (
+          <EventCalendarMonth events={visibleEvents} />
         ) : (
           <>
             <div className={styles.grid}>

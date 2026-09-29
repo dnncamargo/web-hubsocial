@@ -56,10 +56,10 @@ Target structure:
 │ sidebar       │ contextual top bar                           │
 │               ├──────────────────────────────────────────────┤
 │ Today         │ Actions of the Day                           │
-│ Agenda        │                                              │
-│ Tasks         │ primary operational content                  │
 │ Events        │                                              │
-│ People        ├──────────────────────┬───────────────────────┤
+│ Tasks         │ primary operational content                  │
+│ People        │                                              │
+│               ├──────────────────────┬───────────────────────┤
 │               │ This Week            │ Context               │
 │               ├──────────────────────┴───────────────────────┤
 │               │ This Month                                   │
@@ -84,11 +84,13 @@ Target structure:
 │                             │
 │ This Month                  │
 ├─────────────────────────────┤
-│ Today Agenda  +  Tasks ...  │
+│ Today Events  +  Tasks ...  │
 └─────────────────────────────┘
 ```
 
 Content remains the same domain projection. Navigation presentation changes by viewport.
+
+The Events workspace owns both list and calendar projections of the same canonical Event data. Calendar is a view mode inside Events, not a separate primary destination.
 
 ## 5. Visual direction
 
