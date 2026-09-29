@@ -476,8 +476,15 @@ Execution checkpoints:
   - the saturated yellow task-editor treatment was removed;
   - no Tailwind utility classes remain in `app/tasks-list/**/*.tsx`;
   - task promotion now normalizes `parentTaskId` and preserves the Firestore document ID when rebuilding the parent task.
-- **Visual 3C — People: NEXT**
-- **Visual 3D — Optional fields and shared UI: QUEUED**
+- **Visual 3C — People: DONE**
+  - People masonry/FAB presentation was removed in favor of a regular responsive operational grid;
+  - People cards became sober operational records with explicit favorite/edit controls and restrained rectangular relationship labels;
+  - People search, filters, and relationship dialogs were modernized with neutral elevated surfaces and semantic controls;
+  - Add Person and Edit Person now share one People-local editor visual contract;
+  - the person detail page became a line-separated operational record with preserved event association and contextual Add Event action;
+  - People-local Tailwind utility styling was removed from `app/people-directory/**/*.tsx`;
+  - PersonCard is visually prepared for a future relationship accent metadata contract through a People fallback border accent, without persistence or schema changes;
+- **Visual 3D — Optional fields and shared UI: NEXT**
 - **Visual 3E — Tailwind removal and dependency cleanup: QUEUED**
 
 After zero utility dependence remains:
@@ -673,7 +680,7 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 3C — People
+Visual 3D — Optional fields and shared UI
 ```
 
-Then continue through Optional Fields/shared UI and final Tailwind dependency removal before Visual 4.
+Then continue through Visual 3E — Tailwind removal and dependency cleanup, followed by Visual 4.

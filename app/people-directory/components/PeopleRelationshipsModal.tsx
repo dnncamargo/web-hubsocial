@@ -1,3 +1,5 @@
+import styles from './PersonDialogs.module.css';
+
 type PeopleRelationshipsModalProps = {
   onClose: () => void;
   availableRelationships: string[];
@@ -14,51 +16,52 @@ export function PeopleRelationshipsModal({
   handleAddRelationship,
 }: PeopleRelationshipsModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white p-4 rounded-lg w-full max-w-sm shadow-lg">
-        <h2 className="text-lg font-semibold mb-4">Selecionar Relacionamento</h2>
+    <div className={styles.overlay} role="presentation">
+      <div
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="people-relationships-title"
+      >
+        <div className={styles.header}>
+          <h2 id="people-relationships-title" className={styles.title}>Selecionar relacionamento</h2>
+        </div>
 
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className={styles.body}>
+          <div className={styles.relationshipGrid}>
           {availableRelationships.map((rel) => (
             <button
               key={rel}
+              type="button"
               onClick={(e) => {
                 e.preventDefault();
                 toggleRelationship(rel);
               }}
-              className={`px-3 py-1 rounded-full text-sm ${
-                selectedRelationships.includes(rel)
-                  ? "bg-green-700 text-white"
-                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-              }`}
+              aria-pressed={selectedRelationships.includes(rel)}
+              className={`${styles.relationshipChoice} ${selectedRelationships.includes(rel) ? styles.relationshipChoiceSelected : ''}`}
             >
               {rel}
             </button>
           ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={async () => {
+              const newRel = prompt('Novo relacionamento:')?.trim();
+              if (newRel) {
+                await handleAddRelationship(newRel);
+                toggleRelationship(newRel);
+              }
+            }}
+            className={styles.actionLink}
+          >
+            + Novo relacionamento
+          </button>
         </div>
 
-        <button
-          onClick={async (e) => {
-            e.preventDefault();
-            const newRel = prompt("Novo relacionamento:")?.trim();
-            if (newRel) {
-              await handleAddRelationship(newRel);
-              toggleRelationship(newRel);
-            }
-          }}
-          className="text-green-600 text-sm mb-4"
-        >
-          + Novo Relacionamento
-        </button>
-
-        <div className="flex justify-end space-x-2">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              onClose();
-            }}
-            className="text-green-600 hover:underline text-sm"
-          >
+        <div className={styles.footer}>
+          <button type="button" onClick={onClose} className={styles.closeButton}>
             Fechar
           </button>
         </div>
