@@ -168,6 +168,20 @@ month
 Actions remain projections of Task/Event data rather than separately persisted Action entities.
 
 The dashboard derives Day, Week, and Month projections from the canonical entities.
+Manual `actionPlanning` remains supported for existing Tasks without a schedule.
+
+Tasks may also carry an optional schedule with these categories:
+
+- daily;
+- weekly with selected weekdays or a flexible week;
+- monthly by civil day, clamped to the final day of short months; and
+- event-relative with a lead time before a related Event.
+
+Recurring occurrences are projections of one canonical Task. They are never
+persisted as occurrence documents. Task status is the recurrence lifecycle:
+completed suppresses automatic recurrence until the user manually resets the
+Task, while in-progress remains active and receives explicit visual emphasis.
+One Task is projected once at the most specific applicable horizon.
 
 ---
 
@@ -184,8 +198,13 @@ Canonical rule support currently includes:
 - matched / notMatched / unresolved evaluation.
 
 Automation changes relevance/highlighting and does not silently remove manually planned actions.
+Favorable conditions remain distinct from schedule and recurrence: weather,
+weekday, and upcoming-event rules highlight an already relevant Task/Event;
+they do not create occurrences.
 
-Weather evaluation uses Open-Meteo only when weather rules are relevant.
+The Dashboard exposes current weather as Context when geolocation permission is
+already granted, and offers an explicit action before requesting permission
+otherwise. The same cached snapshot is reused for automation evaluation.
 
 ---
 
@@ -702,7 +721,6 @@ A roadmap checkpoint is complete only when:
 
 ## 11. Current next action
 
-Calendar 2 is complete locally. Future product work should be separately
-scoped from the remaining Actions and Automation refinement areas, preserving
-the existing Events workspace, canonical Event persistence, and civil-date
-semantics.
+Calendar 2 and the Task planning refinement are complete locally. Future
+product work should be separately scoped from remaining Actions and Automation
+areas, preserving canonical Task/Event persistence and civil-date semantics.

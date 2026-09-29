@@ -104,6 +104,16 @@
   box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
+.inProgressRow {
+  background: color-mix(in srgb, var(--color-task-status-in-progress) 8%, var(--color-surface));
+  box-shadow: inset 3px 0 0 var(--color-task-status-in-progress);
+}
+
+.highlightedRow.inProgressRow {
+  background: color-mix(in srgb, var(--color-events-soft) 72%, var(--color-task-status-in-progress) 10%);
+  box-shadow: inset 3px 0 0 var(--color-task-status-in-progress);
+}
+
 .pendingMarker,
 .completedMarker {
   width: 0.625rem;
@@ -136,8 +146,24 @@
 }
 
 .meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   color: var(--color-text-muted);
   font-size: 0.75rem;
+}
+
+.sourceIcon {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: none;
+}
+
+.inProgressLabel {
+  width: fit-content;
+  color: var(--color-task-status-in-progress);
+  font-size: 0.6875rem;
+  font-weight: 650;
 }
 
 .automationMatched,

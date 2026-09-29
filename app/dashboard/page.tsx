@@ -7,9 +7,18 @@ import { useAuth } from '../components/auth/AuthProvider';
 import { Event, Person, Task } from '../utils/interfaces';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
 import { AutomationRuleSet } from '../types/automation';
-import { AutomationEventContext, evaluateAutomation } from '../utils/automation';
-import { getCurrentBrowserWeather, getWeatherConditionLabel, WeatherSnapshot } from '../utils/weather';
+import { evaluateAutomation } from '../utils/automation';
+import {
+  getBrowserGeolocationPermissionState,
+  getCurrentBrowserWeather,
+  getWeatherConditionLabel,
+  WeatherSnapshot,
+} from '../utils/weather';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
+import {
+  getTaskActionCandidates,
+  TaskScheduleEventContext,
+} from '../utils/taskSchedule';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ArrowUpRight, CalendarDays, Check, MapPin, Star, UserRound } from 'lucide-react';
@@ -33,6 +42,8 @@ type PlannedActionSource = {
   automation?: AutomationRuleSet
 }
 
+type WeatherUiState = 'checking' | 'loading' | 'available' | 'needsPermission' | 'unavailable'
+
 /**
  * @component
  * @description Componente principal da página inicial, exibindo os próximos eventos e permitindo adicionar novos eventos.
@@ -55,6 +66,7 @@ export default function Dashboard(): JSX.Element {
     month: [],
   });
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const [weatherUiState, setWeatherUiState] = useState<WeatherUiState>('checking');
   const [showSuggestions, setShowSuggestions] = useState(false); /** @state {boolean} showSuggestions - Controla a visibilidade do painel de sugestões de eventos. */
 
   useEffect(() => {
@@ -82,95 +94,111 @@ export default function Dashboard(): JSX.Element {
     setPerson(personData);
   };
 
-  const fetchPlannedActions = async (): Promise<void> => {
+  const loadWeatherIfAllowed = async (): Promise<WeatherSnapshot | null> => {
+    const permission = await getBrowserGeolocationPermissionState()
+
+    if (permission !== 'granted') {
+      setWeather(null)
+      setWeatherUiState(permission === 'denied' ? 'unavailable' : 'needsPermission')
+      return null
+    }
+
+    setWeatherUiState('loading')
+
+    try {
+      const currentWeather = await getCurrentBrowserWeather()
+      setWeather(currentWeather)
+      setWeatherUiState('available')
+      return currentWeather
+    } catch (error) {
+      console.warn('Contexto de clima indisponível:', error)
+      setWeather(null)
+      setWeatherUiState('unavailable')
+      return null
+    }
+  }
+
+  const fetchPlannedActions = async (
+    weatherOverride?: WeatherSnapshot | null,
+  ): Promise<void> => {
     if (!uid) return
 
     const referenceDate = new Date()
-    const periods = getActionPeriodKeys(referenceDate)
     const horizons: ActionHorizon[] = ['day', 'week', 'month']
-
-    const sourcesByHorizon = await Promise.all(
-      horizons.map(async (horizon) => {
-        const [eventSnapshot, taskSnapshot] = await Promise.all([
-          getDocs(
+    const [eventSourcesByHorizon, taskSnapshot] = await Promise.all([
+      Promise.all(
+        horizons.map(async (horizon) => {
+          const periods = getActionPeriodKeys(referenceDate)
+          const eventSnapshot = await getDocs(
             query(
               collection(db, `users/${uid}/events-history`),
               where(`actionPlanning.${horizon}`, '==', periods[horizon]),
             ),
-          ),
-          getDocs(
-            query(
-              collection(db, `users/${uid}/tasks-list`),
-              where(`actionPlanning.${horizon}`, '==', periods[horizon]),
-            ),
-          ),
-        ])
+          )
 
-        const eventActions: PlannedActionSource[] = eventSnapshot.docs.map((snapshot) => {
-          const event = { id: snapshot.id, ...snapshot.data() } as Event
-          return {
-            item: {
-              key: `event:${event.id}`,
-              sourceType: 'event',
-              sourceId: event.id,
-              title: event.title,
-              completed: event.status === 1,
-              date: event.startDate,
-              ...(event.startTime ? { time: event.startTime } : {}),
-            },
-            automation: event.automation,
-          }
-        })
+          const eventActions: PlannedActionSource[] = eventSnapshot.docs.map((snapshot) => {
+            const event = { id: snapshot.id, ...snapshot.data() } as Event
+            return {
+              item: {
+                key: `event:${event.id}`,
+                sourceType: 'event',
+                sourceId: event.id,
+                title: event.title,
+                completed: event.status === 1,
+                date: event.startDate,
+                ...(event.startTime ? { time: event.startTime } : {}),
+              },
+              automation: event.automation,
+            }
+          })
 
-        const taskActions: PlannedActionSource[] = taskSnapshot.docs.map((snapshot) => {
-          const task = { id: snapshot.id, ...snapshot.data() } as Task
-          return {
-            item: {
-              key: `task:${task.id}`,
-              sourceType: 'task',
-              sourceId: task.id,
-              title: task.content,
-              completed: task.status === 2,
-            },
-            automation: task.automation,
-          }
-        })
-
-        return [horizon, [...eventActions, ...taskActions]] as const
-      }),
-    )
-
-    const needsWeather = sourcesByHorizon.some(([, sources]) =>
-      sources.some((source) =>
-        source.automation?.rules.some((rule) => rule.type === 'weather'),
+          return [horizon, eventActions] as const
+        }),
       ),
-    )
+      getDocs(collection(db, `users/${uid}/tasks-list`)),
+    ])
 
-    let currentWeather: WeatherSnapshot | null = null
+    const tasks = taskSnapshot.docs.map(snapshot => ({
+      id: snapshot.id,
+      ...snapshot.data(),
+    }) as Task)
 
-    if (needsWeather) {
-      try {
-        currentWeather = await getCurrentBrowserWeather()
-      } catch (error) {
-        console.warn('Contexto de clima indisponível para automação:', error)
-      }
+    const currentWeather = weatherOverride === undefined
+      ? await loadWeatherIfAllowed()
+      : weatherOverride
+
+    if (weatherOverride !== undefined) {
+      setWeather(currentWeather)
+      setWeatherUiState(currentWeather ? 'available' : 'unavailable')
     }
 
-    setWeather(currentWeather)
-
     const referencedEventIds = new Set<string>()
-
-    for (const [, sources] of sourcesByHorizon) {
-      for (const source of sources) {
-        for (const rule of source.automation?.rules ?? []) {
-          if (rule.type === 'upcomingEvent') {
-            referencedEventIds.add(rule.eventId)
-          }
+    const collectEventReferences = (source: PlannedActionSource) => {
+      for (const rule of source.automation?.rules ?? []) {
+        if (rule.type === 'upcomingEvent') {
+          referencedEventIds.add(rule.eventId)
         }
       }
     }
 
-    const linkedEvents = (
+    for (const [, sources] of eventSourcesByHorizon) {
+      sources.forEach(collectEventReferences)
+    }
+
+    for (const task of tasks) {
+      if (task.schedule?.type === 'eventRelative' && task.schedule.eventId) {
+        referencedEventIds.add(task.schedule.eventId)
+      }
+      collectEventReferences({ item: {
+        key: `task:${task.id}`,
+        sourceType: 'task',
+        sourceId: task.id,
+        title: task.content,
+        completed: task.status === 2,
+      }, automation: task.automation })
+    }
+
+    const linkedEvents: TaskScheduleEventContext[] = (
       await Promise.all(
         Array.from(referencedEventIds).map(async (eventId) => {
           const snapshot = await getDoc(
@@ -183,13 +211,51 @@ export default function Dashboard(): JSX.Element {
           return {
             id: snapshot.id,
             startDate: event.startDate,
-          } satisfies AutomationEventContext
+          }
         }),
       )
-    ).filter((event): event is AutomationEventContext => event !== null)
+    ).filter((event): event is TaskScheduleEventContext => event !== null)
+
+    const taskSourcesByHorizon: Record<ActionHorizon, PlannedActionSource[]> = {
+      day: [],
+      week: [],
+      month: [],
+    }
+
+    for (const task of tasks) {
+      const candidates = getTaskActionCandidates(task, referenceDate, linkedEvents)
+
+      for (const candidate of candidates) {
+        taskSourcesByHorizon[candidate.horizon].push({
+          item: {
+            key: `task:${task.id}`,
+            sourceType: 'task',
+            sourceId: task.id,
+            title: task.content,
+            completed: task.status === 2,
+            inProgress: task.status === 1,
+            ...(candidate.date ? { date: candidate.date } : {}),
+          },
+          automation: task.automation,
+        })
+      }
+    }
+
+    const sourcesByHorizon = eventSourcesByHorizon.map(([horizon, sources]) => (
+      [horizon, [...sources, ...taskSourcesByHorizon[horizon]]] as const
+    ))
+    const projectedTaskKeys = new Set<string>()
 
     const entries = sourcesByHorizon.map(([horizon, sources]) => {
-      const items: ActionProjectionItem[] = sources
+      const visibleSources = sources.filter(source => {
+        if (source.item.sourceType !== 'task') return true
+        if (projectedTaskKeys.has(source.item.key)) return false
+
+        projectedTaskKeys.add(source.item.key)
+        return true
+      })
+
+      const items: ActionProjectionItem[] = visibleSources
         .map(({ item, automation }) => ({
           ...item,
           automation: evaluateAutomation(automation, {
@@ -205,6 +271,10 @@ export default function Dashboard(): JSX.Element {
             return a.automation.highlighted ? -1 : 1
           }
 
+          if (a.inProgress !== b.inProgress) {
+            return a.inProgress ? -1 : 1
+          }
+
           const timeOrder = (a.time ?? '99:99').localeCompare(b.time ?? '99:99')
           return timeOrder !== 0 ? timeOrder : a.title.localeCompare(b.title, 'pt-BR')
         })
@@ -213,7 +283,7 @@ export default function Dashboard(): JSX.Element {
     })
 
     setActions(Object.fromEntries(entries) as ActionProjection)
-  };
+  }
 
   /**
    * @async
@@ -282,6 +352,22 @@ export default function Dashboard(): JSX.Element {
     await Promise.all([fetchAndGroupEvents(), fetchPlannedActions()]);
   };
 
+  const handleLoadWeather = async () => {
+    setWeatherUiState('loading')
+
+    try {
+      const currentWeather = await getCurrentBrowserWeather()
+      setWeather(currentWeather)
+      setWeatherUiState('available')
+      await fetchPlannedActions(currentWeather)
+    } catch (error) {
+      console.warn('Contexto de clima indisponível:', error)
+      setWeather(null)
+      setWeatherUiState('unavailable')
+      await fetchPlannedActions(null)
+    }
+  }
+
   const handleToggleEventStatus = async (eventId: string, newStatus: 0 | 1) => {
     try {
       const eventRef = doc(db, `users/${uid}/events-history`, eventId);
@@ -344,15 +430,29 @@ export default function Dashboard(): JSX.Element {
                 </div>
               </header>
 
-              {weather && (
-                <div className={styles.weatherContext}>
-                  <span>{getWeatherConditionLabel(weather.condition)} · {Math.round(weather.temperatureC)}°C</span>
-                  <span className={styles.weatherAttribution}>
-                    Clima por{' '}
-                    <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
-                  </span>
-                </div>
-              )}
+              <div className={styles.weatherContext}>
+                {weather ? (
+                  <>
+                    <span>{getWeatherConditionLabel(weather.condition)} · {Math.round(weather.temperatureC)}°C</span>
+                    <span className={styles.weatherAttribution}>
+                      Clima por{' '}
+                      <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+                    </span>
+                  </>
+                ) : weatherUiState === 'loading' || weatherUiState === 'checking' ? (
+                  <span>Consultando clima atual…</span>
+                ) : weatherUiState === 'needsPermission' ? (
+                  <button
+                    type="button"
+                    className={styles.weatherAction}
+                    onClick={handleLoadWeather}
+                  >
+                    Ver clima atual
+                  </button>
+                ) : (
+                  <span>Clima atual indisponível.</span>
+                )}
+              </div>
 
               <div className={styles.contextEvents}>
                 <div className={styles.contextEventsHeading}>

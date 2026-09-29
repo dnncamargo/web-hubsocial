@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import {
   collection,
+  deleteField,
   doc,
   runTransaction,
   updateDoc,
@@ -13,8 +14,10 @@ import { useAuth } from '../../components/auth/AuthProvider'
 import { Task } from '../../utils/interfaces'
 import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
+import { TaskSchedule } from '../../types/tasks'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
+import TaskScheduleControl from '../../components/actions/TaskScheduleControl'
 import { OptionalField } from '../../types/optionalFields'
 import { buildEventPayload } from '../../utils/eventPayload'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
@@ -60,6 +63,7 @@ export default function EditTaskModal({
   const [actionPlanning, setActionPlanning] = useState<ActionPlanning>(
     task.actionPlanning ?? {},
   )
+  const [schedule, setSchedule] = useState<TaskSchedule | undefined>(task.schedule)
   const [automation, setAutomation] = useState<AutomationRuleSet>(
     task.automation ?? { match: 'all', rules: [] },
   )
@@ -89,6 +93,7 @@ export default function EditTaskModal({
   useEffect(() => {
     setContent(task.content)
     setActionPlanning(task.actionPlanning ?? {})
+    setSchedule(task.schedule)
     setAutomation(task.automation ?? { match: 'all', rules: [] })
     setAddingDate(false)
     setSaveError('')
@@ -197,6 +202,7 @@ export default function EditTaskModal({
       content: content.trim(),
       actionPlanning,
       automation,
+      schedule: schedule ?? deleteField(),
     })
   }
 
@@ -223,12 +229,23 @@ export default function EditTaskModal({
       const currentSubtask = subtasks[subtaskIndex]
       const updatedSubtasks = subtasks.map((subtask, index) => (
         index === subtaskIndex
-          ? {
-            ...currentSubtask,
-            content: content.trim(),
-            actionPlanning,
-            automation,
-          }
+          ? schedule
+            ? {
+              ...currentSubtask,
+              content: content.trim(),
+              actionPlanning,
+              automation,
+              schedule,
+            }
+            : (() => {
+              const { schedule: _schedule, ...withoutSchedule } = currentSubtask
+              return {
+                ...withoutSchedule,
+                content: content.trim(),
+                actionPlanning,
+                automation,
+              }
+            })()
           : subtask
       ))
 
@@ -371,6 +388,12 @@ export default function EditTaskModal({
           <ActionPlanningControl
             planning={actionPlanning}
             onChange={setActionPlanning}
+          />
+
+          <TaskScheduleControl
+            uid={uid}
+            value={schedule}
+            onChange={setSchedule}
           />
 
           <AutomationRulesEditor

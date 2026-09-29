@@ -21,9 +21,9 @@ export default function ActionPlanningControl({
 }: ActionPlanningControlProps) {
   return (
     <fieldset className={styles.fieldset}>
-      <legend className={styles.legend}>Ações</legend>
+      <legend className={styles.legend}>Planejamento manual</legend>
       <p className={styles.description}>
-        Inclua manualmente este item nos seus horizontes de ação.
+        Inclua manualmente este item em um ou mais horizontes de ação.
       </p>
 
       <div className={styles.options}>

@@ -44,6 +44,21 @@ let cachedWeather:
     }
   | undefined
 
+let pendingWeather: Promise<WeatherSnapshot> | undefined
+
+export type GeolocationPermissionState = PermissionState | 'unsupported'
+
+export async function getBrowserGeolocationPermissionState(): Promise<GeolocationPermissionState> {
+  if (!navigator.permissions?.query) return 'unsupported'
+
+  try {
+    const status = await navigator.permissions.query({ name: 'geolocation' })
+    return status.state
+  } catch {
+    return 'unsupported'
+  }
+}
+
 export function mapWeatherCodeToCondition(
   weatherCode: number,
 ): WeatherCondition | null {
@@ -131,16 +146,30 @@ export async function getCurrentBrowserWeather(): Promise<WeatherSnapshot> {
     return cachedWeather.snapshot
   }
 
-  const coordinates = await getBrowserCoordinates()
-  const snapshot = await fetchWeather(
-    coordinates.latitude,
-    coordinates.longitude,
-  )
+  if (pendingWeather) return pendingWeather
 
-  cachedWeather = {
-    snapshot,
-    expiresAt: Date.now() + CACHE_DURATION_MS,
+  const request = (async () => {
+    const coordinates = await getBrowserCoordinates()
+    const snapshot = await fetchWeather(
+      coordinates.latitude,
+      coordinates.longitude,
+    )
+
+    cachedWeather = {
+      snapshot,
+      expiresAt: Date.now() + CACHE_DURATION_MS,
+    }
+
+    return snapshot
+  })()
+
+  pendingWeather = request
+
+  try {
+    return await request
+  } finally {
+    if (pendingWeather === request) {
+      pendingWeather = undefined
+    }
   }
-
-  return snapshot
 }

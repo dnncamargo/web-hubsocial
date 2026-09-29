@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CalendarDays, ListChecks } from 'lucide-react'
 import { ActionProjection, ActionProjectionItem } from '../../types/actions'
 import styles from './ActionsOverview.module.css'
 
@@ -32,9 +33,12 @@ function getAutomationStatus(item: ActionProjectionItem) {
 
 function ActionRow({ item }: { item: ActionProjectionItem }) {
   const automationStatus = getAutomationStatus(item)
-  const rowClassName = item.automation.highlighted
-    ? `${styles.row} ${styles.highlightedRow}`
-    : styles.row
+  const SourceIcon = item.sourceType === 'event' ? CalendarDays : ListChecks
+  const rowClassName = [
+    styles.row,
+    item.automation.highlighted ? styles.highlightedRow : '',
+    item.inProgress ? styles.inProgressRow : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <li className={rowClassName}>
@@ -47,10 +51,14 @@ function ActionRow({ item }: { item: ActionProjectionItem }) {
           {item.title}
         </span>
         <span className={styles.meta}>
+          <SourceIcon className={styles.sourceIcon} aria-hidden="true" />
           {item.sourceType === 'event' ? 'Evento' : 'Tarefa'}
           {item.date ? ` · ${item.date}` : ''}
           {item.time ? ` · ${item.time}` : ''}
         </span>
+        {item.inProgress && (
+          <span className={styles.inProgressLabel}>Em andamento</span>
+        )}
         {automationStatus && (
           <span className={automationStatus.className}>
             {automationStatus.label}
