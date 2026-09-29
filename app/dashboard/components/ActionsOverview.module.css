@@ -84,6 +84,7 @@
 }
 
 .row {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
@@ -97,16 +98,33 @@
 }
 
 .highlightedRow {
-  margin-inline: calc(var(--space-2) * -1);
-  padding-inline: var(--space-2);
+  padding-left: var(--space-2);
   border-radius: var(--radius-sm);
   background: var(--color-events-soft);
-  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .inProgressRow {
+  padding-left: var(--space-2);
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--color-task-status-in-progress) 8%, var(--color-surface));
-  box-shadow: inset 3px 0 0 var(--color-task-status-in-progress);
+}
+
+.highlightedRow::before,
+.inProgressRow::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  content: '';
+  pointer-events: none;
+}
+
+.highlightedRow::before {
+  background: var(--color-accent);
+}
+
+.inProgressRow::before {
+  background: var(--color-task-status-in-progress);
 }
 
 .pendingMarker,
