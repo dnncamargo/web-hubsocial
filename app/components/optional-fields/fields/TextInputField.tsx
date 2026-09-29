@@ -1,3 +1,6 @@
+import { useId } from 'react';
+import styles from '../OptionalFields.module.css';
+
 type TextInputFieldProps = {
     label: string;
     value: string;
@@ -11,22 +14,30 @@ export default function TextInputField({
     onChange, 
     onLabelChange 
 }: TextInputFieldProps) {
+    const fieldId = useId();
+    const labelId = `${fieldId}-label`;
+    const valueId = `${fieldId}-value`;
+
     return (
-        <div className="mb-4">
+        <div className={styles.field}>
 
             <input
+                id={labelId}
                 type="text"
                 value={label}
                 onChange={(e) => onLabelChange(e.target.value)}
-                className="font-semibold text-sm bg-gray-50  text-gray-700 mb-2 p-1 "
+                className={styles.labelInput}
+                aria-label="Nome do campo opcional"
                 placeholder="Descrição"
             />
 
             <input
+                id={valueId}
                 type="text"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full border p-2 rounded"
+                className={styles.input}
+                aria-label={label || 'Valor do campo opcional'}
             />
         </div>
     );

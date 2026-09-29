@@ -48,6 +48,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const {
     optionalFields,
     addOptionalField,
+    availableFieldOptions,
     removeOptionalField,
     updateOptionalField,
     updateLabel,
@@ -231,6 +232,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 {showOptionalFieldModal && (
                   <OptionalFieldModal
                     context="event"
+                    availableFieldOptions={availableFieldOptions}
                     onAddOptionalField={addOptionalField}
                     onClose={() => setShowOptionalFieldModal(false)}
                   />

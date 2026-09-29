@@ -51,6 +51,7 @@ const EditEventModal = ({
   const {
     optionalFields,
     addOptionalField,
+    availableFieldOptions,
     removeOptionalField,
     updateOptionalField,
     updateLabel,
@@ -255,6 +256,7 @@ const EditEventModal = ({
                 {showOptionalFieldModal && (
                   <OptionalFieldModal
                     context="event"
+                    availableFieldOptions={availableFieldOptions}
                     onAddOptionalField={addOptionalField}
                     onClose={() => setShowOptionalFieldModal(false)}
                   />

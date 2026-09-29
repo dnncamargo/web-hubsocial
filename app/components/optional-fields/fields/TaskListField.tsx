@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, KeyboardEvent } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { useId, useState, KeyboardEvent } from 'react';
 import { TaskItem } from '../../../types/optionalFields';
+import styles from '../OptionalFields.module.css';
 
 interface TaskListFieldProps {
   label: string;
@@ -18,6 +18,7 @@ export default function TaskListField({
   onLabelChange
 }: TaskListFieldProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const fieldId = useId();
 
   const toggleDone = (id: string) => {
     const updated = value.map(task =>
@@ -39,7 +40,7 @@ export default function TaskListField({
 
   const addEmptyTask = () => {
     const newTask: TaskItem = {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       text: '',
       done: false
     };
@@ -54,41 +55,48 @@ export default function TaskListField({
   };
 
   return (
-    <div className="space-y-2">
-      <ul className="space-y-1">
-        {/* Label editável */}
-        <input
-          type="text"
-          value={label}
-          onChange={(e) => onLabelChange(e.target.value)}
-          className="font-semibold text-sm bg-gray-50 text-gray-700 mb-2 p-1 w-full"
-          placeholder="Lista de Tarefas"
-        />
-        {value.map(task => (
-          <li key={task.id} className="flex items-center gap-2">
+    <div className={styles.tasks}>
+      <input
+        id={`${fieldId}-label`}
+        type="text"
+        value={label}
+        onChange={(e) => onLabelChange(e.target.value)}
+        className={styles.labelInput}
+        aria-label="Nome do campo de tarefas"
+        placeholder="Lista de Tarefas"
+      />
+
+      <ul className={styles.taskList}>
+        {value.map((task, index) => (
+          <li key={task.id} className={styles.taskRow}>
             <input
+              id={`${fieldId}-${task.id}-done`}
               type="checkbox"
               checked={task.done}
               onChange={() => toggleDone(task.id)}
-              className="h-4 w-4 text-green-600"
+              className={styles.checkbox}
+              aria-label={`Marcar tarefa ${index + 1} como concluída`}
             />
 
             <input
+              id={`${fieldId}-${task.id}-text`}
               type="text"
               value={task.text}
               onChange={e => updateTaskText(task.id, e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, task.id)}
-              className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
+              className={styles.taskInput}
+              aria-label={`Tarefa ${index + 1}`}
               placeholder="Descrição da tarefa"
               autoFocus={editingTaskId === task.id}
             />
 
             <button
+              type="button"
               onClick={(e) => {
                 e.preventDefault();
                 deleteTask(task.id)
               }}
-              className="text-red-500 text-xs"
+              className={`${styles.removeAction} ${styles.taskDelete}`}
             >
               Excluir
             </button>
@@ -96,11 +104,12 @@ export default function TaskListField({
         ))}
       </ul>
       <button
+        type="button"
         onClick={(e) => {
           e.preventDefault();
           addEmptyTask();
         }}
-        className="text-blue-600 text-sm underline mt-2"
+        className={`${styles.action} ${styles.addAction}`}
       >
         + Nova tarefa
       </button>
