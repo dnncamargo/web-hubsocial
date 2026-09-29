@@ -1,48 +1,42 @@
-import { EventSuggestion } from "../../utils/interfaces";
+import { EventSuggestion } from '../../utils/interfaces'
+import styles from './SuggestionCard.module.css'
 
 interface SuggestionCardProps {
-    suggestion: EventSuggestion;
-    onAccept: () => void;
-    onReject: () => void;
+  suggestion: EventSuggestion
+  onAccept: () => void
+  onReject: () => void
 }
 
-export default function SuggestionCard({ suggestion, onAccept, onReject }: SuggestionCardProps) {
+export default function SuggestionCard({
+  suggestion,
+  onAccept,
+  onReject,
+}: SuggestionCardProps) {
+  const { person, reason } = suggestion
 
-    const { person, reason, suggestedDate } = suggestion
+  const reasonText = {
+    birthday: 'Aniversário em breve 🎂',
+    belatedBirthday: 'Aniversário recente 🎉',
+    contactFrequency: 'Faz tempo desde o último contato 👋',
+    inactiveFavorite: 'Favorito sem interação recente ⭐',
+    favoriteMissingBirthday: 'Adicionar data de aniversário 📅',
+  }
 
-    // Objeto de mapeamento para traduzir o 'reason'
-    const reasonText = {
-        birthday: 'Aniversário em breve 🎂',
-        belatedBirthday: 'Aniversário recente 🎉',
-        contactFrequency: 'Faz tempo desde o último contato 👋',
-        inactiveFavorite: 'Favorito sem interação recente ⭐',
-        favoriteMissingBirthday: 'Adicionar data de aniversário 📅'
-    }
+  const translatedReason = reasonText[reason] || 'Motivo desconhecido'
 
-    // Busca a tradução do motivo
-    const translatedReason = reasonText[reason] || 'Motivo Desconhecido';
+  return (
+    <article className={styles.card}>
+      <p className={styles.personName}>{person.name}</p>
+      <p className={styles.reason}>{translatedReason}</p>
 
-    return (
-        <div className="bg-gray-100 rounded p-3 mb-3">
-            <p><strong>{person.name}</strong></p>
-            <p className="text-sm text-gray-500">
-                {translatedReason}
-            </p>
-            <div className="flex gap-2 mt-2">
-                <button
-                    onClick={onAccept}
-                    className="text-white bg-green-500 px-3 py-1 text-sm rounded hover:bg-green-600"
-                >
-                    Criar evento
-                </button>
-                <button
-                    onClick={onReject}
-                    className="text-sm text-gray-500 hover:text-red-500"
-                >
-                    Rejeitar
-                </button>
-            </div>
-        </div>
-
-    )
+      <div className={styles.actions}>
+        <button type="button" onClick={onAccept} className={styles.acceptButton}>
+          Criar evento
+        </button>
+        <button type="button" onClick={onReject} className={styles.rejectButton}>
+          Rejeitar
+        </button>
+      </div>
+    </article>
+  )
 }

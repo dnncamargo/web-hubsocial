@@ -436,6 +436,11 @@ Execution checkpoints:
   - Event card migrated to CSS Module;
   - compact scan-oriented presentation;
   - keyboard-accessible card navigation and preserved edit action.
+- **Visual 2F — Dashboard supporting surfaces: DONE**
+  - Suggestion card and side panel migrated to CSS Modules;
+  - duplicate panel close action removed;
+  - upcoming-event summary migrated away from Tailwind/global card classes;
+  - event status control is keyboard-accessible and exposes its visible state.
 
 Validate both desktop and mobile before expanding the migration.
 
