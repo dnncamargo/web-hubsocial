@@ -510,26 +510,25 @@ No new CSS framework replaces Tailwind.
 
 ### 6.6. Visual 4 — Canonical workspace shell
 
-**Status: NEXT**
+**Status: DONE**
 
-Implement the mature workspace described in `VISUAL_CONTRACT.md`.
+Implemented the mature workspace described in `VISUAL_CONTRACT.md`:
 
-Desktop target:
+Desktop behavior:
 
 - persistent left sidebar;
-- contextual top bar;
-- broad operational workspace;
-- Actions of the Day dominant;
-- Week secondary;
-- Month tertiary;
-- context/weather supporting rather than dominant.
+- restrained contextual top bar with Today/date and quick create;
+- broad operational workspace with Actions of the Day dominant, Week secondary, Month tertiary, and Context supporting;
+- nearest upcoming events, weather when available, and Suggestions remain supporting context.
 
-Mobile target:
+Mobile behavior:
 
 - compact header/context;
-- persistent bottom navigation;
-- same domain projections as desktop;
-- no desktop-sidebar-as-drawer by default.
+- persistent five-item bottom navigation with a central quick-create action;
+- same Day/Week/Month projections as desktop;
+- no desktop-sidebar-as-drawer.
+
+Quick create routes to the existing Task, Event, and Person creation editors through transient URL intent and does not add persistence.
 
 ---
 
@@ -682,8 +681,8 @@ A roadmap checkpoint is complete only when:
 
 ## 11. Current next action
 
-The next implementation checkpoint is:
+The next product decision is:
 
 ```text
-Visual 4 — Canonical workspace shell
+TBD — pending product decision
 ```

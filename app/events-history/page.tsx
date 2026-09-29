@@ -4,6 +4,7 @@ import { useState, useEffect, JSX } from 'react'
 import { getDocs, query, orderBy, collection, doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../utils/firebaseConfig'
 import { useAuth } from '../components/auth/AuthProvider'
+import { useSearchParams } from 'react-router'
 import { Event } from '../utils/interfaces'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import EventCard from './components/EventCard'
@@ -28,6 +29,7 @@ const defaultFilters: EventFilter = {
 
 const EventsHistory = (): JSX.Element => {
   const { uid } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false)
@@ -49,6 +51,15 @@ const EventsHistory = (): JSX.Element => {
       fetchEvents()
     }
   }, [uid])
+
+  useEffect(() => {
+    if (searchParams.get('create') !== 'event') return
+
+    setIsAddEventModalOpen(true)
+    const nextSearchParams = new URLSearchParams(searchParams)
+    nextSearchParams.delete('create')
+    setSearchParams(nextSearchParams, { replace: true })
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     const init = async () => {

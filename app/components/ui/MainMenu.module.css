@@ -16,7 +16,7 @@
   backdrop-filter: blur(10px);
 }
 
-.mobileBrand,
+.mobileContext,
 .brand {
   color: var(--color-text-primary);
   font-family: var(--font-brand);
@@ -24,8 +24,23 @@
   text-decoration: none;
 }
 
-.mobileBrand {
-  font-size: 1.25rem;
+.mobileContext {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.mobileEyebrow {
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.mobileDate {
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 400;
 }
 
 .bottomNav {
@@ -33,7 +48,7 @@
   inset: auto 0 0;
   z-index: 50;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 4.25rem;
   border-top: 1px solid var(--color-border);
   background: rgb(255 255 255 / 0.97);
@@ -61,12 +76,26 @@
   font-size: 0.6875rem;
 }
 
+.bottomNav > .mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .navLink:hover {
   color: var(--color-text-primary);
 }
 
 .navLinkActive {
   color: var(--color-accent);
+}
+
+.navLink:focus-visible,
+.mobileContext:focus-visible,
+.accountButton:focus-visible,
+.mobileAccountButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
 }
 
 .navIcon {

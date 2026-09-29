@@ -2,9 +2,12 @@ import { JSX, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { CalendarDays, House, ListTodo, Users } from 'lucide-react'
 import { Link, useLocation } from 'react-router'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../auth/AuthProvider'
 import LogoutButton from './LogoutButton'
 import ImportContactsModal from './ImportContactsModal'
+import QuickCreateMenu from './QuickCreateMenu'
 import { instance } from '../../config/instance'
 import styles from './MainMenu.module.css'
 
@@ -50,6 +53,8 @@ export default function MainMenu(): JSX.Element {
   const avatarUrl =
     userPicture ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name?.[0] || 'U')}&background=ccc&color=000`
+  const dateText = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
+  const formattedDate = dateText.charAt(0).toUpperCase() + dateText.slice(1)
 
   const renderNavLink = ({ path, label, icon: Icon }: (typeof navItems)[number]) => (
     <Link
@@ -99,14 +104,17 @@ export default function MainMenu(): JSX.Element {
       </aside>
 
       <header className={styles.mobileHeader}>
-        <Link to="/dashboard" className={styles.mobileBrand}>
-          {instance.name}
+        <Link to="/dashboard" className={styles.mobileContext}>
+          <span className={styles.mobileEyebrow}>Hoje</span>
+          <span className={styles.mobileDate}>{formattedDate}</span>
         </Link>
         {accountButton(styles.mobileAccountButton)}
       </header>
 
       <nav className={styles.bottomNav} aria-label="Navegação principal">
-        {navItems.map(renderNavLink)}
+        {navItems.slice(0, 2).map(renderNavLink)}
+        <QuickCreateMenu variant="mobile" />
+        {navItems.slice(2).map(renderNavLink)}
       </nav>
 
       <AnimatePresence>
