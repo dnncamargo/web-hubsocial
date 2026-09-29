@@ -1,0 +1,74 @@
+.card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.personName,
+.reason {
+  margin: 0;
+}
+
+.personName {
+  color: var(--color-text-primary);
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.reason {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.acceptButton,
+.rejectButton {
+  min-height: 2rem;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+
+.acceptButton {
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  background: var(--color-events);
+  color: #ffffff;
+}
+
+.acceptButton:hover {
+  background: var(--color-events-strong);
+}
+
+.rejectButton {
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.rejectButton:hover {
+  color: var(--color-danger);
+}
+
+.acceptButton:focus-visible,
+.rejectButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
