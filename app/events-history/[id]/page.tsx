@@ -78,6 +78,20 @@ const EventDetails = () => {
     })
   }
 
+  const handleCreateCalendarEvent = async () => {
+    if (!googleAccessToken) {
+      alert('Autorização do Google não está disponível.')
+      return
+    }
+
+    try {
+      await createGoogleCalendarEvent(event, googleAccessToken)
+    } catch (error) {
+      console.error('Erro ao criar evento no Google Calendar:', error)
+      alert('Não foi possível criar o evento no Google Calendar.')
+    }
+  }
+
   const renderOptionalFieldValue = (field: OptionalField) => {
     switch (field.type) {
       case 'text':
@@ -239,7 +253,7 @@ const EventDetails = () => {
               <div className={styles.actions}>
                 <button
                   type="button"
-                  onClick={() => createGoogleCalendarEvent(event, googleAccessToken)}
+                  onClick={handleCreateCalendarEvent}
                   className={styles.calendarButton}
                 >
                   Criar no Google Calendar
