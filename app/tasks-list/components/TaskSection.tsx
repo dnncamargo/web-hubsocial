@@ -56,15 +56,18 @@ export default function TaskSection({
 
     if (!parentSnap.exists()) return
 
-    const parentTask = parentSnap.data() as Task
+    const parentTask = {
+      id: parentSnap.id,
+      ...parentSnap.data(),
+    } as Task
     const updatedParent: Task = {
       ...parentTask,
       subtasks: (parentTask.subtasks || []).filter(item => item.id !== subtask.id),
     }
 
     const promotedTask: Task = {
-      parentTaskId: '',
       ...subtask,
+      parentTaskId: null,
       subtasks: [],
     }
 
@@ -104,8 +107,8 @@ export default function TaskSection({
   const handleStatusSwitch = async (task: Task, newStatus: 0 | 1 | 2) => {
     if (!uid) return
 
-    const isParent = task.subtasks !== undefined
-    const isSubtask = task.parentTaskId !== undefined && task.parentTaskId !== null
+    const isParent = (task.subtasks?.length ?? 0) > 0
+    const isSubtask = Boolean(task.parentTaskId)
 
     if (!isParent && !isSubtask) {
       await setDoc(
