@@ -270,14 +270,14 @@ const EventsHistory = (): JSX.Element => {
           {(searchIsActive || filtersAreActive) && <span>Visualização filtrada</span>}
         </div>
 
-        {events.length === 0 ? (
+        {viewMode === 'calendar' ? (
+          <EventCalendarMonth events={visibleEvents} />
+        ) : events.length === 0 ? (
           <p className={styles.emptyState}>Nenhum evento registrado.</p>
         ) : visibleEvents.length === 0 ? (
           <p className={styles.emptyState}>
             Nenhum evento corresponde à pesquisa ou aos filtros atuais.
           </p>
-        ) : viewMode === 'calendar' ? (
-          <EventCalendarMonth events={visibleEvents} />
         ) : (
           <>
             <div className={styles.grid}>
