@@ -2,192 +2,190 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { addDoc, getDocs, collection } from 'firebase/firestore';
+import { addDoc, getDocs, collection } from 'firebase/firestore'
 import { db } from '../../utils/firebaseConfig'
-import { useAuth } from '../../components/auth/AuthProvider';
-import { motion } from 'motion/react';
+import { useAuth } from '../../components/auth/AuthProvider'
+import { motion } from 'motion/react'
 import { differenceInDays, format, isAfter, parseISO, add } from 'date-fns'
 import { X } from 'lucide-react'
 import { Person, Event, EventSuggestion } from '../../utils/interfaces'
 import { buildEventPayload } from '../../utils/eventPayload'
-import SuggestionCard from './SuggestionCard';
+import SuggestionCard from './SuggestionCard'
+import styles from './SuggestionPanel.module.css'
 
 interface SuggestionPanelProps {
-    onClose: () => void;
-    onEventCreated: () => void;
+  onClose: () => void
+  onEventCreated: () => void
 }
 
 export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionPanelProps) {
-    const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
-    const [suggestions, setSuggestions] = useState<EventSuggestion[]>([])
+  const { uid } = useAuth()
+  const [suggestions, setSuggestions] = useState<EventSuggestion[]>([])
 
-    useEffect(() => {
-        if (uid) {
-            fetchSuggestions()
-        }
-    }, [uid])
+  useEffect(() => {
+    if (uid) {
+      fetchSuggestions()
+    }
+  }, [uid])
 
-    if (!uid) {
-        return <p>Carregando usuário...</p>;
+  if (!uid) {
+    return <p className={styles.loadingState}>Carregando usuário...</p>
+  }
+
+  const fetchSuggestions = async () => {
+    const peopleSnap = await getDocs(collection(db, `users/${uid}/people-directory`))
+    const eventsSnap = await getDocs(collection(db, `users/${uid}/events-history`))
+
+    const people = peopleSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Person[]
+    const events = eventsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Event[]
+
+    const result = generateSuggestions(people, events)
+    setSuggestions(result)
+  }
+
+  function getNextContactDate(lastContact: Date | null, frequency: Person['contactFrequency']) {
+    if (!frequency || !lastContact) return null
+
+    const freqMap = {
+      weekly: 7,
+      biweekly: 14,
+      monthly: 30,
+      quarterly: 90,
     }
 
-    const fetchSuggestions = async () => {
-        // buscar pessoas e eventos
-        // aplicar a lógica de filtro
-        // atualizar o estado
-        const peopleSnap = await getDocs(collection(db, `users/${uid}/people-directory`))
-        const eventsSnap = await getDocs(collection(db, `users/${uid}/events-history`))
+    const days = freqMap[frequency]
+    return add(lastContact, { days })
+  }
 
-        const people = peopleSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Person[]
-        const events = eventsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Event[]
+  function generateSuggestions(people: Person[], events: Event[]): EventSuggestion[] {
+    const now = new Date()
+    const today = format(now, 'yyyy-MM-dd')
+    const nextSuggestions: EventSuggestion[] = []
 
-        const result = generateSuggestions(people, events)
-        setSuggestions(result)
+    for (const person of people) {
+      const birthday = person.birthday ? parseISO(person.birthday) : null
+      const lastEvent = events
+        .filter(event => event.personIds?.includes(person.id))
+        .sort((a, b) => parseISO(b.startDate).getTime() - parseISO(a.startDate).getTime())[0]
+
+      if (birthday) {
+        const upcoming = new Date(now.getFullYear(), birthday.getMonth(), birthday.getDate())
+        const daysFromNow = differenceInDays(now, upcoming)
+
+        if ((daysFromNow >= -7 && daysFromNow <= 0) || (daysFromNow > 0 && daysFromNow <= 2)) {
+          nextSuggestions.push({
+            reason: daysFromNow > 0 ? 'belatedBirthday' : 'birthday',
+            person,
+            suggestedDate: format(upcoming, 'yyyy-MM-dd'),
+          })
+        }
+      }
+
+      if (person.favorite && !person.birthday) {
+        nextSuggestions.push({
+          reason: 'favoriteMissingBirthday',
+          person,
+          suggestedDate: today,
+        })
+      } else if (
+        person.favorite
+        && (!lastEvent || differenceInDays(now, parseISO(lastEvent.startDate)) > 90)
+      ) {
+        nextSuggestions.push({
+          reason: 'inactiveFavorite',
+          person,
+          suggestedDate: today,
+        })
+      }
+
+      const nextContact = getNextContactDate(
+        lastEvent?.startDate ? parseISO(lastEvent.startDate) : null,
+        person.contactFrequency,
+      )
+
+      if (nextContact && isAfter(now, nextContact)) {
+        nextSuggestions.push({
+          reason: 'contactFrequency',
+          person,
+          suggestedDate: today,
+        })
+      }
     }
 
+    return nextSuggestions
+  }
 
-    function getNextContactDate(lastContact: Date | null, frequency: Person['contactFrequency']) {
-        if (!frequency || !lastContact) return null
-
-        const freqMap = {
-            weekly: 7,
-            biweekly: 14,
-            monthly: 30,
-            quarterly: 90,
-        }
-
-        const days = freqMap[frequency]
-        return add(lastContact, { days })
+  const handleAccept = async (suggestion: EventSuggestion) => {
+    if (suggestion.reason === 'favoriteMissingBirthday') {
+      alert(`Adicionar data de nascimento para ${suggestion.person.name}.`)
+      return
     }
 
-    function generateSuggestions(people: Person[], events: Event[]): EventSuggestion[] {
-        const now = new Date()
-        const today = format(now, 'yyyy-MM-dd')
-        const suggestions: EventSuggestion[] = []
+    const suggestedDate = suggestion.suggestedDate
 
-        for (const person of people) {
-            const birthday = person.birthday ? parseISO(person.birthday) : null
-            const lastEvent = events
-                .filter(e => e.personIds?.includes(person.id))
-                .sort((a, b) => parseISO(b.startDate).getTime() - parseISO(a.startDate).getTime())[0]
+    await addDoc(collection(db, `users/${uid}/events-history`), buildEventPayload({
+      title: suggestion.reason === 'belatedBirthday'
+        ? `Feliz aniversário atrasado para ${suggestion.person.name}`
+        : `Contato com ${suggestion.person.name}`,
+      personIds: [suggestion.person.id],
+      allDay: false,
+      startDate: suggestedDate,
+      endDate: suggestedDate,
+      startTime: '12:00',
+      endTime: '13:00',
+      status: 0,
+      createdAt: new Date(),
+    }))
 
-            {/* Aniversário nos próximos 7 dias */ }
-            if (birthday) {
-                const upcoming = new Date(now.getFullYear(), birthday.getMonth(), birthday.getDate())
-                const daysFromNow = differenceInDays(now, upcoming)
+    onEventCreated()
+    setSuggestions(previous => previous.filter(item => item !== suggestion))
+  }
 
-                // Se for nos próximos 7 dias OU até 2 dias depois
-                if ((daysFromNow >= -7 && daysFromNow <= 0) || (daysFromNow > 0 && daysFromNow <= 2)) {
-                    suggestions.push({
-                        reason: daysFromNow > 0 ? 'belatedBirthday' : 'birthday',
-                        person,
-                        suggestedDate: format(upcoming, 'yyyy-MM-dd')
-                    })
-                }
-            }
+  const handleReject = (suggestion: EventSuggestion) => {
+    setSuggestions(previous => previous.filter(item => item !== suggestion))
+  }
 
-            {/* Favorito sem data de aniversário */ }
-            if (person.favorite && !person.birthday) {
-                suggestions.push({
-                    reason: 'favoriteMissingBirthday',
-                    person,
-                    suggestedDate: today
-                })
-            }
-            else 
-            {/* Favoritos sem eventos há muito tempo (somente se tiver data de aniversário) */ }
-            if (person.favorite &&
-                 (!lastEvent || differenceInDays(now, parseISO(lastEvent.startDate)) > 90)) {
-                suggestions.push({
-                    reason: 'inactiveFavorite',
-                    person,
-                    suggestedDate: today
-                })
-            }
-
-            {/* Frequência de contato vencida */ }
-            const nextContact = getNextContactDate(lastEvent?.startDate ? parseISO(lastEvent.startDate) : null, person.contactFrequency)
-            if (nextContact && isAfter(now, nextContact)) {
-                suggestions.push({
-                    reason: 'contactFrequency',
-                    person,
-                    suggestedDate: today
-                })
-            }
-        }
-        return suggestions
-    }
-
-    const handleAccept = async (suggestion: EventSuggestion) => {
-        if (suggestion.reason === 'favoriteMissingBirthday') {
-            // Redirecionar para edição da pessoa ou abrir modal futuramente
-            alert(`Adicionar data de nascimento para ${suggestion.person.name}.`);
-            return;
-        }
-
-        const suggestedDate = suggestion.suggestedDate;
-
-        await addDoc(collection(db, `users/${uid}/events-history`), buildEventPayload({
-            title: suggestion.reason === 'belatedBirthday'
-                ? `Feliz aniversário atrasado para ${suggestion.person.name}`
-                : `Contato com ${suggestion.person.name}`,
-            personIds: [suggestion.person.id],
-            allDay: false,
-            startDate: suggestedDate,
-            endDate: suggestedDate,
-            startTime: '12:00',
-            endTime: '13:00',
-            status: 0,
-            createdAt: new Date(),
-        }));
-
-        onEventCreated();
-        setSuggestions(prev => prev.filter(s => s !== suggestion));
-    };
-
-    const handleReject = (suggestion: EventSuggestion) => {
-        // Por enquanto, apenas removemos da lista local
-        setSuggestions(prev => prev.filter(s => s !== suggestion));
-    };
-
-
-    return (
-        <motion.div
-            animate={{ x: 120 }} // Posição final
-            initial={{ x: '100%' }} // Inicia fora da tela
-            exit={{ x: '100%' }}    // Sai para fora da tela
-            transition={{ type: 'spring', stiffness: 300, damping: 30, duration: 0.5 }} //Transição suave
-            className="fixed top-0 right-0 w-full sm:w-96 h-full bg-white z-40 shadow-xl p-4 overflow-y-auto"
+  return (
+    <motion.aside
+      animate={{ x: 0 }}
+      initial={{ x: '100%' }}
+      exit={{ x: '100%' }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className={styles.panel}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="suggestion-panel-title"
+    >
+      <header className={styles.header}>
+        <button
+          type="button"
+          className={styles.closeButton}
+          onClick={onClose}
+          aria-label="Fechar sugestões"
         >
+          <X className={styles.closeIcon} aria-hidden="true" />
+        </button>
+        <h2 id="suggestion-panel-title" className={styles.title}>
+          Sugestões de evento
+        </h2>
+      </header>
 
-            <div className='lateral-panel mt-4'>
-                <div className='lateral-header flex p-2'>
-                    <button
-                        className='flex-none mr-2'
-                        onClick={onClose}>
-                        <X className="h-6 w-6 text-gray-500" />
-                    </button>
-                    <h2 className="text-lg font-semibold flex-1">Sugestões de Evento</h2>
-                </div>
-                {/* Sugestões de eventos */}
-
-                {Object.values(suggestions).flat().length === 0 && (
-                    <p className="text-gray-600 text-center text-wrap ml-10 w-40">Adicione pessoas e eventos para ver sugestões.</p>
-                )}
-
-            </div>
-
-            {suggestions.map((sug, i) => (
-                <SuggestionCard
-                    key={i}
-                    suggestion={sug}
-                    onAccept={() => handleAccept(sug)}
-                    onReject={() => handleReject(sug)}
-                />
-
-            ))}
-            <button onClick={onClose} className="absolute top-4 right-4 text-gray-400">✕</button>
-        </motion.div>
-
-    )
+      {suggestions.length === 0 ? (
+        <p className={styles.emptyState}>
+          Adicione pessoas e eventos para ver sugestões.
+        </p>
+      ) : (
+        <div className={styles.list}>
+          {suggestions.map(suggestion => (
+            <SuggestionCard
+              key={`${suggestion.person.id}:${suggestion.reason}:${suggestion.suggestedDate}`}
+              suggestion={suggestion}
+              onAccept={() => handleAccept(suggestion)}
+              onReject={() => handleReject(suggestion)}
+            />
+          ))}
+        </div>
+      )}
+    </motion.aside>
+  )
 }
