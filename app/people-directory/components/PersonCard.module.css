@@ -1,0 +1,182 @@
+.card {
+  display: grid;
+  min-width: 0;
+  height: 100%;
+  border: 1px solid var(--color-border);
+  border-left: 2px solid var(--person-card-accent, var(--color-people));
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-background);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.header,
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.titleButton {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.title {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.titleButton:focus-visible,
+.bodyButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.actionGroup {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.iconButton,
+.editButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-people-strong);
+  font: inherit;
+  cursor: pointer;
+}
+
+.iconButton {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--color-text-muted);
+}
+
+.iconButton:hover,
+.editButton:hover {
+  color: var(--color-people-strong);
+}
+
+.iconButton:focus-visible,
+.editButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.favoriteActive {
+  color: var(--color-people-strong);
+}
+
+.icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.bodyButton {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.metaList {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.metaRow {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.metaIcon {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.1rem;
+  color: var(--color-text-muted);
+}
+
+.metaText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relationships {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.relationship {
+  padding: 0.2rem var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.footer {
+  justify-content: flex-end;
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.editButton {
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+}

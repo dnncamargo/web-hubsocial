@@ -1,3 +1,5 @@
+import styles from './PersonCard.module.css';
+
 type PeopleRelationshipsRendererProps = {
   selectedRelationships: string[];
 };
@@ -8,11 +10,11 @@ export function PeopleRelationshipsRenderer({
   if (selectedRelationships.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 mb-2">
+    <div className={styles.relationships}>
       {selectedRelationships.map((rel) => (
         <span
           key={rel}
-          className="bg-blue-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-bold"
+          className={styles.relationship}
         >
           {rel}
         </span>

@@ -1,20 +1,18 @@
 'use client';
 
-import { useState, useEffect, JSX } from 'react';
-import { doc, getDocs, updateDoc, collection, setDoc, getDoc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import { ListFilter, Search, UserPlus, X } from 'lucide-react';
 import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
-import { Person } from '../utils/interfaces';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
+import { Person } from '../utils/interfaces';
+import { usePersonRelationships } from '../hooks/usePersonRelationships';
 import PersonCard from './components/PersonCard';
 import AddPersonModal from './components/AddPersonModal';
 import EditPersonModal from './components/EditPersonModal';
-import { UserPlus } from 'lucide-react';
-import { ListFilterIcon, SearchIcon } from 'lucide-react';
-import FilterPersonModal from './components/FilterPersonModal';
-import type { PersonFilter } from './components/FilterPersonModal';
-import { usePersonRelationships } from '../hooks/usePersonRelationships';
-import Masonry from 'react-masonry-css'
+import FilterPersonModal, { PersonFilter } from './components/FilterPersonModal';
+import styles from './PeopleDirectory.module.css';
 
 const defaultFilters: PersonFilter = {
   enabled: true,
@@ -28,51 +26,62 @@ const defaultFilters: PersonFilter = {
   selectedRelationships: [],
 };
 
-
-/**
- * @component
- * @description Componente para exibir e gerenciar o diretório de pessoas. Permite adicionar, editar e excluir pessoas.
- * @returns {JSX.Element} A interface do diretório de pessoas.
- */
-const PeopleDirectory = (): JSX.Element => {
-  const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
-  const [people, setPeople] = useState<Person[]>([]);  /** @state {Person[]} people - Array de pessoas buscadas do Firestore. */
-  const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);  /** @state {boolean} isAddPersonModalOpen - Controla a visibilidade do modal de adicionar uma nova pessoa. */
-  const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);  /** @state {boolean} isEditModalOpen - Controla a visibilidade do modal de edição de uma pessoa existente. */
-  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);  /** @state {Person | null} selectedPerson - A pessoa selecionada para edição. */
+const PeopleDirectory = () => {
+  const { uid } = useAuth();
+  const [people, setPeople] = useState<Person[]>([]);
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
+  const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [filtersLoaded, setFiltersLoaded] = useState(false); // para evitar renderização prematura
-  const [filters, setFilters] = useState<PersonFilter>({
-    ...defaultFilters,
-    selectedRelationships: [],
-  });
-  const { availableRelationships } = usePersonRelationships();
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
+  const [filters, setFilters] = useState<PersonFilter>(defaultFilters);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const { availableRelationships } = usePersonRelationships();
+
+  const fetchPeople = async (): Promise<void> => {
+    if (!uid) return;
+
+    try {
+      const querySnapshot = await getDocs(collection(db, `users/${uid}/people-directory`));
+      const peopleData = querySnapshot.docs.map((personDocument) => ({
+        id: personDocument.id,
+        ...personDocument.data(),
+      })) as Person[];
+
+      peopleData.sort((left, right) => {
+        const favoriteDifference = Number(right.favorite) - Number(left.favorite);
+        return favoriteDifference !== 0
+          ? favoriteDifference
+          : left.name.localeCompare(right.name);
+      });
+      setPeople(peopleData);
+    } catch (error) {
+      console.error('Erro ao buscar pessoas:', error);
+    }
+  };
 
   useEffect(() => {
-    // Chama a função fetchPeople quando o componente é montado.
-    // Isso garante que a lista de pessoas seja carregada assim que o componente for exibido.
-    if (uid) {
-      fetchPeople();
-    }
+    void fetchPeople();
   }, [uid]);
 
   useEffect(() => {
-    const init = async () => {
+    const loadFilters = async () => {
       if (!uid) return;
 
       try {
-        const PeopleSettingRef = doc(db, `users/${uid}/settings`, 'userPeopleFilters');
-        const snapshot = await getDoc(PeopleSettingRef);
+        const settingsReference = doc(db, `users/${uid}/settings`, 'userPeopleFilters');
+        const snapshot = await getDoc(settingsReference);
 
         if (snapshot.exists()) {
           const data = snapshot.data();
           setFilters({
             ...defaultFilters,
             ...data,
-            selectedRelationships: Array.isArray(data?.selectedRelationships) ? data.selectedRelationships : [],
+            selectedRelationships: Array.isArray(data?.selectedRelationships)
+              ? data.selectedRelationships
+              : [],
           });
         }
       } catch (error) {
@@ -82,140 +91,50 @@ const PeopleDirectory = (): JSX.Element => {
       }
     };
 
-
-    init();
+    void loadFilters();
   }, [uid]);
 
   useEffect(() => {
     if (availableRelationships.length === 0) return;
 
-    setFilters(prev => ({
-      ...prev,
-      selectedRelationships: prev.selectedRelationships.length === 0
+    setFilters((previousFilters) => ({
+      ...previousFilters,
+      selectedRelationships: previousFilters.selectedRelationships.length === 0
         ? availableRelationships
-        : prev.selectedRelationships,
+        : previousFilters.selectedRelationships,
     }));
   }, [availableRelationships]);
 
-  /**
- * @async
- * @function fetchPeople
- * @description Busca a lista de pessoas do Firestore na coleção 'people-directory'.
- * @returns {Promise<void>}
- */
-  const fetchPeople = async (): Promise<void> => {
-    try {
-      // Obtém todos os documentos da coleção 'people-directory' no banco de dados 'db'.
-      const querySnapshot = await getDocs(collection(db, `users/${uid}/people-directory`));
-      // Mapeia os documentos para um array de objetos 'Person', incluindo o ID do documento.
-      const peopleData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Person[];
-
-      // Favoritos primeiro
-      const sorted = peopleData.sort((a, b) => {
-        // Ordenação primária: favoritos primeiro
-        const favDiff = Number(b.favorite) - Number(a.favorite);
-        if (favDiff !== 0) {
-          return favDiff;
-        }
-        return a.name.localeCompare(b.name); // Ordenação secundária: por nome
-      });
-      // Atualiza o estado 'person' com os dados ordenados.
-      setPeople(sorted);
-    } catch (error) {
-      console.error('Erro ao buscar pessoas:', error);
-      //todo: Lide com o erro de forma apropriada (ex: exibir uma mensagem ao usuário)
-    }
-  };
-
-  /**
- * @function openEditPersonModal
- * @description Abre o modal de edição para a pessoa fornecida.
- * @param {Person} person - O objeto da pessoa a ser editada.
- * @returns {void}
- */
   const openEditPersonModal = (person: Person) => {
     setSelectedPerson(person);
     setIsEditPersonModalOpen(true);
   };
 
-  /**
- * @function handlePersonDeleted
- * @description Limpa a pessoa selecionada para edição e recarrega a lista de pessoas.
- * @returns {void}
- */
   const handlePersonDeleted = () => {
     setSelectedPerson(null);
-    fetchPeople();
+    void fetchPeople();
   };
 
-  /**
- * @async
- * @function toggleFavorite
- * @description Alterna o status de favorito de uma pessoa no Firestore e recarrega a lista de pessoas.
- * @param {string} personId - O ID da pessoa cujo status de favorito deve ser alterado.
- * @param {boolean} currentValue - O valor atual do status de favorito da pessoa.
- * @returns {Promise<void>}
- */
   const toggleFavorite = async (personId: string, currentValue: boolean) => {
-    const docRef = doc(db, `users/${uid}/people-directory`, personId);
-    await updateDoc(docRef, { favorite: !currentValue });
-    fetchPeople();
+    if (!uid) return;
+
+    const personReference = doc(db, `users/${uid}/people-directory`, personId);
+    await updateDoc(personReference, { favorite: !currentValue });
+    await fetchPeople();
   };
 
   const filteredPeople = (!filters.enabled || !filtersLoaded)
     ? people
     : people.filter((person) => {
-      const optionalFields = person.optionalFields ?? [];
-
-      // Filtro: telefone principal presente
       const matchesPhone = !filters.hasPhone || !!person.phone;
-
-      // Filtro: e-mail principal presente
       const matchesEmail = !filters.hasEmail || !!person.email;
-
-      // Filtro: data de nascimento presente
       const matchesBirthday = !filters.hasBirthday || !!person.birthday;
-
-      // Filtro: favorito marcado
       const matchesFavorite = !filters.isFavorite || !!person.favorite;
-
-      // Filtro: frequência de contato definida
       const matchesFrequency = !filters.hasContactFrequency || !!person.contactFrequency;
-
-      // Filtro: possui endereço com CEP via API nos optionalFields
-/*       const hasAddressByCep =
-        Array.isArray(optionalFields) &&
-        optionalFields.some(
-          (field) =>
-            field.type === 'address' &&
-            field.value.useAddressAPI &&
-            typeof field.value.zipcode === 'string' &&
-            field.value.zipcode.trim() !== ''
-        );
-      const matchesAddress = !filters.hasAddressByCep || hasAddressByCep; */
-
-      // Filtro: possui nota (anotação)
-/*       const hasNote =
-        Array.isArray(optionalFields) &&
-        optionalFields.some(
-          (field) =>
-            field.type === 'note' &&
-            typeof field.value === 'string' &&
-            field.value.trim() !== ''
-        );
-      const matchesNote = !filters.hasNote || hasNote; */
-
-      // Filtro: possui pelo menos um dos tipos de relacionamento definidos
-
       const matchesRelationship =
         (filters.selectedRelationships?.length ?? 0) === 0 ||
-        (Array.isArray(person.relationships)
-          ? person.relationships
-          : []
-        ).some((rel) => filters.selectedRelationships.includes(rel));
+        (Array.isArray(person.relationships) ? person.relationships : [])
+          .some((relationship) => filters.selectedRelationships.includes(relationship));
 
       return (
         matchesPhone &&
@@ -223,88 +142,95 @@ const PeopleDirectory = (): JSX.Element => {
         matchesBirthday &&
         matchesFavorite &&
         matchesFrequency &&
-/*         matchesAddress &&
-        matchesNote && */
         matchesRelationship
       );
     });
 
-  const updateFilters = async (updated: PersonFilter) => {
-    setFilters(updated);
-    if (uid) {
-      const PeopleSettingRef = doc(db, `users/${uid}/settings`, 'userPeopleFilters')
-      setDoc(PeopleSettingRef, updated)
-    }
+  const visiblePeople = filteredPeople.filter((person) => {
+    if (!isSearching || searchQuery.trim() === '') return true;
+    return person.name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+  });
+
+  const updateFilters = async (updatedFilters: PersonFilter) => {
+    setFilters(updatedFilters);
+    if (!uid) return;
+
+    const settingsReference = doc(db, `users/${uid}/settings`, 'userPeopleFilters');
+    await setDoc(settingsReference, updatedFilters);
   };
 
-  const filtersAreActive = filters.enabled
-
   const searchIsActive = isSearching && searchQuery.trim() !== '';
+  const hasPeople = people.length > 0;
 
   return (
-
     <ProtectedRoute>
-
-      <main className="main-container-body main-container-bg">
-
-        {/* Renderiza o menu principal da aplicação. */}
-
-        <div className="flex justify-between">
-          <h1 className="title-1">Diretório de Pessoas</h1>
-
-          <div className="flex items-center gap-2">
-            <SearchIcon
-              className={`w-6 h-6 cursor-pointer transition 
-                ${searchIsActive ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'
-                }`}
-              onClick={() => setShowSearchModal(true)}
-            />
-
-            <ListFilterIcon
-              className={`w-6 h-6 cursor-pointer transition 
-                ${filtersAreActive ? 'text-green-600' : 'text-gray-300'
-                }`}
-              onClick={() => setShowFilterModal(true)}
-            />
+      <main className={styles.page}>
+        <header className={styles.header}>
+          <div className={styles.heading}>
+            <h1 className={styles.title}>Diretório de pessoas</h1>
+            <p className={styles.subtitle}>Contatos, relacionamentos e histórico associado.</p>
           </div>
-        </div>
 
-        {Object.values(people).flat().length === 0 && (
-          <p className="text-gray-600">Nenhuma pessoa registrada.</p>
+          <div className={styles.toolbar}>
+            <button
+              type="button"
+              className={styles.toolbarButton}
+              title="Buscar pessoa"
+              aria-label="Buscar pessoa"
+              onClick={() => setShowSearchModal(true)}
+            >
+              <Search className={styles.buttonIcon} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={`${styles.toolbarButton} ${filters.enabled ? styles.toolbarButtonActive : ''}`}
+              title="Filtrar pessoas"
+              aria-label="Filtrar pessoas"
+              aria-pressed={filters.enabled}
+              onClick={() => setShowFilterModal(true)}
+            >
+              <ListFilter className={styles.buttonIcon} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => setIsAddPersonModalOpen(true)}
+            >
+              <UserPlus className={styles.buttonIcon} aria-hidden="true" />
+              Nova pessoa
+            </button>
+          </div>
+        </header>
+
+        {hasPeople && (
+          <div className={styles.resultMeta}>
+            <p className={styles.resultCount}>
+              {visiblePeople.length} {visiblePeople.length === 1 ? 'pessoa' : 'pessoas'}
+            </p>
+            {searchIsActive && <p className={styles.resultCount}>Busca ativa</p>}
+          </div>
         )}
 
-        {/* Renderiza os cards de cada pessoa. */}
-        <div className="card-spacing-bellow">
-          <Masonry
-            breakpointCols={{ default: 3, 1024: 2, 640: 1 }}
-            className="flex gap-4"
-            columnClassName="flex flex-col gap-4"
-          >
-            {filteredPeople
-              .filter((person) => {
-                if (!isSearching || searchQuery.trim() === '') return true;
-                const query = searchQuery.toLowerCase();
-                return (
-                  (person.name && person.name.toLowerCase().includes(query))
-                );
-              })
-              .map((p, index, arr) => (
-                <div key={p.id}>
-                  <PersonCard
-                    key={p.id}
-                    person={p}
-                    onEditPerson={openEditPersonModal}
-                    onToggleFavorite={toggleFavorite}
-                  />
-                  {index === arr.length - 1 && (
-                    <p className="text-center text-sm text-gray-500 mt-2">Fim dos resultados</p>
-                  )}
-                </div>
-              ))}
-          </Masonry>
-        </div>
+        {!hasPeople && <p className={styles.emptyState}>Nenhuma pessoa registrada.</p>}
 
-        {/* Filtro */}
+        {hasPeople && visiblePeople.length === 0 && (
+          <p className={styles.noResults}>Nenhuma pessoa corresponde aos filtros ou à busca atual.</p>
+        )}
+
+        {visiblePeople.length > 0 && (
+          <div className={styles.grid}>
+            {visiblePeople.map((person) => (
+              <div key={person.id}>
+                <PersonCard
+                  person={person}
+                  onEditPerson={openEditPersonModal}
+                  onToggleFavorite={toggleFavorite}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
         <FilterPersonModal
           isOpen={showFilterModal}
           onClose={() => setShowFilterModal(false)}
@@ -313,37 +239,46 @@ const PeopleDirectory = (): JSX.Element => {
           availableRelationships={availableRelationships}
         />
 
-
-        {/* Pesquisa */}
         {showSearchModal && (
-          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-            <div className="bg-black w-[90%] max-w-md p-4 rounded-2xl shadow-lg relative">
-              <h2 className="text-lg text-white font-semibold mb-3">Buscar pessoa</h2>
-              <input
-                type="text"
-                placeholder="Digite um termo..."
-                className="w-full px-3 py-2 border rounded-md text-sm"
-                value={searchQuery}
-                autoFocus
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setIsSearching(true);
-                }}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setIsSearching(false);
+          <div className={styles.searchOverlay} role="presentation">
+            <div
+              className={styles.searchDialog}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="people-search-title"
+            >
+              <div className={styles.searchHeader}>
+                <h2 id="people-search-title" className={styles.searchTitle}>Buscar pessoa</h2>
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className={styles.searchClear}
+                    aria-label="Limpar busca"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setIsSearching(false);
+                    }}
+                  >
+                    <X className={styles.buttonIcon} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              <div className={styles.searchBody}>
+                <input
+                  type="search"
+                  placeholder="Digite um nome..."
+                  aria-label="Buscar por nome"
+                  className={styles.searchInput}
+                  value={searchQuery}
+                  autoFocus
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                    setIsSearching(true);
                   }}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-              )}
-              <div className="mt-4 text-right">
+                />
                 <button
-                  className="text-sm text-blue-600 hover:underline"
+                  type="button"
+                  className={styles.searchClose}
                   onClick={() => setShowSearchModal(false)}
                 >
                   Fechar
@@ -353,7 +288,6 @@ const PeopleDirectory = (): JSX.Element => {
           </div>
         )}
 
-        {/* Modal de adição de nova pessoa. Abre quando isAddPersonModalOpen é verdadeiro. */}
         {isAddPersonModalOpen && (
           <AddPersonModal
             onClose={() => setIsAddPersonModalOpen(false)}
@@ -362,7 +296,6 @@ const PeopleDirectory = (): JSX.Element => {
           />
         )}
 
-        {/* Modal de edição de pessoa. Abre quando isEditModalOpen é verdadeiro e uma pessoa está selecionada. */}
         {isEditPersonModalOpen && selectedPerson && (
           <EditPersonModal
             person={selectedPerson}
@@ -372,19 +305,7 @@ const PeopleDirectory = (): JSX.Element => {
             onDeleted={handlePersonDeleted}
           />
         )}
-
-        {/* Botão flutuante para adicionar uma nova pessoa. Ao clicar, abre o modal de adição. */}
-        <button
-          onClick={() => {
-            setIsAddPersonModalOpen(true); // Abre o modal de adição
-          } // Fecha o menu principal ao abrir o modal de adição
-          }
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg text-3xl hover:bg-green-600 transition"
-        >
-          <UserPlus className="w-6 h-6" />
-        </button>
       </main>
-
     </ProtectedRoute>
   );
 };

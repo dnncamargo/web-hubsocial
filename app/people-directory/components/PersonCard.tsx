@@ -1,9 +1,9 @@
 'use client';
 
-import { JSX } from 'react';
 import { useNavigate } from 'react-router';
 import { Person } from '../../utils/interfaces';
-import { Heart, Mail, Phone } from 'lucide-react';
+import { Heart, Mail, Pencil, Phone } from 'lucide-react';
+import styles from './PersonCard.module.css';
 
 /**
  * @interface PersonCardProps
@@ -24,79 +24,90 @@ interface PersonCardProps {
  * @param {PersonCardProps} { person, onEditPerson, onToggleFavorite } - Props para o componente.
  * @returns {JSX.Element} Um cartão representando as informações da pessoa.
  */
-const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps): JSX.Element => {
+const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps) => {
   const navigate = useNavigate();
+  const relationships = person.relationships ?? [];
 
   return (
-    <div
-      onClick={() => navigate(`/people-directory/${person.id}`)}
-      className="card-container-large card-container-bg">
+    <article className={styles.card}>
 
-      {/* Título do card */}
-      <div className="card-header-large card-header-bg">
-        <h2 className="card-header-title-large flex-1 break-words color-pd-dark">{person.name}</h2>
-        {/* Favorito */}
+      <div className={styles.header}>
         <button
+          type="button"
+          className={styles.titleButton}
+          onClick={() => navigate(`/people-directory/${person.id}`)}
+        >
+          <span className={styles.title}>{person.name}</span>
+        </button>
+        <div className={styles.actionGroup}>
+        <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             onToggleFavorite(person.id, !!person.favorite);
           }}
-          className="card-header-far-right color-pd-base">
+          aria-label={person.favorite ? `Remover ${person.name} dos favoritos` : `Adicionar ${person.name} aos favoritos`}
+          className={`${styles.iconButton} ${person.favorite ? styles.favoriteActive : ''}`}>
           {person.favorite ? (
-            <Heart className="w-6 h-6" fill="currentColor" />
+            <Heart className={styles.icon} fill="currentColor" />
           ) : (
-            <Heart className="w-6 h-6" />
+            <Heart className={styles.icon} />
           )}
         </button>
+        </div>
       </div>
 
-      {/* Conteúdo */}
-      <div className="card-content-large">
-        {/* Telefone */}
+      <button
+        type="button"
+        className={styles.bodyButton}
+        aria-label={`Abrir detalhes de ${person.name}`}
+        onClick={() => navigate(`/people-directory/${person.id}`)}
+      >
+      <div className={styles.body}>
+        <div className={styles.metaList}>
         {person.phone && (
-          <div className="card-content-info-large text-gray-500 mb-2">
-            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0"><Phone className="w-4 h-4 mr-2 mt-0.5" /></div>
-            {person.phone}
+          <div className={styles.metaRow}>
+            <Phone className={styles.metaIcon} aria-hidden="true" />
+            <span className={styles.metaText}>{person.phone}</span>
           </div>
         )}
-        {/* E-mail */}
         {person.email && (
-          <div className="card-content-info-large text-gray-500">
-            <div className="w-4 h-4 mr-2 mt-1 flex-shrink-0 truncate"><Mail className="w-4 h-4 mr-2 mt-0.5" /></div>
-            {person.email}
+          <div className={styles.metaRow}>
+            <Mail className={styles.metaIcon} aria-hidden="true" />
+            <span className={styles.metaText}>{person.email}</span>
           </div>
         )}
+        </div>
 
-        {/* Relacionamentos */}
-        <div className='mt-2 ml-2'>
-          {person.relationships && person.relationships.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {person.relationships.map((rel: string, index: number) => (
+        {relationships.length > 0 && (
+          <div className={styles.relationships}>
+              {relationships.map((rel) => (
                 <span
-                  key={index}
-                  className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full"
+                  key={rel}
+                  className={styles.relationship}
                 >
                   {rel}
                 </span>
               ))}
-            </div>
-          )}
-
-
-          {/* Botão de editar */}
-          <div className="card-bottom-end">
-            <button
-              className="color-pd-base"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditPerson(person);
-              }}>
-              Editar
-            </button>
           </div>
-        </div>
+        )}
       </div>
-    </div>
+      </button>
+
+      <div className={styles.footer}>
+        <button
+          type="button"
+          className={styles.editButton}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEditPerson(person);
+          }}
+        >
+          <Pencil className={styles.icon} aria-hidden="true" />
+          Editar
+        </button>
+      </div>
+    </article>
   );
 };
 
