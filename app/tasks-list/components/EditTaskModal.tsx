@@ -1,8 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { updateDoc, doc, addDoc, deleteDoc, collection } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  runTransaction,
+  updateDoc,
+} from 'firebase/firestore'
 import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
 import { Task } from '../../utils/interfaces'
@@ -14,17 +19,37 @@ import { OptionalField } from '../../types/optionalFields'
 import { buildEventPayload } from '../../utils/eventPayload'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
 import useEventDate from '../../hooks/useEventDate'
+import { useAssociatePerson } from '../../hooks/useAssociatePerson'
+import { AssociatePersonModal } from '../../events-history/components/AssociatePersonModal'
+import { AssociatePersonRenderer } from '../../events-history/components/AssociatePersonRenderer'
 import styles from './TaskEditor.module.css'
 
 interface EditTaskModalProps {
   task: Task
+  parentTaskId?: string | null
   isOpen: boolean
   onClose: () => void
   onUpdated: () => void
 }
 
+function buildTaskOptionalFields(task: Task): OptionalField[] {
+  if (!task.subtasks || task.subtasks.length === 0) return []
+
+  return [{
+    id: crypto.randomUUID(),
+    type: 'tasks',
+    label: 'Lista de Tarefas',
+    value: task.subtasks.map(subtask => ({
+      id: subtask.id,
+      text: subtask.content,
+      done: subtask.status !== 0,
+    })),
+  }]
+}
+
 export default function EditTaskModal({
   task,
+  parentTaskId = null,
   isOpen,
   onClose,
   onUpdated,
@@ -38,14 +63,38 @@ export default function EditTaskModal({
   const [automation, setAutomation] = useState<AutomationRuleSet>(
     task.automation ?? { match: 'all', rules: [] },
   )
+  const [showAssociatePersonModal, setShowAssociatePersonModal] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const dateControl = useEventDate()
-  const { allDay, startDate, endDate, startTime, endTime } = dateControl
+  const {
+    allDay,
+    startDate,
+    endDate,
+    startTime,
+    endTime,
+    timeZone,
+  } = dateControl
+  const associatePersonControl = useAssociatePerson({ uid: uid ?? '' })
+  const {
+    people,
+    fetchPeople,
+    associatedPersonIds,
+    associatePerson,
+    disassociatePerson,
+    error: associatePersonError,
+    resetAssociatedPeople,
+  } = associatePersonControl
 
   useEffect(() => {
     setContent(task.content)
     setActionPlanning(task.actionPlanning ?? {})
     setAutomation(task.automation ?? { match: 'all', rules: [] })
-  }, [task])
+    setAddingDate(false)
+    setSaveError('')
+    setShowAssociatePersonModal(false)
+    resetAssociatedPeople()
+  }, [task.id, parentTaskId])
 
   useEffect(() => {
     if (!isOpen) return
@@ -58,87 +107,180 @@ export default function EditTaskModal({
     }
   }, [isOpen])
 
+  const handleOpenAssociatePerson = async () => {
+    await fetchPeople()
+    setShowAssociatePersonModal(true)
+  }
+
+  const validateEventSchedule = () => {
+    if (!startDate || !endDate) {
+      setSaveError('Informe as datas de início e término.')
+      return false
+    }
+
+    if (!allDay && (!startTime || !endTime)) {
+      setSaveError('Informe os horários de início e término.')
+      return false
+    }
+
+    return true
+  }
+
+  const buildEventFromTask = (sourceTask: Task) => buildEventPayload({
+    title: content.trim(),
+    startDate,
+    endDate,
+    allDay,
+    ...(!allDay ? { startTime, endTime } : {}),
+    timeZone,
+    personIds: associatedPersonIds,
+    optionalFields: buildTaskOptionalFields(sourceTask),
+    actionPlanning,
+    automation,
+    createdAt: new Date(),
+  })
+
+  const convertTopLevelTask = async () => {
+    if (!uid) return
+
+    const taskReference = doc(db, `users/${uid}/tasks-list`, task.id)
+    await runTransaction(db, async transaction => {
+      const taskSnapshot = await transaction.get(taskReference)
+      if (!taskSnapshot.exists()) {
+        throw new Error('A tarefa não existe mais.')
+      }
+
+      const currentTask = {
+        id: taskSnapshot.id,
+        ...taskSnapshot.data(),
+      } as Task
+      const eventReference = doc(collection(db, `users/${uid}/events-history`))
+
+      transaction.set(eventReference, buildEventFromTask(currentTask))
+      transaction.delete(taskReference)
+    })
+  }
+
+  const convertEmbeddedSubtask = async () => {
+    if (!uid || !parentTaskId) return
+
+    const parentReference = doc(db, `users/${uid}/tasks-list`, parentTaskId)
+    await runTransaction(db, async transaction => {
+      const parentSnapshot = await transaction.get(parentReference)
+      if (!parentSnapshot.exists()) {
+        throw new Error('A tarefa pai não existe mais.')
+      }
+
+      const parentTask = {
+        id: parentSnapshot.id,
+        ...parentSnapshot.data(),
+      } as Task
+      const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
+      const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
+      if (subtaskIndex === -1) {
+        throw new Error('A subtarefa não foi encontrada na tarefa pai.')
+      }
+
+      const currentSubtask = subtasks[subtaskIndex]
+      const eventReference = doc(collection(db, `users/${uid}/events-history`))
+      const updatedSubtasks = subtasks.filter(subtask => subtask.id !== task.id)
+
+      transaction.set(eventReference, buildEventFromTask(currentSubtask))
+      transaction.update(parentReference, { subtasks: updatedSubtasks })
+    })
+  }
+
+  const updateTopLevelTask = async () => {
+    if (!uid) return
+
+    await updateDoc(doc(db, `users/${uid}/tasks-list`, task.id), {
+      content: content.trim(),
+      actionPlanning,
+      automation,
+    })
+  }
+
+  const updateEmbeddedSubtask = async () => {
+    if (!uid || !parentTaskId) return
+
+    const parentReference = doc(db, `users/${uid}/tasks-list`, parentTaskId)
+    await runTransaction(db, async transaction => {
+      const parentSnapshot = await transaction.get(parentReference)
+      if (!parentSnapshot.exists()) {
+        throw new Error('A tarefa pai não existe mais.')
+      }
+
+      const parentTask = {
+        id: parentSnapshot.id,
+        ...parentSnapshot.data(),
+      } as Task
+      const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
+      const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
+      if (subtaskIndex === -1) {
+        throw new Error('A subtarefa não foi encontrada na tarefa pai.')
+      }
+
+      const currentSubtask = subtasks[subtaskIndex]
+      const updatedSubtasks = subtasks.map((subtask, index) => (
+        index === subtaskIndex
+          ? {
+            ...currentSubtask,
+            content: content.trim(),
+            actionPlanning,
+            automation,
+          }
+          : subtask
+      ))
+
+      transaction.update(parentReference, { subtasks: updatedSubtasks })
+    })
+  }
+
   const handleUpdate = async () => {
-    if (!content.trim()) {
-      alert('Digite algo para a tarefa.')
+    if (isSaving) return
+
+    const trimmedContent = content.trim()
+    if (!trimmedContent) {
+      setSaveError('Digite algo para a tarefa.')
       return
     }
 
     if (!uid) return
 
-    if (addingDate) {
-      if (!startDate || !endDate) {
-        alert('Informe as datas de início e término')
-        return
-      }
+    if (addingDate && !validateEventSchedule()) return
 
-      if (!allDay && (!startTime || !endTime)) {
-        alert('Informe os horários de início e término')
-        return
-      }
-
-      const start = new Date(`${startDate}T${startTime}`)
-      const end = new Date(`${endDate}T${endTime}`)
-
-      if (!allDay && start >= end) {
-        alert('O horário de término deve ser após o horário de início')
-        return
-      }
-
-      const optionalFields: OptionalField[] = []
-
-      if (task.subtasks && task.subtasks.length > 0) {
-        const confirmed = window.confirm(
-          'Esta tarefa possui subtarefas.\n\nDeseja que todas elas se incorporem ao novo evento?',
-        )
-        if (!confirmed) return
-
-        optionalFields.push({
-          id: crypto.randomUUID(),
-          type: 'tasks',
-          label: 'Lista de Tarefas',
-          value: task.subtasks.map(subtask => ({
-            id: subtask.id,
-            text: subtask.content,
-            done: subtask.status !== 0,
-          })),
-        })
-      }
-
-      const newEvent = buildEventPayload({
-        title: content.trim(),
-        startDate,
-        endDate,
-        allDay,
-        ...(!allDay ? { startTime, endTime } : {}),
-        createdAt: new Date(),
-        optionalFields,
-        actionPlanning,
-        automation,
-      })
-
-      try {
-        await addDoc(collection(db, `users/${uid}/events-history`), newEvent)
-        await deleteDoc(doc(db, `users/${uid}/tasks-list/${task.id}`))
-        onUpdated()
-        onClose()
-      } catch (error) {
-        console.error('Erro ao criar evento:', error)
-      }
-
-      return
+    if (addingDate && !parentTaskId && (task.subtasks?.length ?? 0) > 0) {
+      const confirmed = window.confirm(
+        'Esta tarefa possui subtarefas.\n\nDeseja que todas elas se incorporem ao novo evento?',
+      )
+      if (!confirmed) return
     }
 
+    setSaveError('')
+    setIsSaving(true)
+
     try {
-      await updateDoc(doc(db, `users/${uid}/tasks-list/${task.id}`), {
-        content: content.trim(),
-        actionPlanning,
-        automation,
-      })
+      if (addingDate) {
+        if (parentTaskId) {
+          await convertEmbeddedSubtask()
+        } else {
+          await convertTopLevelTask()
+        }
+      } else if (parentTaskId) {
+        await updateEmbeddedSubtask()
+      } else {
+        await updateTopLevelTask()
+      }
+
       onUpdated()
       onClose()
     } catch (error) {
-      console.error('Erro ao atualizar tarefa:', error)
+      console.error('Erro ao atualizar tarefa ou criar evento:', error)
+      setSaveError(error instanceof Error
+        ? error.message
+        : 'Não foi possível salvar a tarefa. Tente novamente.')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -166,30 +308,65 @@ export default function EditTaskModal({
             type="text"
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                handleUpdate()
-              }
-            }}
             placeholder="Descrição da tarefa"
+            aria-label="Descrição da tarefa"
             className={styles.input}
           />
 
-          <label className={styles.optionRow}>
-            <input
-              type="checkbox"
-              checked={addingDate}
-              onChange={() => setAddingDate(!addingDate)}
-              className={styles.checkbox}
-            />
-            Criar evento a partir da tarefa
-          </label>
+          <div className={styles.conversionPanel}>
+            <label className={styles.optionRow}>
+              <input
+                type="checkbox"
+                checked={addingDate}
+                onChange={() => setAddingDate(!addingDate)}
+                className={styles.checkbox}
+              />
+              Agendar como evento
+            </label>
 
-          {addingDate && (
-            <div className={styles.datePanel}>
-              <CalendarEventCreator {...dateControl} />
-            </div>
-          )}
+            {addingDate && (
+              <>
+                <div className={styles.datePanel}>
+                  <CalendarEventCreator {...dateControl} />
+                </div>
+
+                <div className={styles.associationPanel}>
+                  {associatedPersonIds.length > 0 ? (
+                    <AssociatePersonRenderer
+                      personIds={associatedPersonIds}
+                      people={people}
+                      onOpenPersonList={handleOpenAssociatePerson}
+                    />
+                  ) : (
+                    <>
+                      <p className={styles.associationLabel}>Pessoas associadas</p>
+                      <button
+                        type="button"
+                        className={styles.associationButton}
+                        onClick={handleOpenAssociatePerson}
+                      >
+                        + Associar pessoa
+                      </button>
+                    </>
+                  )}
+
+                  {showAssociatePersonModal && (
+                    <AssociatePersonModal
+                      onClose={() => setShowAssociatePersonModal(false)}
+                      onAssociatePerson={associatePerson}
+                      onDisassociatePerson={disassociatePerson}
+                      associatedPersonIds={associatedPersonIds}
+                      people={people}
+                    />
+                  )}
+
+                  {associatePersonError && (
+                    <p className={styles.error} role="alert">{associatePersonError}</p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
 
           <ActionPlanningControl
             planning={actionPlanning}
@@ -201,12 +378,15 @@ export default function EditTaskModal({
             value={automation}
             onChange={setAutomation}
           />
+
+          {saveError && <p className={styles.error} role="alert">{saveError}</p>}
         </div>
 
         <footer className={styles.footer}>
           <button
             type="button"
             onClick={onClose}
+            disabled={isSaving}
             className={styles.secondaryButton}
           >
             Cancelar
@@ -214,9 +394,10 @@ export default function EditTaskModal({
           <button
             type="button"
             onClick={handleUpdate}
+            disabled={isSaving}
             className={styles.primaryButton}
           >
-            Atualizar
+            {isSaving ? 'Salvando...' : addingDate ? 'Criar evento' : 'Salvar tarefa'}
           </button>
         </footer>
       </section>

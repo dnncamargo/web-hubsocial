@@ -24,7 +24,7 @@ interface TaskSectionProps {
   section: string
   status: 0 | 1 | 2
   tasks: Task[]
-  onEditTask: (task: Task) => void
+  onEditTask: (task: Task, parentTaskId?: string | null) => void
   refreshTasks: () => void
   updateTasksLocally: (tasks: Task[]) => void
 }
