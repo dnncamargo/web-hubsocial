@@ -67,7 +67,7 @@
 .statusCompleted {
   border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
   background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
-  color: var(--color-people-strong);
+  color: var(--color-success);
 }
 
 .statusIcon {
