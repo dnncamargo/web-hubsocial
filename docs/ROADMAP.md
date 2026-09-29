@@ -448,16 +448,31 @@ Validate both desktop and mobile before expanding the migration.
 
 ### 6.5. Visual 3 — Complete Tailwind removal
 
-**Status: QUEUED**
+**Status: IN PROGRESS**
 
-After the contracts are proven:
+Visual 3 is a redesign migration, not a mechanical Tailwind translation. Legacy utility strings describe existing behavior/layout constraints but do not define the target appearance.
 
-- migrate remaining Events surfaces;
-- migrate Tasks surfaces;
-- migrate People surfaces;
-- migrate optional fields and editors;
-- migrate remaining shared UI;
-- remove obsolete Tailwind configuration and dependency only after zero utility dependence remains;
+Execution checkpoints:
+
+- **Visual 3A — Events: DONE**
+  - sober global palette and sharper radius tokens established;
+  - visual contract updated for thin lines, minimal shadows, restrained color, and predominantly square corners;
+  - Events History moved from masonry/FAB presentation to a regular operational grid with a compact toolbar;
+  - Event search, filters, categories, and people dialogs share one neutral dialog contract;
+  - Add/Edit Event share one editor visual contract;
+  - Event detail rebuilt as a line-separated operational record instead of stacked rounded cards;
+  - event categories use restrained rectangular tags rather than pills;
+  - shared `CalendarEventCreator` migrated to CSS Modules because it is a direct Event/Task editor dependency;
+  - no Tailwind utility classes remain in `app/events-history/**/*.tsx`;
+  - shared Optional Fields remain intentionally deferred to their Visual 3 checkpoint.
+- **Visual 3B — Tasks: NEXT**
+- **Visual 3C — People: QUEUED**
+- **Visual 3D — Optional fields and shared UI: QUEUED**
+- **Visual 3E — Tailwind removal and dependency cleanup: QUEUED**
+
+After zero utility dependence remains:
+
+- remove obsolete Tailwind configuration and dependency;
 - reassess PostCSS/autoprefixer based on actual remaining use.
 
 No new CSS framework replaces Tailwind.
@@ -648,11 +663,7 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 3 — complete Tailwind removal
+Visual 3B — Tasks
 ```
 
-After that:
-
-```text
-Visual 4 — finalize the canonical workspace shell
-```
+Then continue through People, Optional Fields/shared UI, and final Tailwind dependency removal before Visual 4.
