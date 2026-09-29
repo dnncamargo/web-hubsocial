@@ -26,6 +26,9 @@
   --color-events-hover: #dce3e8;
 
   --color-tasks: #8a5d5d;
+  --color-task-status-not-started: #7b8388;
+  --color-task-status-in-progress: #806a54;
+  --color-task-status-completed: #607363;
 
   --color-people: #627662;
   --color-people-strong: #485b49;
