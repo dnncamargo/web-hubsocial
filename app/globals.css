@@ -8,10 +8,6 @@
 @import '../app/styles/buttons.css';
 @import '../app/styles/forms.css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* reset básico */
 * {
   margin: 0;

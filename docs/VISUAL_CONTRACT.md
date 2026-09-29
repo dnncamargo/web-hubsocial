@@ -529,11 +529,11 @@ When creating a new visual element:
 
 ## 26. Visual migration rule
 
-Existing Tailwind styles are legacy migration debt.
+The Tailwind migration is complete. Retained application source uses native CSS, semantic custom properties, and CSS Modules. Do not reintroduce a CSS framework without an explicit architectural decision.
 
-Do not mechanically translate utility strings one-to-one into CSS classes.
+Historical migration work did not mechanically translate utility strings one-to-one into CSS classes.
 
-During migration:
+The migration approach was:
 
 1. identify repeated intent;
 2. decide the modernized visual hierarchy instead of reproducing the Tailwind appearance;
@@ -543,6 +543,6 @@ During migration:
 6. remove obsolete utilities;
 7. only then expand to the next surface.
 
-A Tailwind utility string is evidence of behavior and layout requirements, not a visual specification to preserve.
+A Tailwind utility string was treated as evidence of behavior and layout requirements, not as a visual specification to preserve.
 
 The redesign should reduce both visual inconsistency and code complexity.

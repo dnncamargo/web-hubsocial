@@ -127,7 +127,7 @@ The visual strategy is now defined by `docs/VISUAL_CONTRACT.md`:
 - shared visual contracts only when reuse is proven;
 - no speculative component library.
 
-The remaining work is not to resurrect those placeholders. It is to migrate real surfaces away from Tailwind and extract shared primitives only when actual consumers justify them.
+The completed Visual 3 migration removed the remaining Tailwind styling/configuration residue. Future work should preserve the native CSS direction and extract shared primitives only when actual consumers justify them.
 
 ---
 
@@ -379,7 +379,7 @@ Acceptance:
 
 **Status: DONE**
 
-Tailwind remains the largest intentional platform/visual migration debt.
+Visual 1 established the native CSS, semantic token, and CSS Modules direction. Its remaining dependency and configuration residue was completed in Visual 3E.
 
 Do not mechanically translate utility classes one-to-one.
 
@@ -448,7 +448,7 @@ Validate both desktop and mobile before expanding the migration.
 
 ### 6.5. Visual 3 — Complete Tailwind removal
 
-**Status: IN PROGRESS**
+**Status: DONE**
 
 Visual 3 is a redesign migration, not a mechanical Tailwind translation. Legacy utility strings describe existing behavior/layout constraints but do not define the target appearance.
 
@@ -493,13 +493,16 @@ Execution checkpoints:
   - Import Contacts migrated to a neutral dialog surface and sensitive contact logging was removed;
   - Logout and ProtectedRoute shared residues were migrated away from Tailwind utilities;
   - retained `app/**/*.tsx` files contain zero Tailwind utility styling;
-  - dependency and configuration cleanup is intentionally deferred to Visual 3E;
-- **Visual 3E — Tailwind removal and dependency cleanup: NEXT**
-
-After zero utility dependence remains:
-
-- remove obsolete Tailwind configuration and dependency;
-- reassess PostCSS/autoprefixer based on actual remaining use.
+  - dependency and configuration cleanup was completed in Visual 3E;
+- **Visual 3E — Tailwind removal and dependency cleanup: DONE**
+  - Tailwind directives were removed from `app/globals.css`;
+  - obsolete Tailwind configuration was removed;
+  - Tailwind, PostCSS, and Autoprefixer direct dependencies/configuration were removed after confirming no independent use;
+  - `uuid` was removed after confirming zero runtime consumers and existing `crypto.randomUUID()` usage;
+  - `react-masonry-css` was removed after confirming zero consumers following the masonry-era layout migration;
+  - `clsx` was removed after confirming zero source consumers;
+  - the package lock was regenerated without unrelated version upgrades;
+  - build and typecheck passed without Tailwind processing.
 
 No new CSS framework replaces Tailwind.
 
@@ -507,7 +510,7 @@ No new CSS framework replaces Tailwind.
 
 ### 6.6. Visual 4 — Canonical workspace shell
 
-**Status: QUEUED**
+**Status: NEXT**
 
 Implement the mature workspace described in `VISUAL_CONTRACT.md`.
 
@@ -638,16 +641,9 @@ Do not perform migrations solely for cosmetic cleanup of immutable/external iden
 
 ### 8.5. Utility/dependency cleanup
 
-**Status: DEBT**
+**Status: RESOLVED — Visual 3E**
 
-Examples to evaluate only when touching the area:
-
-- `uuid` usage versus supported `crypto.randomUUID()`;
-- unused package removal;
-- Tailwind/PostCSS cleanup after CSS migration;
-- package-level names that no longer describe the surface product.
-
-Dependency removal must be evidence-based.
+The Visual 3E audit removed the unused `uuid`, `react-masonry-css`, and `clsx` packages, along with the obsolete Tailwind/PostCSS/Autoprefixer direct setup. Future dependency removal remains evidence-based and should stay within focused checkpoints.
 
 ---
 
@@ -689,7 +685,5 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 3E — Tailwind removal and dependency cleanup
+Visual 4 — Canonical workspace shell
 ```
-
-Then continue with Visual 4.
