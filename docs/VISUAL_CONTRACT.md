@@ -232,6 +232,8 @@ Automation/relevance highlighting should use a separate semantic treatment and m
 
 Color must never be the only signal conveying meaning.
 
+Task status colors are semantic system tokens, not per-task persisted data. A task row may project status through a narrow 1–2 px accent line and the status icon while keeping the row surface neutral.
+
 ## 9. Typography
 
 Use a small, predictable hierarchy:
