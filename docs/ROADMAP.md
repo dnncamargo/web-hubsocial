@@ -465,8 +465,17 @@ Execution checkpoints:
   - shared `CalendarEventCreator` migrated to CSS Modules because it is a direct Event/Task editor dependency;
   - no Tailwind utility classes remain in `app/events-history/**/*.tsx`;
   - shared Optional Fields remain intentionally deferred to their Visual 3 checkpoint.
-- **Visual 3B — Tasks: NEXT**
-- **Visual 3C — People: QUEUED**
+- **Visual 3B — Tasks: DONE**
+  - task list moved from FAB/masonry-era presentation to a sober operational workflow board;
+  - status order is now explicit as Not started → In progress → Completed;
+  - task sections use thin borders, restrained status accents, compact counts, and regular alignment;
+  - task cards became operational rows with explicit status, drag handle, action menu, and visible subtask hierarchy;
+  - swipe remains available as a secondary interaction rather than the only way to discover actions;
+  - Add/Edit Task share one neutral editor visual contract;
+  - the saturated yellow task-editor treatment was removed;
+  - no Tailwind utility classes remain in `app/tasks-list/**/*.tsx`;
+  - task promotion now normalizes `parentTaskId` and preserves the Firestore document ID when rebuilding the parent task.
+- **Visual 3C — People: NEXT**
 - **Visual 3D — Optional fields and shared UI: QUEUED**
 - **Visual 3E — Tailwind removal and dependency cleanup: QUEUED**
 
@@ -663,7 +672,7 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 3B — Tasks
+Visual 3C — People
 ```
 
-Then continue through People, Optional Fields/shared UI, and final Tailwind dependency removal before Visual 4.
+Then continue through Optional Fields/shared UI and final Tailwind dependency removal before Visual 4.

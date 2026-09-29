@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../utils/firebaseConfig'
@@ -9,6 +9,7 @@ import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
+import styles from './TaskEditor.module.css'
 
 interface AddTaskModalProps {
   isOpen: boolean
@@ -16,12 +17,30 @@ interface AddTaskModalProps {
   onAdded: () => void
 }
 
-export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalProps) {
-  const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
+export default function AddTaskModal({
+  isOpen,
+  onClose,
+  onAdded,
+}: AddTaskModalProps) {
+  const { uid } = useAuth()
   const [content, setContent] = useState('')
   const [adding, setAdding] = useState(false)
   const [actionPlanning, setActionPlanning] = useState<ActionPlanning>({})
-  const [automation, setAutomation] = useState<AutomationRuleSet>({ match: 'all', rules: [] })
+  const [automation, setAutomation] = useState<AutomationRuleSet>({
+    match: 'all',
+    rules: [],
+  })
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isOpen])
 
   if (!isOpen || !uid) return null
 
@@ -32,39 +51,37 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
     }
 
     setAdding(true)
-    try {
-      // Primeiro, busca quantas tarefas "not_started" já existem
-      const q = query(
-        collection(db, `users/${uid}/tasks-list`),
-        where('status', '==', 0) // status 0 = not_started
-      );
-      const snapshot = await getDocs(q);
-      const currentTasksCount = snapshot.size;
 
-      // Adiciona a nova task com order = quantidade atual
+    try {
+      const tasksQuery = query(
+        collection(db, `users/${uid}/tasks-list`),
+        where('status', '==', 0),
+      )
+      const snapshot = await getDocs(tasksQuery)
+
       await addDoc(collection(db, `users/${uid}/tasks-list`), {
         content: content.trim(),
         status: 0,
-        order: currentTasksCount, // <----- aqui!!
+        order: snapshot.size,
         createdAt: new Date(),
         actionPlanning,
         automation,
-      });
+      })
 
-      onAdded();
-      setActionPlanning({});
-      setAutomation({ match: 'all', rules: [] });
-      onClose();
+      onAdded()
+      setActionPlanning({})
+      setAutomation({ match: 'all', rules: [] })
+      onClose()
     } catch (error) {
       console.error('Erro ao adicionar tarefa:', error)
     } finally {
-      setContent('') // 🧹 limpa o campo
+      setContent('')
       setAdding(false)
     }
   }
 
   const handleCancel = () => {
-    setContent('') // 🧹 limpa o campo
+    setContent('')
     setActionPlanning({})
     setAutomation({ match: 'all', rules: [] })
     onClose()
@@ -72,49 +89,66 @@ export default function AddTaskModal({ isOpen, onClose, onAdded }: AddTaskModalP
 
   return (
     <motion.div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className={styles.overlay}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-lg font-semibold mb-4">Nova Tarefa</h2>
-        <input
-          type="text"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleAdd();
-            }
-          }}
-          placeholder="Descrição da tarefa"
-          className="border w-full p-2 rounded mb-4"
-        />
-        <ActionPlanningControl
-          planning={actionPlanning}
-          onChange={setActionPlanning}
-        />
+      <section
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-task-title"
+      >
+        <header className={styles.header}>
+          <h2 id="add-task-title" className={styles.title}>Nova tarefa</h2>
+        </header>
 
-        <AutomationRulesEditor
-          uid={uid}
-          value={automation}
-          onChange={setAutomation}
-        />
+        <div className={styles.body}>
+          <input
+            type="text"
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                handleAdd()
+              }
+            }}
+            placeholder="Descrição da tarefa"
+            className={styles.input}
+            autoFocus
+          />
 
-        <div className="flex justify-end gap-2">
-          <button onClick={handleCancel} className="px-4 py-2 text-gray-600 hover:text-black">
+          <ActionPlanningControl
+            planning={actionPlanning}
+            onChange={setActionPlanning}
+          />
+
+          <AutomationRulesEditor
+            uid={uid}
+            value={automation}
+            onChange={setAutomation}
+          />
+        </div>
+
+        <footer className={styles.footer}>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className={styles.secondaryButton}
+          >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={handleAdd}
             disabled={adding}
-            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-800"
+            className={styles.primaryButton}
           >
             {adding ? 'Adicionando...' : 'Adicionar'}
           </button>
-        </div>
-      </div>
+        </footer>
+      </section>
     </motion.div>
   )
 }

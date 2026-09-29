@@ -11,205 +11,277 @@ import {
   CirclePlay,
   Flag,
   GripVertical,
+  MoreHorizontal,
   SquarePen,
+  Trash2,
 } from 'lucide-react'
 import { Task } from '../../utils/interfaces'
 import { useAuth } from '../../components/auth/AuthProvider'
+import styles from './TaskCard.module.css'
 
 interface TaskCardProps {
   task: Task
-  onEditTask: (task: Task) => void // Função para abrir o modal de edição
+  onEditTask: (task: Task) => void
   onPromoteSubtask: (task: Task) => void
   onMakeSubtask: (task: Task) => void
-  onStatusSwitch: (status: number | any) => void
-  parentTaskId?: string | null // Adicionado para evitar erro
+  onStatusSwitch: (status: 0 | 1 | 2) => void
+  parentTaskId?: string | null
   onDelete: () => void
-  refreshTasks: () => void // Função para atualizar a lista de tarefas
+  refreshTasks: () => void
 }
 
-export default function TaskCard({ task, onEditTask, onPromoteSubtask, onMakeSubtask, onStatusSwitch, parentTaskId, onDelete, refreshTasks }: TaskCardProps) {
+const statusMeta = {
+  0: { label: 'Não iniciada', icon: Flag, className: styles.statusPending },
+  1: { label: 'Em andamento', icon: CirclePlay, className: styles.statusProgress },
+  2: { label: 'Concluída', icon: CircleCheck, className: styles.statusDone },
+} as const
+
+export default function TaskCard({
+  task,
+  onEditTask,
+  onPromoteSubtask,
+  onMakeSubtask,
+  onStatusSwitch,
+  parentTaskId,
+  onDelete,
+  refreshTasks,
+}: TaskCardProps) {
   const { user } = useAuth()
-  const { attributes, listeners, setNodeRef, transform, transition, setActivatorNodeRef } = useSortable({ id: task.id })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    setActivatorNodeRef,
+    isDragging,
+  } = useSortable({ id: task.id })
 
   const [x, setX] = useState(0)
   const [showActionsOn, setShowActionsOn] = useState<'left' | 'right' | null>(null)
 
-  const threshold = 80  // deslocamento mínimo para considerar um gesto de arraste para ação
-  const deleteSwipe = 160 // distância mínima para considerar como tentativa de exclusão
+  const threshold = 84
+  const deleteSwipe = 160
 
   const handleResetPosition = () => {
     setX(0)
     setShowActionsOn(null)
   }
 
-  const makeSubtask = async () => {
-    await onMakeSubtask(task);
-    handleResetPosition();
+  const showStatusActions = () => {
+    setX(threshold)
+    setShowActionsOn('left')
   }
 
-  const promoteSubtask = async () => {
-    if (!user) return;
-    await onPromoteSubtask(task);
-    refreshTasks();
-  };
+  const showTaskActions = () => {
+    setX(-threshold)
+    setShowActionsOn('right')
+  }
 
-  const editTask = () => {
-    if (!user) return
-    onEditTask(task) // Chama a função de edição passando a tarefa atual
+  const makeSubtask = async () => {
+    await onMakeSubtask(task)
     handleResetPosition()
   }
 
-  const statusSwitch = (status: number | any) => {
+  const promoteSubtask = async () => {
+    if (!user) return
+    await onPromoteSubtask(task)
+    refreshTasks()
+    handleResetPosition()
+  }
+
+  const editTask = () => {
+    if (!user) return
+    onEditTask(task)
+    handleResetPosition()
+  }
+
+  const statusSwitch = (status: 0 | 1 | 2) => {
     onStatusSwitch(status)
     handleResetPosition()
   }
 
-  const deleteTask = async () => {
-    if (onDelete) onDelete();
-    handleResetPosition(); // ou o fallback padrão
-  };
+  const deleteTask = () => {
+    onDelete()
+    handleResetPosition()
+  }
 
-  const style = {
+  const sortableStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
   }
 
+  const currentStatus = statusMeta[task.status]
+  const CurrentStatusIcon = currentStatus.icon
+  const rowClass = [
+    styles.row,
+    parentTaskId ? styles.subtaskRow : '',
+    isDragging ? styles.rowDragging : '',
+  ].filter(Boolean).join(' ')
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="relative overflow-hidden rounded shadow">
-
-      {/* Botões de fundo */}
-      <div className="absolute inset-0 flex justify-between items-center px-4 bg-gray-100 z-0 transition-opacity duration-300">
-        <div className="flex gap-2 transition-all duration-300 ease-in-out">
+    <div ref={setNodeRef} style={sortableStyle} className={styles.container}>
+      <div className={styles.actionLayer}>
+        <div className={styles.actionGroup}>
           {showActionsOn === 'left' && (
-            <div>
-              {task.status === 0 && (
-                <>
-                  <button onClick={() => statusSwitch(2)}>
-                    {/* Switch: Checked */}
-                    <CircleCheck className="w-5 h-5 text-green-600 mr-2" />
-                  </button>
-                  <button onClick={() => statusSwitch(1)}>
-                    {/* Switch: Processing */}
-                    <CirclePlay className="w-5 h-5 text-blue-600" />
-                  </button>
-                </>
-              )}
+            ([0, 1, 2] as const)
+              .filter(status => status !== task.status)
+              .map(status => {
+                const meta = statusMeta[status]
+                const StatusIcon = meta.icon
 
-              {task.status === 1 && (
-                <>
-                  <button onClick={() => statusSwitch(0)}>
-                    {/* Switch: Not Started */}
-                    <Flag className="w-5 h-5 text-gray-400 mr-2" />
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    className={styles.actionButton}
+                    onClick={() => statusSwitch(status)}
+                    aria-label={`Mover para ${meta.label}`}
+                    title={`Mover para ${meta.label}`}
+                  >
+                    <StatusIcon
+                      className={`${styles.actionIcon} ${meta.className}`}
+                      aria-hidden="true"
+                    />
                   </button>
-                  <button onClick={() => statusSwitch(2)}>
-                    {/* Switch: Checked */}
-                    <CircleCheck className="w-5 h-5 text-green-600" />
-                  </button>
-                </>
-              )}
-
-              {task.status === 2 && (
-                <>
-                  <button onClick={() => statusSwitch(0)}>
-                    {/* Switch: Not Started */}
-                    <Flag className="w-5 h-5 text-gray-500 mr-2" />
-                  </button>
-                  <button onClick={() => statusSwitch(1)}>
-                    {/* Switch: Processing */}
-                    <CirclePlay className="w-5 h-5 text-blue-600" />
-                  </button>
-                </>
-              )}
-            </div>
+                )
+              })
           )}
         </div>
-        <div className="flex gap-2 transition-all duration-300 ease-in-out">
+
+        <div className={styles.actionGroup}>
           {showActionsOn === 'right' && (
             <>
-              {/* Switch: Subtask / Task Parent */}
               {parentTaskId ? (
-                <button onClick={promoteSubtask}>
-                  <ArrowUpLeft className="w-5 h-5 text-purple-500" />
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={promoteSubtask}
+                  aria-label="Promover subtarefa"
+                  title="Promover subtarefa"
+                >
+                  <ArrowUpLeft className={styles.actionIcon} aria-hidden="true" />
                 </button>
               ) : (
                 <button
+                  type="button"
+                  className={styles.actionButton}
                   onClick={() => {
                     if (task.subtasks && task.subtasks.length > 0) {
-                      alert("Essa tarefa já possui subtarefas e não pode ser transformada em subtask.");
-                      handleResetPosition();
-                      return;
+                      alert(
+                        'Essa tarefa já possui subtarefas e não pode ser transformada em subtarefa.',
+                      )
+                      handleResetPosition()
+                      return
                     }
-                    makeSubtask();
+
+                    makeSubtask()
                   }}
+                  aria-label="Transformar em subtarefa da tarefa anterior"
+                  title="Transformar em subtarefa"
                 >
-                  <ArrowDownRight className="w-5 h-5 text-purple-500" />
+                  <ArrowDownRight className={styles.actionIcon} aria-hidden="true" />
                 </button>
               )}
 
-              {/* Modal Editar Task */}
-              <button onClick={editTask}>
-                <SquarePen className="w-5 h-5 text-yellow-600" />
+              <button
+                type="button"
+                className={styles.actionButton}
+                onClick={editTask}
+                aria-label="Editar tarefa"
+                title="Editar tarefa"
+              >
+                <SquarePen className={styles.actionIcon} aria-hidden="true" />
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.actionButton} ${styles.actionButtonDanger}`}
+                onClick={deleteTask}
+                aria-label="Excluir tarefa"
+                title="Excluir tarefa"
+              >
+                <Trash2 className={styles.actionIcon} aria-hidden="true" />
               </button>
             </>
           )}
         </div>
       </div>
 
-      {/* Área principal arrastável / clicável */}
       <motion.div
         drag="x"
-        dragElastic={0.7}
+        dragElastic={0.45}
         dragConstraints={{ left: -deleteSwipe, right: deleteSwipe }}
         animate={{ x }}
-        onClick={(e) => {
-          const { left, width } = e.currentTarget.getBoundingClientRect()
-          const xPos = e.clientX - left
-          if (showActionsOn == null) {
-            if (xPos > width / 2) {
-              setX(-threshold)
-              setShowActionsOn('right')
-            } else {
-              setX(threshold)
-              setShowActionsOn('left')
-            }
-          } else { handleResetPosition() }
-        }}
-        onDrag={(event, info) => {
-          const limitedX = Math.max(-deleteSwipe, Math.min(deleteSwipe, info.offset.x))
+        onDrag={(_, info) => {
+          const limitedX = Math.max(
+            -deleteSwipe,
+            Math.min(deleteSwipe, info.offset.x),
+          )
           setX(limitedX)
         }}
-        onDragEnd={(event, info) => {
-          const offset = info.offset.x
-
-          if (offset > deleteSwipe) {
+        onDragEnd={(_, info) => {
+          if (info.offset.x >= deleteSwipe) {
             deleteTask()
-          } else {
-            setX(0)
-            setShowActionsOn(null)
+            return
+          }
+
+          handleResetPosition()
+        }}
+        className={rowClass}
+        onClick={() => {
+          if (showActionsOn !== null) {
+            handleResetPosition()
           }
         }}
-        className="relative z-10 grid grid-cols-[auto_1fr_auto] items-center bg-white gap-3 p-3 cursor-pointer"
       >
-        {/* Grip de arraste vertical */}
-        <div
+        <button
           ref={setActivatorNodeRef}
+          type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing"
+          className={styles.gripButton}
+          aria-label="Reordenar tarefa"
+          onClick={(event) => event.stopPropagation()}
         >
-          <GripVertical className="w-7 h-7  text-gray-500" />
-        </div>
+          <GripVertical className={styles.gripIcon} aria-hidden="true" />
+        </button>
 
-        {/* Texto */}
-        <span className={`flex items-center text-wrap mr-4 
-            ${task.status === 2 ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+        <button
+          type="button"
+          className={`${styles.statusButton} ${currentStatus.className}`}
+          onClick={(event) => {
+            event.stopPropagation()
+            showStatusActions()
+          }}
+          aria-label={`Status: ${currentStatus.label}. Alterar status`}
+          title={currentStatus.label}
+        >
+          <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
+        </button>
+
+        <span
+          className={task.status === 2
+            ? `${styles.content} ${styles.contentCompleted}`
+            : styles.content}
+        >
           {task.content}
+          {parentTaskId && <span className={styles.subtaskLabel}>Subtarefa</span>}
         </span>
+
+        <button
+          type="button"
+          className={styles.moreButton}
+          onClick={(event) => {
+            event.stopPropagation()
+            showTaskActions()
+          }}
+          aria-label="Ações da tarefa"
+          title="Ações"
+        >
+          <MoreHorizontal className={styles.moreIcon} aria-hidden="true" />
+        </button>
       </motion.div>
     </div>
   )
 }
-
