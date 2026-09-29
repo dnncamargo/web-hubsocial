@@ -234,6 +234,8 @@ Color must never be the only signal conveying meaning.
 
 Task status colors are semantic system tokens, not per-task persisted data. A task row may project status through a narrow 1–2 px accent line and the status icon while keeping the row surface neutral.
 
+Future configurable category and relationship colors should belong to the category/relationship definition, not be duplicated on each Event or Person. Prefer a constrained sober palette with verified contrast over unrestricted decorative color picking.
+
 ## 9. Typography
 
 Use a small, predictable hierarchy:
