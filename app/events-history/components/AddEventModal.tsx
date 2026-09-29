@@ -92,10 +92,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   })
 
   useEffect(() => {
-    document.body.classList.toggle('overflow-hidden', isOpen)
+    if (!isOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
 
     return () => {
-      document.body.classList.remove('overflow-hidden')
+      document.body.style.overflow = previousOverflow
     }
   }, [isOpen])
 
