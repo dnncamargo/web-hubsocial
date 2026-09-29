@@ -1,10 +1,10 @@
+import type { ReactNode } from 'react'
 import { ActionProjection, ActionProjectionItem } from '../../types/actions'
-import { getWeatherConditionLabel, WeatherSnapshot } from '../../utils/weather'
 import styles from './ActionsOverview.module.css'
 
 interface ActionsOverviewProps {
   actions: ActionProjection
-  weather: WeatherSnapshot | null
+  context: ReactNode
 }
 
 function getAutomationStatus(item: ActionProjectionItem) {
@@ -65,15 +65,24 @@ function ActionSection({
   title,
   items,
   primary = false,
+  tertiary = false,
 }: {
   title: string
   items: ActionProjectionItem[]
   primary?: boolean
+  tertiary?: boolean
 }) {
+  const sectionClassName = primary
+    ? styles.primarySection
+    : tertiary
+      ? styles.tertiarySection
+      : styles.secondarySection
+  const Heading = primary ? 'h1' : 'h2'
+
   return (
-    <section className={primary ? styles.primarySection : styles.secondarySection}>
+    <section className={sectionClassName}>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>{title}</h2>
+        <Heading className={styles.sectionTitle}>{title}</Heading>
         <span className={styles.count}>{items.length}</span>
       </div>
 
@@ -90,34 +99,17 @@ function ActionSection({
   )
 }
 
-export default function ActionsOverview({ actions, weather }: ActionsOverviewProps) {
+export default function ActionsOverview({ actions, context }: ActionsOverviewProps) {
   return (
     <div className={styles.container}>
-      {weather && (
-        <div className={styles.weatherContext}>
-          <span>
-            {getWeatherConditionLabel(weather.condition)} · {Math.round(weather.temperatureC)}°C
-          </span>
-          <span className={styles.weatherAttribution}>
-            Dados meteorológicos:{' '}
-            <a
-              href="https://open-meteo.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Open-Meteo
-            </a>
-            {' '}· condição simplificada pelo app
-          </span>
-        </div>
-      )}
-
       <ActionSection title="Ações do dia" items={actions.day} primary />
 
-      <div className={styles.secondaryGrid}>
+      <div className={styles.planningGrid}>
         <ActionSection title="Esta semana" items={actions.week} />
-        <ActionSection title="Este mês" items={actions.month} />
+        <div className={styles.contextSlot}>{context}</div>
       </div>
+
+      <ActionSection title="Este mês" items={actions.month} tertiary />
     </div>
   )
 }

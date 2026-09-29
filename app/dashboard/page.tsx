@@ -8,13 +8,13 @@ import { Event, Person, Task } from '../utils/interfaces';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
 import { AutomationRuleSet } from '../types/automation';
 import { AutomationEventContext, evaluateAutomation } from '../utils/automation';
-import { getCurrentBrowserWeather, WeatherSnapshot } from '../utils/weather';
+import { getCurrentBrowserWeather, getWeatherConditionLabel, WeatherSnapshot } from '../utils/weather';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Star } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Check, MapPin, Star, UserRound } from 'lucide-react';
+import { Link } from 'react-router';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
-import UpcomingEventCard from './components/UpcomingEventCard';
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
 import styles from './Dashboard.module.css'
@@ -313,90 +313,95 @@ export default function Dashboard(): JSX.Element {
     }
   };
 
-  /**
-   * @function renderEvent
-   * @description Renderiza um cartão de resumo de evento, buscando a pessoa associada na lista de pessoas (se houver).
-   * @param {Event}
-   */
-  const renderEvent = (event: Event) => {
-    const associatedPerson = person.find(p => event.personIds?.includes(p.id))
-    return (
-      <div
-        key={event.id}
-      >
-        <UpcomingEventCard
-          key={event.id}
-          event={event}
-          person={associatedPerson}
-          onToggleStatus={handleToggleEventStatus} />
-      </div>
-    )
-  }
-
-  const groupLabels: Record<keyof GroupedEvents, string> = {
-    today: 'Hoje',
-    tomorrow: 'Amanhã',
-    thisWeek: 'Esta semana',
-    thisMonth: 'Este mês',
-    nextMonth: 'Próximo mês',
-    future: 'Futuro',
-  }
-
   const totalUpcomingEvents = Object.values(events).flat().length
-  const todayText = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
-  const formattedToday = todayText.charAt(0).toUpperCase() + todayText.slice(1)
+  const nearestEvents = Object.values(events).flat().slice(0, 3)
 
   return (
     <ProtectedRoute>
       <main className={styles.page}>
-        <header className={styles.pageHeader}>
-          <div>
-            <p className={styles.eyebrow}>Hoje</p>
-            <h1 className={styles.pageTitle}>{formattedToday}</h1>
-          </div>
-
-          <button
-            type="button"
-            className={styles.contextAction}
-            onClick={() => setShowSuggestions(true)}
-          >
-            <Star className={styles.contextActionIcon} aria-hidden="true" />
-            Sugestões
-          </button>
-        </header>
-
-        <ActionsOverview actions={actions} weather={weather} />
-
-        <section className={styles.eventsSection} aria-labelledby="upcoming-events-title">
-          <div className={styles.sectionHeading}>
-            <h2 id="upcoming-events-title" className={styles.sectionTitle}>
-              Próximos eventos
-            </h2>
-            <span className={styles.sectionCount}>
-              {totalUpcomingEvents} {totalUpcomingEvents === 1 ? 'evento' : 'eventos'}
-            </span>
-          </div>
-
-          {Object.entries(events).map(([groupName, groupEvents]) => {
-            if (groupEvents.length === 0) return null
-
-            const groupKey = groupName as keyof GroupedEvents
-            return (
-              <section key={groupName} className={styles.eventGroup}>
-                <h3 className={styles.groupTitle}>
-                  {groupLabels[groupKey]} ({groupEvents.length})
-                </h3>
-                <div className={styles.eventGrid}>
-                  {groupEvents.map(renderEvent)}
+        <ActionsOverview
+          actions={actions}
+          context={(
+            <section className={styles.contextPanel} aria-labelledby="context-title">
+              <header className={styles.contextHeader}>
+                <div>
+                  <p className={styles.contextEyebrow}>Contexto</p>
+                  <h2 id="context-title" className={styles.contextTitle}>Ao redor das suas ações</h2>
                 </div>
-              </section>
-            )
-          })}
+                <div className={styles.contextActions}>
+                  <button
+                    type="button"
+                    className={styles.contextAction}
+                    onClick={() => setShowSuggestions(true)}
+                  >
+                    <Star className={styles.contextActionIcon} aria-hidden="true" />
+                    Sugestões
+                  </button>
+                  <Link to="/events-history" className={styles.contextLink}>
+                    Eventos
+                    <ArrowUpRight className={styles.contextActionIcon} aria-hidden="true" />
+                  </Link>
+                </div>
+              </header>
 
-          {totalUpcomingEvents === 0 && (
-            <p className={styles.emptyState}>Nenhum evento futuro agendado.</p>
+              {weather && (
+                <div className={styles.weatherContext}>
+                  <span>{getWeatherConditionLabel(weather.condition)} · {Math.round(weather.temperatureC)}°C</span>
+                  <span className={styles.weatherAttribution}>
+                    Clima por{' '}
+                    <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+                  </span>
+                </div>
+              )}
+
+              <div className={styles.contextEvents}>
+                <div className={styles.contextEventsHeading}>
+                  <h3 className={styles.contextSectionTitle}>Próximos eventos</h3>
+                  <span className={styles.sectionCount}>{totalUpcomingEvents}</span>
+                </div>
+
+                {nearestEvents.length > 0 ? (
+                  <div className={styles.contextEventList}>
+                    {nearestEvents.map((event) => {
+                      const associatedPerson = person.find((item) => event.personIds?.includes(item.id))
+                      const isCompleted = event.status === 1
+
+                      return (
+                        <article key={event.id} className={styles.contextEvent}>
+                          <div className={styles.contextEventBody}>
+                            <span className={styles.contextEventDate}>
+                              <CalendarDays className={styles.contextEventIcon} aria-hidden="true" />
+                              {format(parseISO(event.startDate), "EEE, d MMM", { locale: ptBR })}
+                              {event.startTime ? ` · ${event.startTime}` : ''}
+                            </span>
+                            <h4 className={styles.contextEventTitle}>{event.title}</h4>
+                            {(associatedPerson || event.location) && (
+                              <span className={styles.contextEventMeta}>
+                                {associatedPerson && <><UserRound className={styles.contextEventIcon} aria-hidden="true" />{associatedPerson.name}</>}
+                                {event.location && <><MapPin className={styles.contextEventIcon} aria-hidden="true" />{event.location}</>}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className={isCompleted ? `${styles.eventStatus} ${styles.eventStatusCompleted}` : styles.eventStatus}
+                            aria-pressed={isCompleted}
+                            onClick={() => handleToggleEventStatus(event.id, isCompleted ? 0 : 1)}
+                          >
+                            <Check className={styles.eventStatusIcon} aria-hidden="true" />
+                            {isCompleted ? 'Concluído' : 'Pendente'}
+                          </button>
+                        </article>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className={styles.emptyState}>Nenhum evento futuro agendado.</p>
+                )}
+              </div>
+            </section>
           )}
-        </section>
+        />
 
         {showSuggestions && (
           <SuggestionPanel

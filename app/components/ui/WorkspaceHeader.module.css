@@ -1,0 +1,36 @@
+.header {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    min-height: 4.25rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-8);
+    border-bottom: 1px solid var(--color-border);
+    background: rgb(255 255 255 / 0.96);
+    backdrop-filter: blur(10px);
+  }
+
+  .context {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+
+  .eyebrow {
+    color: var(--color-text-primary);
+    font-size: 0.8125rem;
+    font-weight: 650;
+  }
+
+  .date {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+  }
+}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { db } from '../utils/firebaseConfig'
 import { useAuth } from '../components/auth/AuthProvider'
+import { useSearchParams } from 'react-router'
 import { Task } from '../utils/interfaces'
 import { Plus } from 'lucide-react'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
@@ -14,6 +15,7 @@ import styles from './TasksList.module.css'
 
 export default function TasksList() {
   const { uid } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tasks, setTasks] = useState<Task[]>([])
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false)
@@ -25,6 +27,15 @@ export default function TasksList() {
       fetchTasks()
     }
   }, [uid])
+
+  useEffect(() => {
+    if (searchParams.get('create') !== 'task') return
+
+    setIsAddTaskModalOpen(true)
+    const nextSearchParams = new URLSearchParams(searchParams)
+    nextSearchParams.delete('create')
+    setSearchParams(nextSearchParams, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const fetchTasks = async () => {
     if (!uid) return

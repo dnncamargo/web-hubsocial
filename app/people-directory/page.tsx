@@ -6,6 +6,7 @@ import { ListFilter, Search, UserPlus, X } from 'lucide-react';
 import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
+import { useSearchParams } from 'react-router';
 import { Person } from '../utils/interfaces';
 import { usePersonRelationships } from '../hooks/usePersonRelationships';
 import PersonCard from './components/PersonCard';
@@ -28,6 +29,7 @@ const defaultFilters: PersonFilter = {
 
 const PeopleDirectory = () => {
   const { uid } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
@@ -65,6 +67,15 @@ const PeopleDirectory = () => {
   useEffect(() => {
     void fetchPeople();
   }, [uid]);
+
+  useEffect(() => {
+    if (searchParams.get('create') !== 'person') return;
+
+    setIsAddPersonModalOpen(true);
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete('create');
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     const loadFilters = async () => {
