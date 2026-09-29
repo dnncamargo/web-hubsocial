@@ -1,6 +1,7 @@
 'use client'
 
 import { useGoogleLogin } from '@react-oauth/google'
+import { useEffect } from 'react'
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../components/auth/AuthProvider'
@@ -10,7 +11,13 @@ import styles from './LoginPage.module.css'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { setGoogleAccessToken, setUid } = useAuth()
+  const { uid, loading, setGoogleAccessToken } = useAuth()
+
+  useEffect(() => {
+    if (!loading && uid) {
+      navigate('/', { replace: true })
+    }
+  }, [loading, uid, navigate])
 
   const loginWithGoogle = useGoogleLogin({
     scope: [
@@ -24,29 +31,10 @@ export default function LoginPage() {
       const accessToken = tokenResponse.access_token
 
       try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        })
-
-        if (!res.ok) {
-          throw new Error(`Falha ao buscar perfil Google: ${res.status}`)
-        }
-
-        const userInfo = await res.json()
-
-        localStorage.setItem('googleAccessToken', accessToken)
-        localStorage.setItem('userInfo', JSON.stringify(userInfo))
-        setGoogleAccessToken(accessToken)
-
         const credential = GoogleAuthProvider.credential(null, accessToken)
-        const userCredential = await signInWithCredential(auth, credential)
+        await signInWithCredential(auth, credential)
 
-        localStorage.setItem('firebaseUid', userCredential.user.uid)
-        setUid(userCredential.user.uid)
-
-        navigate('/')
+        setGoogleAccessToken(accessToken)
       } catch (error) {
         console.error('Erro ao autenticar com Google/Firebase:', error)
       }

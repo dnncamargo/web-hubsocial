@@ -1,27 +1,21 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useAuth } from './AuthProvider'
 import { useNavigate } from 'react-router'
 import styles from './ProtectedRoute.module.css'
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { uid, googleAccessToken, loading } = useAuth()
+  const { uid, loading } = useAuth()
   const navigate = useNavigate()
-  const [checked, setChecked] = useState(false)
 
   useEffect(() => {
-    if (loading) return
-
-    if (!googleAccessToken || !uid) {
+    if (!loading && !uid) {
       navigate('/auth-login', { replace: true })
-      return
     }
+  }, [loading, uid, navigate])
 
-    setChecked(true)
-  }, [loading, uid, googleAccessToken, navigate])
-
-  if (loading || !checked) {
+  if (loading || !uid) {
     return <div className={styles.loading} role="status">Verificando autenticação...</div>
   }
 

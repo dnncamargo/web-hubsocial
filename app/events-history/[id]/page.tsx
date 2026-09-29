@@ -13,7 +13,7 @@ import { CheckCircle, Circle, Star } from 'lucide-react'
 import styles from './EventDetails.module.css'
 
 const EventDetails = () => {
-  const { uid } = useAuth()
+  const { uid, googleAccessToken } = useAuth()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
@@ -76,6 +76,20 @@ const EventDetails = () => {
     await updateDoc(doc(db, `users/${uid}/events-history/${id}`), {
       rating: newRating,
     })
+  }
+
+  const handleCreateCalendarEvent = async () => {
+    if (!googleAccessToken) {
+      alert('Autorização do Google não está disponível.')
+      return
+    }
+
+    try {
+      await createGoogleCalendarEvent(event, googleAccessToken)
+    } catch (error) {
+      console.error('Erro ao criar evento no Google Calendar:', error)
+      alert('Não foi possível criar o evento no Google Calendar.')
+    }
   }
 
   const renderOptionalFieldValue = (field: OptionalField) => {
@@ -239,7 +253,7 @@ const EventDetails = () => {
               <div className={styles.actions}>
                 <button
                   type="button"
-                  onClick={() => createGoogleCalendarEvent(event)}
+                  onClick={handleCreateCalendarEvent}
                   className={styles.calendarButton}
                 >
                   Criar no Google Calendar

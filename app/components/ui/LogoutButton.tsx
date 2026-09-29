@@ -1,22 +1,24 @@
 'use client'
 
 import { useNavigate } from 'react-router';
+import { signOut } from 'firebase/auth';
 import { useAuth } from '../auth/AuthProvider';
+import { auth } from '../../utils/firebaseConfig';
 import { LogOut } from 'lucide-react'
 import styles from './MainMenu.module.css'
 
 export default function LogoutButton() {
-  const { setUid, setUser, setGoogleAccessToken } = useAuth();
+  const { setGoogleAccessToken } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    setGoogleAccessToken(null)
-    setUid(null)
-    setUser(null)
-    localStorage.removeItem('googleAccessToken')
-    localStorage.removeItem('firebaseUid')
-    localStorage.removeItem('userInfo')
-    navigate('/auth-login'); // Redireciona
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      setGoogleAccessToken(null)
+      navigate('/auth-login')
+    } catch (error) {
+      console.error('Erro ao sair da conta Firebase:', error)
+    }
   }
   
   

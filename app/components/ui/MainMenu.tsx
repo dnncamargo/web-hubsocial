@@ -19,27 +19,11 @@ const navItems = [
 ] as const
 
 export default function MainMenu(): JSX.Element {
-  const { uid, googleAccessToken, user } = useAuth()
-  const isAuthenticated = !!uid && !!googleAccessToken
-  const [userPicture, setUserPicture] = useState<string | null>(null)
+  const { uid, user } = useAuth()
+  const isAuthenticated = !!uid
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [showImportContacts, setShowImportContacts] = useState(false)
   const { pathname } = useLocation()
-
-  useEffect(() => {
-    const savedUserInfo = localStorage.getItem('userInfo')
-
-    if (!savedUserInfo) return
-
-    try {
-      const storedUser = JSON.parse(savedUserInfo)
-      if (storedUser.picture) {
-        setUserPicture(storedUser.picture)
-      }
-    } catch (error) {
-      console.warn('[MainMenu] Falha ao carregar imagem de perfil do localStorage:', error)
-    }
-  }, [])
 
   useEffect(() => {
     setIsAccountOpen(false)
@@ -51,7 +35,7 @@ export default function MainMenu(): JSX.Element {
       : pathname === path || pathname.startsWith(`${path}/`)
 
   const avatarUrl =
-    userPicture ||
+    user?.picture ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name?.[0] || 'U')}&background=ccc&color=000`
   const dateText = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
   const formattedDate = dateText.charAt(0).toUpperCase() + dateText.slice(1)

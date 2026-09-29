@@ -583,23 +583,27 @@ These items are real but are not all immediate blockers.
 
 ### 8.1. Authentication/session ownership
 
-**Status: DEBT**
+**Status: PARTIALLY RESOLVED / DEBT**
 
-Current code still relies heavily on browser-local values such as:
+The canonical application-session ownership checkpoint is resolved:
+
+- Firebase Auth owns application session state;
+- `firebaseUid` localStorage duplication was removed;
+- `userInfo` localStorage duplication was removed;
+- logout uses Firebase `signOut`;
+- Google tokens no longer gate protected routes or the application shell;
+- direct Google-token storage ownership is centralized in `AuthProvider`.
+
+The remaining debt is specific to the Google integration credential and configuration:
 
 ```text
 googleAccessToken
-firebaseUid
-userInfo
 ```
 
-Future auth cleanup should audit:
+Deferred work includes:
 
-- Firebase Auth state as the canonical authenticated-session source;
-- Google access-token lifecycle and renewal;
-- stale/expired localStorage behavior;
-- logout cleanup;
-- recovery after reload;
+- Google access-token expiration/renewal and reauthorization UX;
+- OAuth scope lifecycle;
 - whether the Google OAuth client ID should move to a public `VITE_GOOGLE_CLIENT_ID` configuration value.
 
 Do not mix this with visual migration unless a blocking auth bug requires it.
