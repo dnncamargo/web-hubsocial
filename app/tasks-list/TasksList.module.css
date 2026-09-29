@@ -1,0 +1,99 @@
+.page {
+  min-height: 100vh;
+  padding: var(--space-4);
+  background: var(--color-background);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.heading {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1.35rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.primaryButton {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-tasks);
+  border-radius: var(--radius-sm);
+  background: var(--color-tasks);
+  color: #fff;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+
+.primaryButton:hover {
+  border-color: color-mix(in srgb, var(--color-tasks) 82%, #000);
+  background: color-mix(in srgb, var(--color-tasks) 82%, #000);
+}
+
+.primaryButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.buttonIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.board {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.emptyState {
+  margin: 0;
+  padding: var(--space-8) 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+@media (min-width: 760px) {
+  .page {
+    padding: var(--space-6) var(--space-8) var(--space-8);
+  }
+
+  .header {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 1040px) {
+  .board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+}
