@@ -7,6 +7,7 @@ import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../auth/AuthProvider'
 import LogoutButton from './LogoutButton'
 import ImportContactsModal from './ImportContactsModal'
+import CurrentWeather from './CurrentWeather'
 import QuickCreateMenu from './QuickCreateMenu'
 import { instance } from '../../config/instance'
 import styles from './MainMenu.module.css'
@@ -92,7 +93,10 @@ export default function MainMenu(): JSX.Element {
           <span className={styles.mobileEyebrow}>Hoje</span>
           <span className={styles.mobileDate}>{formattedDate}</span>
         </Link>
-        {accountButton(styles.mobileAccountButton)}
+        <div className={styles.mobileActions}>
+          <CurrentWeather />
+          {accountButton(styles.mobileAccountButton)}
+        </div>
       </header>
 
       <nav className={styles.bottomNav} aria-label="Navegação principal">

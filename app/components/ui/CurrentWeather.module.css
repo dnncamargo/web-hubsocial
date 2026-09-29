@@ -1,0 +1,54 @@
+.weather {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.icon {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  color: var(--color-accent);
+  stroke-width: 1.9;
+}
+
+.temperature {
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.separator {
+  color: var(--color-text-muted);
+}
+
+.loading .icon {
+  color: var(--color-text-muted);
+}
+
+.unavailable {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+@media (max-width: 520px) {
+  .weather {
+    gap: 0.2rem;
+  }
+
+  .label,
+  .separator {
+    display: none;
+  }
+
+  .icon {
+    width: 0.9375rem;
+    height: 0.9375rem;
+  }
+}

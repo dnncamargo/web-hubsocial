@@ -45,19 +45,12 @@ let cachedWeather:
   | undefined
 
 let pendingWeather: Promise<WeatherSnapshot> | undefined
-
-export type GeolocationPermissionState = PermissionState | 'unsupported'
-
-export async function getBrowserGeolocationPermissionState(): Promise<GeolocationPermissionState> {
-  if (!navigator.permissions?.query) return 'unsupported'
-
-  try {
-    const status = await navigator.permissions.query({ name: 'geolocation' })
-    return status.state
-  } catch {
-    return 'unsupported'
-  }
-}
+let unavailableWeather:
+  | {
+      error: Error
+      expiresAt: number
+    }
+  | undefined
 
 export function mapWeatherCodeToCondition(
   weatherCode: number,
@@ -148,6 +141,12 @@ export async function getCurrentBrowserWeather(): Promise<WeatherSnapshot> {
 
   if (pendingWeather) return pendingWeather
 
+  if (unavailableWeather && unavailableWeather.expiresAt > Date.now()) {
+    return Promise.reject(unavailableWeather.error)
+  }
+
+  unavailableWeather = undefined
+
   const request = (async () => {
     const coordinates = await getBrowserCoordinates()
     const snapshot = await fetchWeather(
@@ -159,6 +158,7 @@ export async function getCurrentBrowserWeather(): Promise<WeatherSnapshot> {
       snapshot,
       expiresAt: Date.now() + CACHE_DURATION_MS,
     }
+    unavailableWeather = undefined
 
     return snapshot
   })()
@@ -167,6 +167,12 @@ export async function getCurrentBrowserWeather(): Promise<WeatherSnapshot> {
 
   try {
     return await request
+  } catch (error) {
+    unavailableWeather = {
+      error: error instanceof Error ? error : new Error('Clima atual indisponível.'),
+      expiresAt: Date.now() + CACHE_DURATION_MS,
+    }
+    throw error
   } finally {
     if (pendingWeather === request) {
       pendingWeather = undefined

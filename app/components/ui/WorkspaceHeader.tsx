@@ -1,5 +1,6 @@
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import CurrentWeather from './CurrentWeather'
 import QuickCreateMenu from './QuickCreateMenu'
 import styles from './WorkspaceHeader.module.css'
 
@@ -13,7 +14,10 @@ export default function WorkspaceHeader() {
         <span className={styles.eyebrow}>Hoje</span>
         <span className={styles.date}>{formattedDate}</span>
       </div>
-      <QuickCreateMenu variant="desktop" />
+      <div className={styles.actions}>
+        <CurrentWeather />
+        <QuickCreateMenu variant="desktop" />
+      </div>
     </header>
   )
 }

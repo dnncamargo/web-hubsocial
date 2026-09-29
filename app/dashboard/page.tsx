@@ -9,9 +9,7 @@ import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/
 import { AutomationRuleSet } from '../types/automation';
 import { evaluateAutomation } from '../utils/automation';
 import {
-  getBrowserGeolocationPermissionState,
   getCurrentBrowserWeather,
-  getWeatherConditionLabel,
   WeatherSnapshot,
 } from '../utils/weather';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
@@ -42,8 +40,6 @@ type PlannedActionSource = {
   automation?: AutomationRuleSet
 }
 
-type WeatherUiState = 'checking' | 'loading' | 'available' | 'needsPermission' | 'unavailable'
-
 /**
  * @component
  * @description Componente principal da página inicial, exibindo os próximos eventos e permitindo adicionar novos eventos.
@@ -65,8 +61,6 @@ export default function Dashboard(): JSX.Element {
     week: [],
     month: [],
   });
-  const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
-  const [weatherUiState, setWeatherUiState] = useState<WeatherUiState>('checking');
   const [showSuggestions, setShowSuggestions] = useState(false); /** @state {boolean} showSuggestions - Controla a visibilidade do painel de sugestões de eventos. */
 
   useEffect(() => {
@@ -93,30 +87,6 @@ export default function Dashboard(): JSX.Element {
     })) as Person[];
     setPerson(personData);
   };
-
-  const loadWeatherIfAllowed = async (): Promise<WeatherSnapshot | null> => {
-    const permission = await getBrowserGeolocationPermissionState()
-
-    if (permission !== 'granted') {
-      setWeather(null)
-      setWeatherUiState(permission === 'denied' ? 'unavailable' : 'needsPermission')
-      return null
-    }
-
-    setWeatherUiState('loading')
-
-    try {
-      const currentWeather = await getCurrentBrowserWeather()
-      setWeather(currentWeather)
-      setWeatherUiState('available')
-      return currentWeather
-    } catch (error) {
-      console.warn('Contexto de clima indisponível:', error)
-      setWeather(null)
-      setWeatherUiState('unavailable')
-      return null
-    }
-  }
 
   const fetchPlannedActions = async (
     weatherOverride?: WeatherSnapshot | null,
@@ -163,13 +133,13 @@ export default function Dashboard(): JSX.Element {
       ...snapshot.data(),
     }) as Task)
 
-    const currentWeather = weatherOverride === undefined
-      ? await loadWeatherIfAllowed()
-      : weatherOverride
-
-    if (weatherOverride !== undefined) {
-      setWeather(currentWeather)
-      setWeatherUiState(currentWeather ? 'available' : 'unavailable')
+    let currentWeather = weatherOverride
+    if (weatherOverride === undefined) {
+      try {
+        currentWeather = await getCurrentBrowserWeather()
+      } catch {
+        currentWeather = null
+      }
     }
 
     const referencedEventIds = new Set<string>()
@@ -352,22 +322,6 @@ export default function Dashboard(): JSX.Element {
     await Promise.all([fetchAndGroupEvents(), fetchPlannedActions()]);
   };
 
-  const handleLoadWeather = async () => {
-    setWeatherUiState('loading')
-
-    try {
-      const currentWeather = await getCurrentBrowserWeather()
-      setWeather(currentWeather)
-      setWeatherUiState('available')
-      await fetchPlannedActions(currentWeather)
-    } catch (error) {
-      console.warn('Contexto de clima indisponível:', error)
-      setWeather(null)
-      setWeatherUiState('unavailable')
-      await fetchPlannedActions(null)
-    }
-  }
-
   const handleToggleEventStatus = async (eventId: string, newStatus: 0 | 1) => {
     try {
       const eventRef = doc(db, `users/${uid}/events-history`, eventId);
@@ -429,30 +383,6 @@ export default function Dashboard(): JSX.Element {
                   </Link>
                 </div>
               </header>
-
-              <div className={styles.weatherContext}>
-                {weather ? (
-                  <>
-                    <span>{getWeatherConditionLabel(weather.condition)} · {Math.round(weather.temperatureC)}°C</span>
-                    <span className={styles.weatherAttribution}>
-                      Clima por{' '}
-                      <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
-                    </span>
-                  </>
-                ) : weatherUiState === 'loading' || weatherUiState === 'checking' ? (
-                  <span>Consultando clima atual…</span>
-                ) : weatherUiState === 'needsPermission' ? (
-                  <button
-                    type="button"
-                    className={styles.weatherAction}
-                    onClick={handleLoadWeather}
-                  >
-                    Ver clima atual
-                  </button>
-                ) : (
-                  <span>Clima atual indisponível.</span>
-                )}
-              </div>
 
               <div className={styles.contextEvents}>
                 <div className={styles.contextEventsHeading}>

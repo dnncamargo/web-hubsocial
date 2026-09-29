@@ -43,6 +43,13 @@
   font-weight: 400;
 }
 
+.mobileActions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .bottomNav {
   position: fixed;
   inset: auto 0 0;
