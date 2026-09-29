@@ -680,7 +680,7 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 3C — People
+Visual 3D — Optional fields and shared UI
 ```
 
-Then continue through Optional Fields/shared UI and final Tailwind dependency removal before Visual 4.
+Then continue through Visual 3E — Tailwind removal and dependency cleanup, followed by Visual 4.

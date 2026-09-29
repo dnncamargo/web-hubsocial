@@ -49,9 +49,9 @@ const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps)
           aria-label={person.favorite ? `Remover ${person.name} dos favoritos` : `Adicionar ${person.name} aos favoritos`}
           className={`${styles.iconButton} ${person.favorite ? styles.favoriteActive : ''}`}>
           {person.favorite ? (
-            <Heart className={styles.icon} fill="currentColor" />
+            <Heart className={styles.icon} fill="currentColor" aria-hidden="true" />
           ) : (
-            <Heart className={styles.icon} />
+            <Heart className={styles.icon} aria-hidden="true" />
           )}
         </button>
         </div>
@@ -63,24 +63,24 @@ const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps)
         aria-label={`Abrir detalhes de ${person.name}`}
         onClick={() => navigate(`/people-directory/${person.id}`)}
       >
-      <div className={styles.body}>
-        <div className={styles.metaList}>
+      <span className={styles.body}>
+        <span className={styles.metaList}>
         {person.phone && (
-          <div className={styles.metaRow}>
+          <span className={styles.metaRow}>
             <Phone className={styles.metaIcon} aria-hidden="true" />
             <span className={styles.metaText}>{person.phone}</span>
-          </div>
+          </span>
         )}
         {person.email && (
-          <div className={styles.metaRow}>
+          <span className={styles.metaRow}>
             <Mail className={styles.metaIcon} aria-hidden="true" />
             <span className={styles.metaText}>{person.email}</span>
-          </div>
+          </span>
         )}
-        </div>
+        </span>
 
         {relationships.length > 0 && (
-          <div className={styles.relationships}>
+          <span className={styles.relationships}>
               {relationships.map((rel) => (
                 <span
                   key={rel}
@@ -89,9 +89,9 @@ const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps)
                   {rel}
                 </span>
               ))}
-          </div>
+          </span>
         )}
-      </div>
+      </span>
       </button>
 
       <div className={styles.footer}>
