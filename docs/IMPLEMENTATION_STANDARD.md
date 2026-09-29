@@ -117,7 +117,7 @@ Do not introduce without an explicit architecture decision:
 - another CSS framework;
 - another global state manager.
 
-Existing Next.js and Tailwind usage is migration debt. New work should not deepen coupling to them unless required to keep an intermediate checkpoint functional.
+The Tailwind migration is complete. Native CSS, semantic CSS custom properties, and CSS Modules are canonical. Do not reintroduce a CSS framework without an explicit architectural decision. Historical references to Next.js or Tailwind may remain only as migration context.
 
 ## 5. Dependency policy
 

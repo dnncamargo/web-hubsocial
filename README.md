@@ -30,7 +30,7 @@ A próxima versão do Nxt_Planner trará ainda mais poder para sua organização
 * [React](https://react.dev/): Biblioteca para construção da interface.
 * [Vite](https://vite.dev/): Build tool e servidor de desenvolvimento.
 * [React Router](https://reactrouter.com/): Roteamento client-side da aplicação.
-* [Tailwind CSS](https://tailwindcss.com/): Framework CSS utilitário para estilização rápida e responsiva.
+* CSS nativo, CSS Modules e propriedades customizadas semânticas: base canônica para estilização, tokens e responsividade.
 * [Lucide](https://lucide.dev/): Biblioteca canônica de ícones SVG.
 * [Firebase](https://firebase.google.com/): Plataforma de desenvolvimento da Google Cloud para persistência de dados na nuvem (Firestore) e autenticação de usuários (Firebase Authentication).
 
@@ -102,4 +102,4 @@ Em desenvolvimento ativo. Versão atual: `2.0.1`.
 
 ---
 
-Feito com ❤️ usando React, Vite, Tailwind CSS e Firebase.
+Feito com ❤️ usando React, Vite, CSS nativo e Firebase.
