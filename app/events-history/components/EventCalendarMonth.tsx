@@ -43,8 +43,8 @@ export default function EventCalendarMonth({ events }: EventCalendarMonthProps) 
   const navigate = useNavigate()
   const referenceDate = new Date()
   const monthStart = startOfMonth(referenceDate)
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 })
-  const calendarEnd = endOfWeek(endOfMonth(referenceDate), { weekStartsOn: 1 })
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 })
+  const calendarEnd = endOfWeek(endOfMonth(referenceDate), { weekStartsOn: 0 })
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   const weekdayLabels = Array.from({ length: 7 }, (_, index) =>
     format(addDays(calendarStart, index), 'EEE', { locale: ptBR }),

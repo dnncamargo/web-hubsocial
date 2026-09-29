@@ -109,13 +109,29 @@ const EventsHistory = (): JSX.Element => {
       const eventsQuery = query(
         collection(db, `users/${uid}/events-history`),
         orderBy('startDate', 'asc'),
-        orderBy('startTime', 'asc'),
       )
       const querySnapshot = await getDocs(eventsQuery)
-      const eventData = querySnapshot.docs.map(snapshot => ({
-        id: snapshot.id,
-        ...snapshot.data(),
-      })) as Event[]
+      const eventData = querySnapshot.docs
+        .map(snapshot => ({
+          id: snapshot.id,
+          ...snapshot.data(),
+        }) as Event)
+        .sort((first, second) => {
+          const dateOrder = first.startDate.localeCompare(second.startDate)
+          if (dateOrder !== 0) return dateOrder
+
+          if (first.allDay !== second.allDay) {
+            return first.allDay ? -1 : 1
+          }
+
+          const timeOrder = (first.startTime ?? '99:99').localeCompare(
+            second.startTime ?? '99:99',
+          )
+
+          return timeOrder !== 0
+            ? timeOrder
+            : first.title.localeCompare(second.title, 'pt-BR')
+        })
 
       setEvents(eventData)
     } catch (error) {
