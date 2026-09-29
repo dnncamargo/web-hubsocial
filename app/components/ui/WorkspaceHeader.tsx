@@ -13,9 +13,9 @@ export default function WorkspaceHeader() {
       <div className={styles.context}>
         <span className={styles.eyebrow}>Hoje</span>
         <span className={styles.date}>{formattedDate}</span>
+        <CurrentWeather />
       </div>
       <div className={styles.actions}>
-        <CurrentWeather />
         <QuickCreateMenu variant="desktop" />
       </div>
     </header>
