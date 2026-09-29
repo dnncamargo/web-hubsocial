@@ -173,7 +173,6 @@
   color: var(--color-text-muted);
 }
 
-.secondaryButton:disabled,
 .associationButton:focus-visible,
 .secondaryButton:focus-visible,
 .primaryButton:focus-visible {
