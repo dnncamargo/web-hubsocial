@@ -1,6 +1,7 @@
 'use client'
 
 import { useGoogleLogin } from '@react-oauth/google'
+import { useEffect } from 'react'
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../components/auth/AuthProvider'
@@ -10,7 +11,13 @@ import styles from './LoginPage.module.css'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { setGoogleAccessToken } = useAuth()
+  const { uid, loading, setGoogleAccessToken } = useAuth()
+
+  useEffect(() => {
+    if (!loading && uid) {
+      navigate('/', { replace: true })
+    }
+  }, [loading, uid, navigate])
 
   const loginWithGoogle = useGoogleLogin({
     scope: [
@@ -28,8 +35,6 @@ export default function LoginPage() {
         await signInWithCredential(auth, credential)
 
         setGoogleAccessToken(accessToken)
-
-        navigate('/')
       } catch (error) {
         console.error('Erro ao autenticar com Google/Firebase:', error)
       }
