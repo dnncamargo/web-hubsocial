@@ -335,7 +335,56 @@ Do not combine unrelated:
 
 Every checkpoint should be independently reviewable and reversible.
 
-## 17. Validation
+## 17. Repository and deployment discipline
+
+Repository writes are agent-owned. The coordinating ChatGPT session must not
+directly mutate the GitHub repository through a GitHub API, MCP, connector, or
+equivalent remote-write tooling. This prohibition includes:
+
+- creating, updating, or deleting files;
+- creating or moving refs;
+- creating branches remotely;
+- creating commits remotely;
+- opening or modifying pull requests directly; and
+- merging pull requests directly.
+
+ChatGPT may use GitHub in read-only mode for audit, evidence, reviewing current
+`main`, inspecting diffs, checking pull request state, and checking commit or
+deployment status. Repository modifications must be executed by the coding
+agent through the repository worktree.
+
+For each checkpoint, use this local-first sequence:
+
+1. synchronize local `main`;
+2. confirm a clean worktree and `main == origin/main`;
+3. create a local feature, fix, or documentation branch;
+4. perform the coherent implementation on that branch;
+5. validate locally;
+6. review the complete diff;
+7. run `git diff --check`; and
+8. commit locally.
+
+Do not push partial exploratory work merely to preserve progress. The complete
+canonical execution flow is:
+
+```text
+AUDIT → EVIDENCE → DECISION → REUSE → GENERALIZE → IMPLEMENT → VALIDATE
+→ REVIEW DIFF → COMMIT → PUSH → PR → MERGE → SYNC MAIN
+```
+
+`IMPLEMENT` through local validation and diff review happen before the first
+normal remote push.
+
+A push to a Git-connected branch can trigger a Vercel deployment and consume
+deployment or debugging capacity. Prefer local commits while a checkpoint is
+being developed. Push only when the checkpoint is coherent and locally
+validated; additional pushes should happen only when a real correction is
+necessary after remote validation or review. Do not use Vercel deployments as
+the normal inner development loop when local validation is sufficient. The
+objective is to avoid unnecessary deployments, not to require exactly one push
+under every circumstance.
+
+## 18. Validation
 
 Before commit:
 
@@ -351,21 +400,27 @@ For feature work, validate the affected user flow.
 
 For visual work, validate mobile from the beginning.
 
-## 18. Git closure
+## 19. Git closure
 
-A work area is complete only after:
+A checkpoint is complete only after:
 
-1. implementation;
-2. validation;
-3. final diff audit;
-4. commit and push;
-5. pull request;
-6. merge to `main`;
-7. remote merge verification;
-8. local `main` synchronized with `origin/main`;
-9. clean worktree.
+1. the implementation is coherent;
+2. relevant local validation passes;
+3. `git diff --check` passes;
+4. the final diff audit passes;
+5. commits are complete;
+6. the branch is pushed;
+7. the pull request is opened and reviewed;
+8. the pull request is merged;
+9. remote `main` is verified;
+10. the local repository returns to `main`;
+11. `git pull --ff-only` is applied;
+12. local `main == origin/main`; and
+13. the worktree is clean.
 
-## 19. Rule of interpretation
+After merge, do not leave the repository on the feature branch.
+
+## 20. Rule of interpretation
 
 When legacy code conflicts with this document, do not copy the legacy pattern automatically.
 
