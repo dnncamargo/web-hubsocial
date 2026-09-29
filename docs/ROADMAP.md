@@ -675,4 +675,4 @@ The next implementation checkpoint is:
 Visual 3C — People
 ```
 
-Then continue through People, Optional Fields/shared UI, and final Tailwind dependency removal before Visual 4.
+Then continue through Optional Fields/shared UI and final Tailwind dependency removal before Visual 4.
