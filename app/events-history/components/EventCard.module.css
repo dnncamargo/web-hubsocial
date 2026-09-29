@@ -3,8 +3,9 @@
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-events);
-  border-radius: var(--radius-md);
+  height: 100%;
+  border-left: 2px solid var(--color-events);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
   cursor: pointer;
   transition:
@@ -41,7 +42,7 @@
 
 .date {
   flex: none;
-  color: var(--color-events-strong);
+  color: var(--color-text-secondary);
   font-size: 0.6875rem;
   font-weight: 600;
   text-align: right;
@@ -98,9 +99,10 @@
 
 .category {
   padding: 0.125rem var(--space-2);
-  border-radius: var(--radius-round);
-  background: var(--color-events-soft);
-  color: var(--color-events-strong);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
   font-size: 0.6875rem;
   font-weight: 600;
 }
