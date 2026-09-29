@@ -470,6 +470,7 @@ Execution checkpoints:
   - status order is now explicit as Not started → In progress → Completed;
   - task sections use thin borders, restrained status accents, compact counts, and regular alignment;
   - task cards became operational rows with explicit status, drag handle, action menu, and visible subtask hierarchy;
+  - task status is projected through sober semantic accent tokens on the row line, status icon, and column marker; colors are system semantics rather than per-task persisted data;
   - swipe remains available as a secondary interaction rather than the only way to discover actions;
   - Add/Edit Task share one neutral editor visual contract;
   - the saturated yellow task-editor treatment was removed;
