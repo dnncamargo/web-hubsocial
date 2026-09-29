@@ -692,4 +692,4 @@ The next implementation checkpoint is:
 Visual 3E — Tailwind removal and dependency cleanup
 ```
 
-Then continue through Visual 3E — Tailwind removal and dependency cleanup, followed by Visual 4.
+Then continue with Visual 4.

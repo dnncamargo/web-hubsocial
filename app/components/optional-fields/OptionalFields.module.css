@@ -46,7 +46,8 @@
 .action:focus-visible,
 .removeAction:focus-visible,
 .taskInput:focus-visible,
-.checkbox:focus-visible {
+.checkbox:focus-visible,
+.cancelAction:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
