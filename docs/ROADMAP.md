@@ -465,7 +465,7 @@ Execution checkpoints:
   - shared `CalendarEventCreator` migrated to CSS Modules because it is a direct Event/Task editor dependency;
   - no Tailwind utility classes remain in `app/events-history/**/*.tsx`;
   - shared Optional Fields remain intentionally deferred to their Visual 3 checkpoint.
-- **Visual 3C — People: DONE**
+- **Visual 3B — Tasks: DONE**
   - task list moved from FAB/masonry-era presentation to a sober operational workflow board;
   - status order is now explicit as Not started → In progress → Completed;
   - task sections use thin borders, restrained status accents, compact counts, and regular alignment;
@@ -672,7 +672,7 @@ A roadmap checkpoint is complete only when:
 The next implementation checkpoint is:
 
 ```text
-Visual 3B — Tasks
+Visual 3C — People
 ```
 
 Then continue through People, Optional Fields/shared UI, and final Tailwind dependency removal before Visual 4.
