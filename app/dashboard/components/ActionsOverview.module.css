@@ -109,18 +109,23 @@
   box-shadow: inset 3px 0 0 var(--color-task-status-in-progress);
 }
 
-.highlightedRow.inProgressRow {
-  background: color-mix(in srgb, var(--color-events-soft) 72%, var(--color-task-status-in-progress) 10%);
-  box-shadow: inset 3px 0 0 var(--color-task-status-in-progress);
-}
-
 .pendingMarker,
-.completedMarker {
+.completedMarker,
+.inProgressMarker {
   width: 0.625rem;
   height: 0.625rem;
   margin-top: 0.3rem;
   border: 1.5px solid var(--color-text-muted);
   border-radius: 50%;
+}
+
+.inProgressMarker {
+  border-color: var(--color-task-status-in-progress);
+  background: radial-gradient(
+    circle,
+    var(--color-task-status-in-progress) 0 2px,
+    transparent 2.5px
+  );
 }
 
 .completedMarker {

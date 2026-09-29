@@ -31,19 +31,34 @@ function getAutomationStatus(item: ActionProjectionItem) {
   }
 }
 
+type AttentionState = 'completed' | 'inProgress' | 'highlighted' | 'normal'
+
+function getAttentionState(item: ActionProjectionItem): AttentionState {
+  if (item.completed) return 'completed'
+  if (item.sourceType === 'task' && item.inProgress) return 'inProgress'
+  if (item.automation.highlighted) return 'highlighted'
+  return 'normal'
+}
+
 function ActionRow({ item }: { item: ActionProjectionItem }) {
   const automationStatus = getAutomationStatus(item)
   const SourceIcon = item.sourceType === 'event' ? CalendarDays : ListChecks
+  const attentionState = getAttentionState(item)
+  const markerClassName = item.completed
+    ? styles.completedMarker
+    : item.sourceType === 'task' && item.inProgress
+      ? styles.inProgressMarker
+      : styles.pendingMarker
   const rowClassName = [
     styles.row,
-    item.automation.highlighted ? styles.highlightedRow : '',
-    item.inProgress ? styles.inProgressRow : '',
+    attentionState === 'highlighted' ? styles.highlightedRow : '',
+    attentionState === 'inProgress' ? styles.inProgressRow : '',
   ].filter(Boolean).join(' ')
 
   return (
     <li className={rowClassName}>
       <span
-        className={item.completed ? styles.completedMarker : styles.pendingMarker}
+        className={markerClassName}
         aria-hidden="true"
       />
       <div className={styles.rowContent}>
