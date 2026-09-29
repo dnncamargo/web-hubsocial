@@ -1,0 +1,296 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(24 28 31 / 0.28);
+}
+
+.dialog {
+  width: min(100%, 26rem);
+  max-height: min(42rem, calc(100dvh - 2rem));
+  overflow-y: auto;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-md);
+}
+
+.header {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.label,
+.sectionLabel {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.input:focus-visible,
+.switch:focus-visible,
+.starButton:focus-visible,
+.choice:focus-visible,
+.textButton:focus-visible,
+.secondaryButton:focus-visible,
+.dangerButton:focus-visible,
+.link:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.75rem;
+}
+
+.switchRow,
+.ratingRow,
+.personRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.switchLabel {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.switch {
+  position: relative;
+  width: 2.5rem;
+  height: 1.35rem;
+  padding: 0.15rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-round);
+  background: var(--color-surface-muted);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+
+.switchActive {
+  border-color: var(--color-events);
+  background: var(--color-events);
+}
+
+.switchThumb {
+  display: block;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transform: translateX(0);
+  transition: transform var(--duration-fast) ease;
+}
+
+.switchThumbActive {
+  transform: translateX(1.05rem);
+}
+
+.rating {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.starButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-border-strong);
+  cursor: pointer;
+}
+
+.starButtonActive {
+  color: var(--color-warning);
+}
+
+.starIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.checkList,
+.personList,
+.associatedList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.personList,
+.associatedList {
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.checkbox {
+  width: 0.95rem;
+  height: 0.95rem;
+  accent-color: var(--color-events);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.choice {
+  min-height: 1.9rem;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.choice:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+}
+
+.choiceSelected {
+  border-color: var(--color-events);
+  background: var(--color-events-soft);
+  color: var(--color-events-strong);
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.personRow {
+  min-height: 2.25rem;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.personRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.personName {
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.textButton,
+.secondaryButton,
+.dangerButton,
+.link {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.textButton,
+.link {
+  color: var(--color-events-strong);
+}
+
+.textButton:hover,
+.link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.secondaryButton {
+  min-height: 2rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.secondaryButton:hover {
+  background: var(--color-surface-muted);
+}
+
+.dangerButton {
+  color: var(--color-danger);
+}
+
+.dangerButton:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
