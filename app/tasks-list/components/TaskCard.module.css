@@ -1,0 +1,178 @@
+.container {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-muted);
+}
+
+.container + .container {
+  border-top: 1px solid var(--color-border);
+}
+
+.actionLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-3);
+  background: var(--color-surface-muted);
+}
+
+.actionGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.actionButton {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.actionButton:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.actionButtonDanger:hover {
+  color: var(--color-danger);
+}
+
+.actionButton:focus-visible,
+.statusButton:focus-visible,
+.moreButton:focus-visible,
+.gripButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.actionIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.row {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 3rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  cursor: default;
+  transition:
+    background-color var(--duration-fast) ease,
+    opacity var(--duration-fast) ease;
+}
+
+.row:hover {
+  background: #f8f8f7;
+}
+
+.rowDragging {
+  opacity: 0.72;
+  box-shadow: var(--shadow-sm);
+}
+
+.subtaskRow {
+  background: #f8f8f7;
+}
+
+.gripButton,
+.statusButton,
+.moreButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.gripButton {
+  width: 1.5rem;
+  height: 2rem;
+  cursor: grab;
+}
+
+.gripButton:active {
+  cursor: grabbing;
+}
+
+.statusButton,
+.moreButton {
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: var(--radius-sm);
+}
+
+.statusButton:hover,
+.moreButton:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+}
+
+.gripIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.statusIcon,
+.moreIcon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.statusPending {
+  color: var(--color-text-muted);
+}
+
+.statusProgress {
+  color: var(--color-tasks);
+}
+
+.statusDone {
+  color: var(--color-success);
+}
+
+.content {
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.contentCompleted {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.subtaskLabel {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--color-text-muted);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
