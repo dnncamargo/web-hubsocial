@@ -67,8 +67,7 @@ function formatForGoogleCalendar(event: any) {
   }
 }
 
-export async function createGoogleCalendarEvent(event: any) {
-  const accessToken = localStorage.getItem('googleAccessToken');
+export async function createGoogleCalendarEvent(event: any, accessToken: string | null) {
   if (!accessToken) throw new Error('Token de acesso do Google não encontrado');
 
   const formatedEvent = formatForGoogleCalendar(event); // Formata o evento para o Google Calendar

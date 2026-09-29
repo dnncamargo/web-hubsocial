@@ -78,6 +78,8 @@ Domain components should not depend on router APIs unless navigation is part of 
 ### Firebase
 Firebase remains the canonical authentication and persistence platform unless a separate architectural decision replaces it.
 
+Firebase Auth state is the canonical application-session source. Google OAuth access tokens are integration credentials for Google APIs, not proof of application authentication. Protected application routing must not depend on a Google API access token.
+
 Persisted domain entities have one canonical shape. Do not create separate schemas for views of the same entity.
 
 Daily, weekly, monthly, agenda, and automation views must derive from the same canonical Task/Event data.

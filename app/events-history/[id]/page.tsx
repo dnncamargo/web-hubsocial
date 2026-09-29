@@ -13,7 +13,7 @@ import { CheckCircle, Circle, Star } from 'lucide-react'
 import styles from './EventDetails.module.css'
 
 const EventDetails = () => {
-  const { uid } = useAuth()
+  const { uid, googleAccessToken } = useAuth()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
@@ -239,7 +239,7 @@ const EventDetails = () => {
               <div className={styles.actions}>
                 <button
                   type="button"
-                  onClick={() => createGoogleCalendarEvent(event)}
+                  onClick={() => createGoogleCalendarEvent(event, googleAccessToken)}
                   className={styles.calendarButton}
                 >
                   Criar no Google Calendar
