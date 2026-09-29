@@ -1,6 +1,7 @@
 'use client'
 
 import useEventDate from '../../hooks/useEventDate'
+import styles from './CalendarEventCreator.module.css'
 
 type DateControl = ReturnType<typeof useEventDate>
 
@@ -19,69 +20,83 @@ type CalendarEventCreatorProps = Pick<
 >
 
 export default function CalendarEventCreator({
-  allDay,  setAllDay,
-  startDate,  setStartDate,
-  endDate,  setEndDate,
+  allDay,
+  setAllDay,
+  startDate,
+  setStartDate,
+  endDate,
+  setEndDate,
   startTime,
   handleStartTimeChange,
   endTime,
   setEndTime,
 }: CalendarEventCreatorProps) {
- 
   return (
-    <div className="space-y-2">
-      {/* Switch All-Day */}
-      <div className="flex justify-between items-center">
-        <span>Dia inteiro</span>
+    <div className={styles.control}>
+      <div className={styles.switchRow}>
+        <span className={styles.label}>Dia inteiro</span>
         <button
           type="button"
+          role="switch"
+          aria-checked={allDay}
           onClick={() => setAllDay(!allDay)}
-          className={`w-12 h-6 rounded-full transition flex items-center p-1 ${allDay ? 'bg-blue-500' : 'bg-gray-300'}`}
+          className={allDay
+            ? `${styles.switch} ${styles.switchActive}`
+            : styles.switch}
         >
-          <div
-            className={`bg-white w-4 h-4 rounded-full shadow transform transition ${allDay ? 'translate-x-6' : 'translate-x-0'}`}
+          <span
+            className={allDay
+              ? `${styles.switchThumb} ${styles.switchThumbActive}`
+              : styles.switchThumb}
+            aria-hidden="true"
           />
         </button>
       </div>
 
-      {/* Início */}
-      <div className="flex items-center gap-2">
-        <span className="w-20">Início</span>
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="flex-1 p-2 border rounded"
-        />
-        {!allDay && (
+      <div className={styles.row}>
+        <label className={styles.label} htmlFor="event-start-date">Início</label>
+        <div className={styles.inputs}>
           <input
-            type="time"
-            step="300"
-            value={startTime}
-            onChange={(e) => handleStartTimeChange(e.target.value)}
-            className="w-24 p-2 border rounded"
+            id="event-start-date"
+            type="date"
+            value={startDate}
+            onChange={(event) => setStartDate(event.target.value)}
+            className={styles.input}
           />
-        )}
+          {!allDay && (
+            <input
+              type="time"
+              step="300"
+              value={startTime}
+              aria-label="Horário de início"
+              onChange={(event) => handleStartTimeChange(event.target.value)}
+              className={styles.input}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Término */}
-      <div className="flex items-center gap-2">
-        <span className="w-20">Término</span>
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className={`flex-1 p-2 border rounded `}
-        />
-        {!allDay && (
+      <div className={styles.row}>
+        <label className={styles.label} htmlFor="event-end-date">Término</label>
+        <div className={styles.inputs}>
           <input
-            type="time"
-            step="300"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            className={`w-24 p-2 border rounded `}
+            id="event-end-date"
+            type="date"
+            value={endDate}
+            onChange={(event) => setEndDate(event.target.value)}
+            className={styles.input}
           />
-        )}
+          {!allDay && (
+            <input
+              type="time"
+              step="300"
+              value={endTime}
+              aria-label="Horário de término"
+              onChange={(event) => setEndTime(event.target.value)}
+              className={styles.input}
+            />
+          )}
+        </div>
       </div>
     </div>
   )

@@ -1,11 +1,12 @@
-import { Person } from "@/app/utils/interfaces";
+import { Person } from '@/app/utils/interfaces'
+import styles from './EventDialogs.module.css'
 
 type AssociatedPeopleModalProps = {
-  personIds: string[];
-  people: Person[];
-  onDisassociatePerson: (personId: string) => void;
-  onClose: () => void;
-};
+  personIds: string[]
+  people: Person[]
+  onDisassociatePerson: (personId: string) => void
+  onClose: () => void
+}
 
 export function AssociatedPeopleModal({
   personIds,
@@ -14,42 +15,56 @@ export function AssociatedPeopleModal({
   onClose,
 }: AssociatedPeopleModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white p-4 rounded-lg w-full max-w-sm shadow-lg">
-        <h2 className="text-lg font-semibold mb-4">Pessoas Associadas</h2>
-        {personIds.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhuma pessoa associada.</p>
-        ) : (
-          <ul className="space-y-2 max-h-80 overflow-y-auto">
-            {personIds.map((id) => {
-              const person = people.find((p) => p.id === id);
-              if (!person) return null;
-              return (
-                <li key={id} className="flex items-center justify-between">
-                  <span>{person.name}</span>
-                  <div className="space-x-2">
-                    <a
-                      href={`/person/${id}`}
-                      className="text-blue-500 text-sm underline"
-                    >
-                      Detalhes
-                    </a>
-                    <button
-                      onClick={() => onDisassociatePerson(id)}
-                      className="text-red-500 text-sm"
-                    >
-                      Remover
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        <div className="flex justify-end mt-4 space-x-2">
-          <button onClick={onClose}>Fechar</button>
+    <div className={styles.overlay}>
+      <section
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="associated-people-title"
+      >
+        <header className={styles.header}>
+          <h2 id="associated-people-title" className={styles.title}>
+            Pessoas associadas
+          </h2>
+        </header>
+
+        <div className={styles.body}>
+          {personIds.length === 0 ? (
+            <p className={styles.empty}>Nenhuma pessoa associada.</p>
+          ) : (
+            <ul className={styles.associatedList}>
+              {personIds.map((id) => {
+                const person = people.find(item => item.id === id)
+                if (!person) return null
+
+                return (
+                  <li key={id} className={styles.personRow}>
+                    <span className={styles.personName}>{person.name}</span>
+                    <div className={styles.rowActions}>
+                      <a href={`/person/${id}`} className={styles.link}>
+                        Detalhes
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => onDisassociatePerson(id)}
+                        className={styles.dangerButton}
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
-      </div>
+
+        <footer className={styles.footer}>
+          <button type="button" onClick={onClose} className={styles.secondaryButton}>
+            Fechar
+          </button>
+        </footer>
+      </section>
     </div>
-  );
+  )
 }

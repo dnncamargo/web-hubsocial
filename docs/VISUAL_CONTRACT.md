@@ -96,16 +96,17 @@ Canonical direction: **quiet productivity**.
 
 Characteristics:
 
-- restrained neutral backgrounds;
+- restrained, sober neutral backgrounds;
 - subtle surface separation;
-- thin borders;
-- modest shadows;
-- moderate radii;
+- thin 1 px borders as the primary separator;
+- very restrained shadows, reserved for real elevation;
+- predominantly square or only slightly rounded corners;
 - strong typographic hierarchy;
 - compact but comfortable spacing;
-- semantic color used intentionally;
+- semantic color used intentionally and sparingly;
 - linear icons;
-- low visual noise.
+- low visual noise;
+- regular alignment and predictable grids over decorative masonry layouts.
 
 Avoid:
 
@@ -215,13 +216,17 @@ A token should describe meaning, not merely duplicate a CSS value.
 
 ## 8. Color
 
+The default palette is neutral and desaturated. Saturated color must not define large surfaces, navigation chrome, dialogs, or cards.
+
 Domain accents remain useful:
 
 - Events: event accent;
 - Tasks: task accent;
 - People: people accent.
 
-These colors are accents, not full-page backgrounds.
+These colors are accents, not full-page backgrounds. Prefer narrow markers, icons, text accents, selection state, or subtle tinted backgrounds over solid saturated fills.
+
+Black surfaces should not be used as a generic modal/dialog treatment. Dialogs should normally use the same neutral surface system as the rest of the application.
 
 Automation/relevance highlighting should use a separate semantic treatment and must not overwrite entity identity.
 
@@ -263,16 +268,18 @@ Use arbitrary spacing only when a real layout constraint requires it.
 
 ## 11. Radius and shadows
 
-Use moderate radii.
+Default to square corners or small radii. A visible radius should communicate a component boundary, not become the dominant visual language.
 
-Cards, panels, and inputs should not all look like oversized rounded capsules.
+Cards, panels, dialogs, inputs, tags, and buttons must not look like oversized rounded capsules.
 
-Shadows indicate elevation, not decoration.
+Fully rounded shapes are reserved for controls whose geometry requires them, such as switch tracks, status dots, avatars, or similarly compact indicators.
+
+Shadows indicate elevation, not decoration, and should remain faint.
 
 Most separation should come from:
 
 1. background;
-2. border;
+2. thin border;
 3. spacing;
 4. shadow only when elevation is meaningful.
 
@@ -525,10 +532,13 @@ Do not mechanically translate utility strings one-to-one into CSS classes.
 During migration:
 
 1. identify repeated intent;
-2. define semantic tokens/contracts;
-3. migrate representative surfaces;
-4. validate mobile and desktop;
-5. remove obsolete utilities;
-6. only then expand to the next surface.
+2. decide the modernized visual hierarchy instead of reproducing the Tailwind appearance;
+3. define or reuse semantic tokens/contracts;
+4. migrate representative surfaces;
+5. validate mobile and desktop;
+6. remove obsolete utilities;
+7. only then expand to the next surface.
+
+A Tailwind utility string is evidence of behavior and layout requirements, not a visual specification to preserve.
 
 The redesign should reduce both visual inconsistency and code complexity.

@@ -1,0 +1,51 @@
+.peopleSummary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.summaryLabel {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.summaryButton {
+  border: 0;
+  background: transparent;
+  color: var(--color-events-strong);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.summaryButton:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.summaryButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.category {
+  padding: 0.2rem var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}

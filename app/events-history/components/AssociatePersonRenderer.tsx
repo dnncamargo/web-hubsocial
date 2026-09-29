@@ -1,10 +1,11 @@
-import { Person } from "@/app/utils/interfaces";
+import { Person } from '@/app/utils/interfaces'
+import styles from './EventRelations.module.css'
 
 type AssociatePersonRendererProps = {
-  personIds: string[];
-  people: Person[];
-  onOpenPersonList: () => void;
-};
+  personIds: string[]
+  people: Person[]
+  onOpenPersonList: () => void
+}
 
 export function AssociatePersonRenderer({
   personIds,
@@ -12,27 +13,26 @@ export function AssociatePersonRenderer({
   onOpenPersonList,
 }: AssociatePersonRendererProps) {
   if (personIds.length === 0) {
-    return null;
+    return null
   }
 
-  const firstPerson = people.find((p) => p.id === personIds[0]);
-
-  const remainingCount = personIds.length - 1;
+  const firstPerson = people.find(person => person.id === personIds[0])
+  const remainingCount = personIds.length - 1
 
   const label = firstPerson
     ? `${firstPerson.name}${remainingCount > 0 ? ` + ${remainingCount} pessoa${remainingCount > 1 ? 's' : ''}` : ''}`
-    : `${personIds.length} pessoa${personIds.length > 1 ? 's' : ''}`;
+    : `${personIds.length} pessoa${personIds.length > 1 ? 's' : ''}`
 
   return (
-    <div className="mt-6 p-2 bg-gray-50 rounded-lg overflow-hidden border">
-      <span className="text-sm font-medium">Pessoas Associadas: </span>
+    <div className={styles.peopleSummary}>
+      <span className={styles.summaryLabel}>Pessoas associadas</span>
       <button
         type="button"
         onClick={onOpenPersonList}
-        className="text-blue-600 text-sm underline"
+        className={styles.summaryButton}
       >
         {label}
       </button>
     </div>
-  );
+  )
 }
