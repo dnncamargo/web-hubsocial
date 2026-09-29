@@ -1,20 +1,19 @@
 'use client'
 
-import { useState, useEffect, JSX } from 'react';
-import { getDocs, query, orderBy, collection, doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../utils/firebaseConfig';
-import { useAuth } from '../components/auth/AuthProvider';
-import { Event } from '../utils/interfaces';
-import ProtectedRoute from '../components/auth/ProtectedRoute';
-import EventCard from './components/EventCard';
-import AddEventModal from './components/AddEventModal';
-import EditEventModal from './components/EditEventModal';
-import { CalendarDays, Plus } from 'lucide-react';
-import { ListFilterIcon, SearchIcon } from 'lucide-react';
-import EventFilterModal from './components/FilterEventModal';
+import { useState, useEffect, JSX } from 'react'
+import { getDocs, query, orderBy, collection, doc, getDoc, setDoc } from 'firebase/firestore'
+import { db } from '../utils/firebaseConfig'
+import { useAuth } from '../components/auth/AuthProvider'
+import { Event } from '../utils/interfaces'
+import ProtectedRoute from '../components/auth/ProtectedRoute'
+import EventCard from './components/EventCard'
+import AddEventModal from './components/AddEventModal'
+import EditEventModal from './components/EditEventModal'
+import { ListFilter, Plus, Search } from 'lucide-react'
+import EventFilterModal from './components/FilterEventModal'
 import type { EventFilter } from './components/FilterEventModal'
-import Masonry from 'react-masonry-css'
-import { useEventCategories } from '../hooks/useEventCategories';
+import { useEventCategories } from '../hooks/useEventCategories'
+import styles from './EventsHistory.module.css'
 
 const defaultFilters: EventFilter = {
   enabled: true,
@@ -27,243 +26,212 @@ const defaultFilters: EventFilter = {
   selectedCategories: [],
 }
 
-/**
- * @component
- * @description Componente para exibir o histórico de eventos. Permite visualizar, adicionar, editar e excluir eventos.
- * @returns {JSX.Element} A interface do histórico de eventos.
- */
 const EventsHistory = (): JSX.Element => {
-  const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
-  const [events, setEvents] = useState<Event[]>([]);  /** @state {Event[]} events - Array de eventos buscados do Firestore. */
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);  /** @state {Event | null} selectedEvent - O evento selecionado para edição. */
-  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);  /** @state {boolean} isAddEventModalOpen - Controla a visibilidade do modal de adicionar um novo evento. */
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); /** @state {boolean} isEditModalOpen - Controla a visibilidade do modal de edição de um evento existente. */
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [filtersLoaded, setFiltersLoaded] = useState(false); // para evitar renderização prematura
+  const { uid } = useAuth()
+  const [events, setEvents] = useState<Event[]>([])
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [showFilterModal, setShowFilterModal] = useState(false)
+  const [filtersLoaded, setFiltersLoaded] = useState(false)
   const [filters, setFilters] = useState<EventFilter>({
     ...defaultFilters,
     selectedCategories: [],
-  });
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [showSearchModal, setShowSearchModal] = useState(false);
+  })
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const [showSearchModal, setShowSearchModal] = useState(false)
 
-  const { availableCategories, handleAddCategory } = useEventCategories(); /** @const {string[]} availableCategories - Categorias de eventos disponíveis. */
+  const { availableCategories } = useEventCategories()
 
   useEffect(() => {
-    // Buscar os eventos do Firestore
-    // Chama a função fetchEvents quando o componente é montado.
-    // Isso garante que a lista de eventos seja carregada assim que o componente for exibido.
     if (uid) {
-      fetchEvents();
+      fetchEvents()
     }
-  }, [uid]);
+  }, [uid])
 
   useEffect(() => {
     const init = async () => {
-      if (!uid) return;
+      if (!uid) return
 
       try {
-        const EventSettingRef = doc(db, `users/${uid}/settings`, 'userEventsFilters');
-        const snapshot = await getDoc(EventSettingRef);
+        const eventSettingRef = doc(db, `users/${uid}/settings`, 'userEventsFilters')
+        const snapshot = await getDoc(eventSettingRef)
 
         if (snapshot.exists()) {
-          const data = snapshot.data();
-          setFilters(prev => ({
+          const data = snapshot.data()
+          setFilters(previous => ({
             ...defaultFilters,
             ...data,
-            selectedCategories: Array.isArray(data?.selectedCategories) ? data.selectedCategories : []
-          }));
-
+            selectedCategories: Array.isArray(data?.selectedCategories)
+              ? data.selectedCategories
+              : [],
+          }))
         }
       } catch (error) {
-        console.error('Erro ao carregar filtros:', error);
+        console.error('Erro ao carregar filtros:', error)
       } finally {
-        setFiltersLoaded(true);
+        setFiltersLoaded(true)
       }
-    };
+    }
 
-    init();
-  }, [uid]);
+    init()
+  }, [uid])
 
   useEffect(() => {
-    if (availableCategories.length === 0) return;
+    if (availableCategories.length === 0) return
 
-    setFilters(prev => ({
-      ...prev,
-      selectedCategories: prev.selectedCategories.length === 0
+    setFilters(previous => ({
+      ...previous,
+      selectedCategories: previous.selectedCategories.length === 0
         ? availableCategories
-        : prev.selectedCategories,
-    }));
-  }, [availableCategories]);
+        : previous.selectedCategories,
+    }))
+  }, [availableCategories])
 
-  /**
-   * @async
-   * @function fetchEvents
-   * @description Busca todos os eventos da coleção 'events-history' no Firestore
-   * @returns {Promise<void>}
-   */
   const fetchEvents = async (): Promise<void> => {
     try {
-      // Obtém todos os documentos da coleção 'events-history' no banco de dados 'db'.
-      const q = query(collection(db, `users/${uid}/events-history`), orderBy('startDate', 'asc'), orderBy('startTime', 'asc'));
-      const querySnapshot = await getDocs(q);
-      // Mapeia os documentos para um array de objetos 'Event', incluindo o ID do documento.
-      const eventData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Event[];
+      const eventsQuery = query(
+        collection(db, `users/${uid}/events-history`),
+        orderBy('startDate', 'asc'),
+        orderBy('startTime', 'asc'),
+      )
+      const querySnapshot = await getDocs(eventsQuery)
+      const eventData = querySnapshot.docs.map(snapshot => ({
+        id: snapshot.id,
+        ...snapshot.data(),
+      })) as Event[]
 
-      // Atualiza o estado 'events' com os dados ordenados.
-      setEvents(eventData);
-
+      setEvents(eventData)
     } catch (error) {
-      console.error('Erro ao buscar eventos:', error);
-      //todo: Lide com o erro de forma apropriada (ex: exibir uma mensagem ao usuário)
+      console.error('Erro ao buscar eventos:', error)
     }
-  };
+  }
 
-  /**
-   * @function openEditEventModal
-   * @description Abre o modal de edição para o evento fornecido.
-   * @param {Event} event - O objeto do evento a ser editado.
-   * @returns {void}
-   */
   const openEditEventModal = (event: Event): void => {
-    setSelectedEvent(event);
-    setIsEditModalOpen(true);
-  };
+    setSelectedEvent(event)
+    setIsEditModalOpen(true)
+  }
 
-  // Aplica os filtros apenas se `enabled === true`
   const filteredEvents = (!filters.enabled || !filtersLoaded)
     ? events
     : events.filter(event => {
-      const from = filters.startDate || null;
-      const to = filters.endDate || null;
-      const eventDate = event.startDate;
+      const from = filters.startDate || null
+      const to = filters.endDate || null
+      const eventDate = event.startDate
 
-      // Filtro por data
       const matchesDate =
-        (!from || eventDate >= from) &&
-        (!to || eventDate <= to);
+        (!from || eventDate >= from)
+        && (!to || eventDate <= to)
 
-      // Filtro por avaliação (rating >= filters.hasRating)
       const matchesRating =
-        filters.hasRating === 0 || (event.rating ?? 0) >= filters.hasRating;
+        filters.hasRating === 0 || (event.rating ?? 0) >= filters.hasRating
 
-
-      // Filtro por tarefas opcionais
-/*       const hasTasks =
-        Array.isArray(event.optionalFields) &&
-        event.optionalFields.some(
-          (field) => field.type === 'tasks' && Array.isArray(field.value) && field.value.length > 0
-        );
-
-      const matchesTasks = !filters.hasTasks || hasTasks; */
-
-      // Filtro por anotações
       const hasNotes =
-        Array.isArray(event.optionalFields) &&
-        event.optionalFields.some(
-          (field) => field.type === 'text' && typeof field.value === 'string' && field.value.trim() !== ''
-        );
+        Array.isArray(event.optionalFields)
+        && event.optionalFields.some(
+          field => field.type === 'text'
+            && typeof field.value === 'string'
+            && field.value.trim() !== '',
+        )
 
-      const matchesNotes = !filters.hasNotes || hasNotes;
+      const matchesNotes = !filters.hasNotes || hasNotes
 
-      // Filtro por endereço com CEP
-/*       const hasAddressByCEP =
-        typeof event.zipcode === 'string' &&
-        event.zipcode.trim() !== '' */
-
-/*       const matchesAddress = !filters.hasAddressByCEP || hasAddressByCEP; */
- 
       const matchesCategory =
-        (filters.selectedCategories?.length ?? 0) === 0 ||
-        (event.categories ?? []).some((cat) => filters.selectedCategories.includes(cat));
+        (filters.selectedCategories?.length ?? 0) === 0
+        || (event.categories ?? []).some(category =>
+          filters.selectedCategories.includes(category),
+        )
 
-      return (
-        matchesDate &&
-        matchesRating &&
-        //matchesTasks &&
-        matchesNotes &&
-        //matchesAddress &&
-        matchesCategory
-      );
-    }
-    );
+      return matchesDate && matchesRating && matchesNotes && matchesCategory
+    })
+
+  const visibleEvents = filteredEvents.filter(event => {
+    if (!isSearching || searchQuery.trim() === '') return true
+    return event.title?.toLowerCase().includes(searchQuery.toLowerCase())
+  })
 
   const updateFilters = (updated: EventFilter) => {
     setFilters(updated)
+
     if (uid) {
-      const EventsSettingRef = doc(db, `users/${uid}/settings`, 'userEventsFilters')
-      setDoc(EventsSettingRef, updated)
+      const eventsSettingRef = doc(db, `users/${uid}/settings`, 'userEventsFilters')
+      setDoc(eventsSettingRef, updated)
     }
   }
 
   const filtersAreActive = filters.enabled
-
-  const searchIsActive = isSearching && searchQuery.trim() !== '';
+  const searchIsActive = isSearching && searchQuery.trim() !== ''
 
   return (
-
     <ProtectedRoute>
-
-      <main className="main-container-body main-container-bg">
-
-        {/* Renderiza o menu principal da aplicação. */}
-
-        <div className="flex justify-between">
-          <h1 className="title-1">Histórico de Eventos</h1>
-
-          <div className="flex items-center gap-2">
-            <SearchIcon
-              className={`w-6 h-6 cursor-pointer transition 
-                ${searchIsActive ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
-                }`}
-              onClick={() => setShowSearchModal(true)}
-            />
-
-            <ListFilterIcon
-              className={`w-6 h-6 cursor-pointer transition 
-                ${filtersAreActive ? 'text-blue-600' : 'text-gray-300'
-                }`}
-              onClick={() => setShowFilterModal(true)}
-            />
+      <main className={styles.page}>
+        <header className={styles.header}>
+          <div className={styles.headingBlock}>
+            <h1 className={styles.title}>Histórico de eventos</h1>
+            <p className={styles.subtitle}>Agenda registrada e contexto dos eventos.</p>
           </div>
+
+          <div className={styles.toolbar} aria-label="Ações de eventos">
+            <button
+              type="button"
+              className={searchIsActive
+                ? `${styles.iconButton} ${styles.iconButtonActive}`
+                : styles.iconButton}
+              onClick={() => setShowSearchModal(true)}
+              aria-label="Pesquisar eventos"
+              aria-pressed={searchIsActive}
+            >
+              <Search className={styles.icon} aria-hidden="true" />
+            </button>
+
+            <button
+              type="button"
+              className={filtersAreActive
+                ? `${styles.iconButton} ${styles.iconButtonActive}`
+                : styles.iconButton}
+              onClick={() => setShowFilterModal(true)}
+              aria-label="Filtrar eventos"
+              aria-pressed={filtersAreActive}
+            >
+              <ListFilter className={styles.icon} aria-hidden="true" />
+            </button>
+
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => setIsAddEventModalOpen(true)}
+            >
+              <Plus className={styles.icon} aria-hidden="true" />
+              Novo evento
+            </button>
+          </div>
+        </header>
+
+        <div className={styles.resultMeta}>
+          <span>
+            {visibleEvents.length} {visibleEvents.length === 1 ? 'evento' : 'eventos'}
+          </span>
+          {(searchIsActive || filtersAreActive) && <span>Visualização filtrada</span>}
         </div>
 
-        {Object.values(events).flat().length === 0 && (
-          <p className="text-gray-600">Nenhum evento registrado.</p>
-        )}
-
-        {/* Renderiza os cards de cada evento. */}
-        <div className="card-spacing-bellow">
-
-          <Masonry
-            breakpointCols={{ default: 3, 1024: 2, 640: 1 }}
-            className="flex gap-4"
-            columnClassName="flex flex-col gap-4"
-          >
-            {filteredEvents
-              .filter((event) => {
-                if (!isSearching || searchQuery.trim() === '') return true;
-                const query = searchQuery.toLowerCase();
-                return (
-                  (event.title && event.title.toLowerCase().includes(query))
-                );
-              })
-              .map((e, index, arr) => (
-                <div key={e.id}>
-                  <EventCard event={e} onEditEvent={openEditEventModal} />
-                  {index === arr.length - 1 && (
-                    <p className="text-center text-sm text-gray-500 mt-2">Fim dos resultados</p>
-                  )}
+        {events.length === 0 ? (
+          <p className={styles.emptyState}>Nenhum evento registrado.</p>
+        ) : (
+          <>
+            <div className={styles.grid}>
+              {visibleEvents.map(event => (
+                <div key={event.id} className={styles.eventItem}>
+                  <EventCard event={event} onEditEvent={openEditEventModal} />
                 </div>
               ))}
-          </Masonry>
-        </div>
+            </div>
+            {visibleEvents.length > 0 && (
+              <p className={styles.endMarker}>Fim dos resultados</p>
+            )}
+          </>
+        )}
 
-        {/* Filtro */}
         <EventFilterModal
           isOpen={showFilterModal}
           onClose={() => setShowFilterModal(false)}
@@ -272,46 +240,57 @@ const EventsHistory = (): JSX.Element => {
           availableCategories={availableCategories}
         />
 
-        {/* Pesquisa */}
         {showSearchModal && (
-          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-            <div className="bg-black w-[90%] max-w-md p-4 rounded-2xl shadow-lg relative">
-              <h2 className="text-lg text-white font-semibold mb-3">Buscar evento</h2>
-              <input
-                type="text"
-                placeholder="Digite um termo..."
-                className="w-full px-3 py-2 border rounded-md text-sm"
-                value={searchQuery}
-                autoFocus
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setIsSearching(true);
-                }}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setIsSearching(false);
+          <div className={styles.searchOverlay} role="presentation">
+            <section
+              className={styles.searchDialog}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="event-search-title"
+            >
+              <header className={styles.searchHeader}>
+                <h2 id="event-search-title" className={styles.searchTitle}>
+                  Buscar evento
+                </h2>
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className={styles.searchClear}
+                    onClick={() => {
+                      setSearchQuery('')
+                      setIsSearching(false)
+                    }}
+                  >
+                    Limpar
+                  </button>
+                )}
+              </header>
+
+              <div className={styles.searchBody}>
+                <input
+                  type="search"
+                  placeholder="Título do evento"
+                  className={styles.searchInput}
+                  value={searchQuery}
+                  autoFocus
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value)
+                    setIsSearching(true)
                   }}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-red-500"
-                >
-                  ✕
-                </button>
-              )}
-              <div className="mt-4 text-right">
+                />
+
                 <button
-                  className="text-sm text-blue-600 hover:underline"
+                  type="button"
+                  className={styles.searchClose}
                   onClick={() => setShowSearchModal(false)}
                 >
                   Fechar
                 </button>
               </div>
-            </div>
+            </section>
           </div>
         )}
 
-        {/* Modal de adição de novo evento. Abre quando isAddEventModalOpen é verdadeiro */}
         {isAddEventModalOpen && (
           <AddEventModal
             isOpen={isAddEventModalOpen}
@@ -320,7 +299,6 @@ const EventsHistory = (): JSX.Element => {
           />
         )}
 
-        {/* Modal de edição de evento. Abre quando isEditModalOpen é verdadeiro e um evento está selecionado */}
         {isEditModalOpen && selectedEvent && (
           <EditEventModal
             event={selectedEvent}
@@ -329,21 +307,9 @@ const EventsHistory = (): JSX.Element => {
             onUpdated={fetchEvents}
           />
         )}
-
-        {/* Botão flutuante para adicionar um novo evento */}
-        <button
-          onClick={() => {
-            setIsAddEventModalOpen(true); // Abre o modal de adição
-          }}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg text-3xl hover:bg-blue-600 transition"
-        >
-          <CalendarDays className="w-6 h-6 absolute mr-1" />
-          <Plus className="w-4 h-4 absolute ml-5 mb-5" />
-        </button>
       </main>
-
     </ProtectedRoute>
-  );
-};
+  )
+}
 
-export default EventsHistory;
+export default EventsHistory
