@@ -30,7 +30,14 @@
 }
 
 .planningGrid {
-  display: contents;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.planningColumn {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
 }
 
 .contextSlot {
@@ -251,16 +258,14 @@
     grid-column: 1 / -1;
   }
 
-  .secondarySection {
-    grid-column: 1;
+  .planningGrid {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+    align-items: start;
   }
 
   .contextSlot {
     grid-column: 2;
-    grid-row: 2;
-  }
-
-  .tertiarySection {
-    grid-column: 1;
+    align-self: start;
   }
 }

@@ -128,11 +128,12 @@ export default function ActionsOverview({ actions, context }: ActionsOverviewPro
       <ActionSection title="Ações do dia" items={actions.day} primary />
 
       <div className={styles.planningGrid}>
-        <ActionSection title="Esta semana" items={actions.week} />
+        <div className={styles.planningColumn}>
+          <ActionSection title="Esta semana" items={actions.week} />
+          <ActionSection title="Este mês" items={actions.month} tertiary />
+        </div>
         <div className={styles.contextSlot}>{context}</div>
       </div>
-
-      <ActionSection title="Este mês" items={actions.month} tertiary />
     </div>
   )
 }
