@@ -18,6 +18,7 @@ export default function TasksList() {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [selectedTaskParentId, setSelectedTaskParentId] = useState<string | null>(null)
 
   useEffect(() => {
     if (uid) {
@@ -52,8 +53,9 @@ export default function TasksList() {
     })
   }
 
-  const openEditTaskModal = (task: Task): void => {
+  const openEditTaskModal = (task: Task, parentTaskId?: string | null): void => {
     setSelectedTask(task)
+    setSelectedTaskParentId(parentTaskId ?? null)
     setIsEditTaskModalOpen(true)
   }
 
@@ -114,6 +116,7 @@ export default function TasksList() {
         {isEditTaskModalOpen && selectedTask && (
           <EditTaskModal
             task={selectedTask}
+            parentTaskId={selectedTaskParentId}
             isOpen={isEditTaskModalOpen}
             onClose={() => setIsEditTaskModalOpen(false)}
             onUpdated={fetchTasks}

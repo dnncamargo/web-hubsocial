@@ -21,7 +21,7 @@ import styles from './TaskCard.module.css'
 
 interface TaskCardProps {
   task: Task
-  onEditTask: (task: Task) => void
+  onEditTask: (task: Task, parentTaskId?: string | null) => void
   onPromoteSubtask: (task: Task) => void
   onMakeSubtask: (task: Task) => void
   onStatusSwitch: (status: 0 | 1 | 2) => void
@@ -107,7 +107,7 @@ export default function TaskCard({
 
   const editTask = () => {
     if (!user) return
-    onEditTask(task)
+    onEditTask(task, parentTaskId)
     handleResetPosition()
   }
 

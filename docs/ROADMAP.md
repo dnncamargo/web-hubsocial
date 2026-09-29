@@ -476,6 +476,7 @@ Execution checkpoints:
   - the saturated yellow task-editor treatment was removed;
   - no Tailwind utility classes remain in `app/tasks-list/**/*.tsx`;
   - task promotion now normalizes `parentTaskId` and preserves the Firestore document ID when rebuilding the parent task.
+  - maintenance follow-up: Task/subtask editing respects embedded ownership; Task→Event conversion is atomic, optionally associates People, and Enter no longer triggers accidental conversion.
 - **Visual 3C — People: DONE**
   - People masonry/FAB presentation was removed in favor of a regular responsive operational grid;
   - People cards became sober operational records with explicit favorite/edit controls and restrained rectangular relationship labels;
