@@ -217,6 +217,10 @@ const EventsHistory = (): JSX.Element => {
 
         {events.length === 0 ? (
           <p className={styles.emptyState}>Nenhum evento registrado.</p>
+        ) : visibleEvents.length === 0 ? (
+          <p className={styles.emptyState}>
+            Nenhum evento corresponde à pesquisa ou aos filtros atuais.
+          </p>
         ) : (
           <>
             <div className={styles.grid}>
@@ -226,9 +230,7 @@ const EventsHistory = (): JSX.Element => {
                 </div>
               ))}
             </div>
-            {visibleEvents.length > 0 && (
-              <p className={styles.endMarker}>Fim dos resultados</p>
-            )}
+            <p className={styles.endMarker}>Fim dos resultados</p>
           </>
         )}
 
