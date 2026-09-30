@@ -178,10 +178,11 @@ Tasks may also carry an optional schedule with these categories:
 - event-relative with a lead time before a related Event.
 
 Recurring occurrences are projections of one canonical Task. They are never
-persisted as occurrence documents. Task status is the recurrence lifecycle:
-completed suppresses automatic recurrence until the user manually resets the
-Task, while in-progress remains active and receives explicit visual emphasis.
-One Task is projected once at the most specific applicable horizon.
+persisted as occurrence documents. Recurrence, lifecycle status, and daily
+execution remain separate concerns: an in-focus Task may be promoted into the
+day projection without mutating its recurrence, and completing today's
+occurrence does not globally complete a recurring Task. One Task is projected
+at most once across the visible horizons.
 
 ---
 
