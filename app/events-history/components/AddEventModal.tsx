@@ -23,14 +23,18 @@ import styles from './EventEditor.module.css'
 
 interface AddEventModalProps {
   isOpen: boolean
-  onClose: () => void
+  onDismiss: () => void
+  onCancel: () => void
+  onSaved: () => void
   onAdded: () => void
   initialPersonId?: string
 }
 
 const AddEventModal: React.FC<AddEventModalProps> = ({
   isOpen,
-  onClose,
+  onDismiss,
+  onCancel,
+  onSaved,
   onAdded,
   initialPersonId,
 }) => {
@@ -52,7 +56,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     removeOptionalField,
     updateOptionalField,
     updateLabel,
-    resetOptionalFields,
   } = optionalFieldsControl
 
   const associatePersonControl = useAssociatePerson({ uid: effectiveUid })
@@ -107,15 +110,31 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
   }, [isOpen])
 
-  useEffect(() => {
-    if (!isOpen) {
-      resetOptionalFields()
-    }
-  }, [isOpen])
-
   const handleOpenAssociatePerson = async () => {
     await fetchPeople()
     setShowAddPersonModal(true)
+  }
+
+  const closeNestedModals = () => {
+    setShowOptionalFieldModal(false)
+    setShowAddPersonModal(false)
+    setShowPersonListModal(false)
+    setShowCategoriesModal(false)
+  }
+
+  const handleDismiss = () => {
+    closeNestedModals()
+    onDismiss()
+  }
+
+  const handleCancel = () => {
+    closeNestedModals()
+    onCancel()
+  }
+
+  const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return
+    handleDismiss()
   }
 
   const handleSubmit = async (event: React.FormEvent): Promise<void> => {
@@ -124,7 +143,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
     if (success) {
       onAdded()
-      onClose()
+      onSaved()
     }
   }
 
@@ -135,6 +154,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       <motion.div
         id="add-event-modal"
         className={styles.modal}
+        onClick={handleBackdropClick}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 12 }}
@@ -146,7 +166,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={onClose} className={styles.toolbarButton}>
+              <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
                 Cancelar
               </button>
               <h3 id="add-event-title" className={styles.toolbarTitle}>Novo evento</h3>

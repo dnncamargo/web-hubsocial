@@ -12,11 +12,13 @@ import styles from './PersonEditor.module.css';
 
 interface AddPersonModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onDismiss: () => void;
+  onCancel: () => void;
+  onSaved: () => void;
   onAdded: () => void | Promise<void>;
 }
 
-const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
+const AddPersonModal = ({ isOpen, onDismiss, onCancel, onSaved, onAdded }: AddPersonModalProps) => {
   const { uid } = useAuth();
   const [showMore, setShowMore] = useState(false);
   const [showOptionalFieldModal, setShowOptionalFieldModal] = useState(false);
@@ -31,7 +33,6 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
     removeOptionalField,
     updateOptionalField,
     updateLabel,
-    resetOptionalFields,
   } = optionalFieldsControl;
   const {
     availableRelationships,
@@ -72,9 +73,25 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) resetOptionalFields();
-  }, [isOpen, resetOptionalFields]);
+  const closeNestedModals = () => {
+    setShowOptionalFieldModal(false);
+    setShowRelationshipsModal(false);
+  };
+
+  const handleDismiss = () => {
+    closeNestedModals();
+    onDismiss();
+  };
+
+  const handleCancel = () => {
+    closeNestedModals();
+    onCancel();
+  };
+
+  const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    handleDismiss();
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -82,7 +99,7 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
     if (!success) return;
 
     await onAdded();
-    onClose();
+    onSaved();
   };
 
   if (!isOpen || !uid) return null;
@@ -91,6 +108,7 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
     <ProtectedRoute>
       <motion.div
         className={styles.overlay}
+        onClick={handleBackdropClick}
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-person-title"
@@ -102,7 +120,7 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={onClose} className={styles.toolbarButton}>
+              <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
                 Cancelar
               </button>
               <h2 id="add-person-title" className={styles.toolbarTitle}>Nova pessoa</h2>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import { ListFilter, Search, UserPlus, X } from 'lucide-react';
 import { db } from '../utils/firebaseConfig';
@@ -15,6 +15,10 @@ import AddPersonModal from './components/AddPersonModal';
 import EditPersonModal from './components/EditPersonModal';
 import FilterPersonModal, { PersonFilter } from './components/FilterPersonModal';
 import styles from './PeopleDirectory.module.css';
+import {
+  initialCreationDraftLifecycleState,
+  reduceCreationDraftLifecycle,
+} from '../utils/creationDraftLifecycle';
 
 const defaultFilters: PersonFilter = {
   enabled: true,
@@ -32,7 +36,10 @@ const PeopleDirectory = () => {
   const { uid } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [people, setPeople] = useState<Person[]>([]);
-  const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
+  const [addPersonDraft, dispatchAddPersonDraft] = useReducer(
+    reduceCreationDraftLifecycle,
+    initialCreationDraftLifecycleState,
+  );
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -71,11 +78,23 @@ const PeopleDirectory = () => {
   useEffect(() => {
     if (searchParams.get('create') !== 'person') return;
 
-    setIsAddPersonModalOpen(true);
+    dispatchAddPersonDraft({ type: 'open' });
     const nextSearchParams = new URLSearchParams(searchParams);
     nextSearchParams.delete('create');
     setSearchParams(nextSearchParams, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  const openAddPersonModal = () => {
+    dispatchAddPersonDraft({ type: 'open' });
+  };
+
+  const dismissAddPersonModal = () => {
+    dispatchAddPersonDraft({ type: 'dismiss' });
+  };
+
+  const discardAddPersonDraft = () => {
+    dispatchAddPersonDraft({ type: 'discard' });
+  };
 
   useEffect(() => {
     const loadFilters = async () => {
@@ -200,7 +219,7 @@ const PeopleDirectory = () => {
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={() => setIsAddPersonModalOpen(true)}
+              onClick={openAddPersonModal}
             >
               <UserPlus className={styles.buttonIcon} aria-hidden="true" />
               Nova pessoa
@@ -295,11 +314,14 @@ const PeopleDirectory = () => {
           </div>
         )}
 
-        {isAddPersonModalOpen && (
+        {addPersonDraft.hasMounted && (
           <AddPersonModal
-            onClose={() => setIsAddPersonModalOpen(false)}
+            key={addPersonDraft.revision}
+            onDismiss={dismissAddPersonModal}
+            onCancel={discardAddPersonDraft}
+            onSaved={discardAddPersonDraft}
             onAdded={fetchPeople}
-            isOpen={isAddPersonModalOpen}
+            isOpen={addPersonDraft.isOpen}
           />
         )}
 

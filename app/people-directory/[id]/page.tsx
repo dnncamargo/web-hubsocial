@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useNavigate, useParams } from 'react-router';
 import AddEventModal from '../../events-history/components/AddEventModal';
@@ -13,6 +13,10 @@ import { usePersonRelationships } from '../../hooks/usePersonRelationships';
 import { db } from '../../utils/firebaseConfig';
 import { getPersonDocumentPath, hydratePerson } from '../../utils/personPayload';
 import styles from '../PersonDetails.module.css';
+import {
+  initialCreationDraftLifecycleState,
+  reduceCreationDraftLifecycle,
+} from '../../utils/creationDraftLifecycle';
 
 const contactFrequencyLabels: Record<NonNullable<Person['contactFrequency']>, string> = {
   weekly: 'Semanal',
@@ -27,10 +31,25 @@ const PersonDetails = () => {
   const navigate = useNavigate();
   const [person, setPerson] = useState<Person | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
-  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
+  const [addEventDraft, dispatchAddEventDraft] = useReducer(
+    reduceCreationDraftLifecycle,
+    initialCreationDraftLifecycleState,
+  );
   const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { relationshipColors } = usePersonRelationships();
+
+  const openAddEventModal = () => {
+    dispatchAddEventDraft({ type: 'open' });
+  };
+
+  const dismissAddEventModal = () => {
+    dispatchAddEventDraft({ type: 'dismiss' });
+  };
+
+  const discardAddEventDraft = () => {
+    dispatchAddEventDraft({ type: 'discard' });
+  };
 
   const fetchPerson = async () => {
     if (!uid || !personId) return;
@@ -233,19 +252,19 @@ const PersonDetails = () => {
         </section>
 
         <div className={styles.actionRow}>
-          <button type="button" onClick={() => setIsAddEventModalOpen(true)} className={styles.primaryButton}>
+          <button type="button" onClick={openAddEventModal} className={styles.primaryButton}>
             Adicionar evento
           </button>
         </div>
 
-        {isAddEventModalOpen && (
+        {addEventDraft.hasMounted && (
           <AddEventModal
-            isOpen={isAddEventModalOpen}
-            onClose={() => setIsAddEventModalOpen(false)}
-            onAdded={() => {
-              setIsAddEventModalOpen(false);
-              void fetchEvents();
-            }}
+            key={`${personId ?? 'unknown'}-${addEventDraft.revision}`}
+            isOpen={addEventDraft.isOpen}
+            onDismiss={dismissAddEventModal}
+            onCancel={discardAddEventDraft}
+            onSaved={discardAddEventDraft}
+            onAdded={() => { void fetchEvents(); }}
             initialPersonId={personId}
           />
         )}

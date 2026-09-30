@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, JSX } from 'react'
+import { useEffect, useReducer, useState, JSX } from 'react'
 import { getDocs, query, orderBy, collection, doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../utils/firebaseConfig'
 import { useAuth } from '../components/auth/AuthProvider'
@@ -20,6 +20,10 @@ import {
 } from './utils/eventFilters'
 import type { EventFilter } from './utils/eventFilters'
 import { useEventCategories } from '../hooks/useEventCategories'
+import {
+  initialCreationDraftLifecycleState,
+  reduceCreationDraftLifecycle,
+} from '../utils/creationDraftLifecycle'
 import styles from './EventsHistory.module.css'
 
 type EventViewMode = 'list' | 'calendar'
@@ -29,7 +33,10 @@ const EventsHistory = (): JSX.Element => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false)
+  const [addEventDraft, dispatchAddEventDraft] = useReducer(
+    reduceCreationDraftLifecycle,
+    initialCreationDraftLifecycleState,
+  )
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [filtersLoaded, setFiltersLoaded] = useState(false)
@@ -63,11 +70,23 @@ const EventsHistory = (): JSX.Element => {
   useEffect(() => {
     if (searchParams.get('create') !== 'event') return
 
-    setIsAddEventModalOpen(true)
+    dispatchAddEventDraft({ type: 'open' })
     const nextSearchParams = new URLSearchParams(searchParams)
     nextSearchParams.delete('create')
     setSearchParams(nextSearchParams, { replace: true })
   }, [searchParams, setSearchParams])
+
+  const openAddEventModal = () => {
+    dispatchAddEventDraft({ type: 'open' })
+  }
+
+  const dismissAddEventModal = () => {
+    dispatchAddEventDraft({ type: 'dismiss' })
+  }
+
+  const discardAddEventDraft = () => {
+    dispatchAddEventDraft({ type: 'discard' })
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -223,7 +242,7 @@ const EventsHistory = (): JSX.Element => {
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={() => setIsAddEventModalOpen(true)}
+              onClick={openAddEventModal}
             >
               <Plus className={styles.icon} aria-hidden="true" />
               Novo evento
@@ -322,10 +341,13 @@ const EventsHistory = (): JSX.Element => {
           </div>
         )}
 
-        {isAddEventModalOpen && (
+        {addEventDraft.hasMounted && (
           <AddEventModal
-            isOpen={isAddEventModalOpen}
-            onClose={() => setIsAddEventModalOpen(false)}
+            key={addEventDraft.revision}
+            isOpen={addEventDraft.isOpen}
+            onDismiss={dismissAddEventModal}
+            onCancel={discardAddEventDraft}
+            onSaved={discardAddEventDraft}
             onAdded={fetchEvents}
           />
         )}
