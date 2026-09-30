@@ -70,9 +70,11 @@ const EditEventModal = ({
   const eventCategoriesControl = useEventCategories()
   const {
     availableCategories,
+    categoryColors,
     selectedCategories,
     toggleCategory,
     handleAddCategory,
+    setCategoryColor,
   } = eventCategoriesControl
 
   const {
@@ -251,7 +253,10 @@ const EditEventModal = ({
                   />
                 ))}
 
-                <EventCategoriesRenderer selectedCategories={selectedCategories} />
+                <EventCategoriesRenderer
+                  selectedCategories={selectedCategories}
+                  categoryColors={categoryColors}
+                />
 
                 {showOptionalFieldModal && (
                   <OptionalFieldModal
@@ -269,6 +274,8 @@ const EditEventModal = ({
                     selectedCategories={selectedCategories}
                     toggleCategory={toggleCategory}
                     handleAddCategory={handleAddCategory}
+                    categoryColors={categoryColors}
+                    setCategoryColor={setCategoryColor}
                   />
                 )}
 

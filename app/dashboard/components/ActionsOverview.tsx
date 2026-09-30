@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { CalendarDays, ListChecks } from 'lucide-react'
 import { ActionProjection, ActionProjectionItem } from '../../types/actions'
+import { getEntityColor, type EntityColorMap } from '../../utils/entityColors'
 import styles from './ActionsOverview.module.css'
 
 interface ActionsOverviewProps {
@@ -8,6 +9,7 @@ interface ActionsOverviewProps {
   context: ReactNode
   onCompleteAction: (item: ActionProjectionItem) => Promise<void>
   pendingActionKeys: ReadonlySet<string>
+  categoryColors?: EntityColorMap
 }
 
 function getAutomationStatus(item: ActionProjectionItem) {
@@ -47,11 +49,13 @@ function ActionRow({
   interactive,
   onCompleteAction,
   isPending,
+  categoryColors,
 }: {
   item: ActionProjectionItem
   interactive: boolean
   onCompleteAction?: (item: ActionProjectionItem) => Promise<void>
   isPending: boolean
+  categoryColors?: EntityColorMap
 }) {
   const automationStatus = getAutomationStatus(item)
   const SourceIcon = item.sourceType === 'event' ? CalendarDays : ListChecks
@@ -99,6 +103,21 @@ function ActionRow({
           {item.sourceType === 'event' ? 'Evento' : 'Tarefa'}
           {item.date ? ` · ${item.date}` : ''}
           {item.time ? ` · ${item.time}` : ''}
+          {item.sourceType === 'event' && item.categories && item.categories.length > 0 && (
+            <span className={styles.categoryMarkers} aria-label="Categorias do evento">
+              {item.categories.map(category => {
+                const color = getEntityColor(categoryColors, category)
+                return (
+                  <span
+                    key={category}
+                    className={styles.categoryMarker}
+                    title={category}
+                    style={color ? { '--entity-color': color } as React.CSSProperties : undefined}
+                  />
+                )
+              })}
+            </span>
+          )}
         </span>
         {item.completedToday && (
           <span className={styles.completedTodayLabel}>Concluída hoje</span>
@@ -124,6 +143,7 @@ function ActionSection({
   interactive = false,
   onCompleteAction,
   pendingActionKeys,
+  categoryColors,
 }: {
   title: string
   items: ActionProjectionItem[]
@@ -132,6 +152,7 @@ function ActionSection({
   interactive?: boolean
   onCompleteAction?: (item: ActionProjectionItem) => Promise<void>
   pendingActionKeys: ReadonlySet<string>
+  categoryColors?: EntityColorMap
 }) {
   const sectionClassName = primary
     ? styles.primarySection
@@ -156,6 +177,7 @@ function ActionSection({
               interactive={interactive}
               onCompleteAction={onCompleteAction}
               isPending={pendingActionKeys.has(item.key)}
+              categoryColors={categoryColors}
             />
           ))}
         </ul>
@@ -171,6 +193,7 @@ export default function ActionsOverview({
   context,
   onCompleteAction,
   pendingActionKeys,
+  categoryColors,
 }: ActionsOverviewProps) {
   return (
     <div className={styles.container}>
@@ -181,6 +204,7 @@ export default function ActionsOverview({
         interactive
         onCompleteAction={onCompleteAction}
         pendingActionKeys={pendingActionKeys}
+        categoryColors={categoryColors}
       />
 
       <div className={styles.planningGrid}>
@@ -189,12 +213,14 @@ export default function ActionsOverview({
             title="Esta semana"
             items={actions.week}
             pendingActionKeys={pendingActionKeys}
+            categoryColors={categoryColors}
           />
           <ActionSection
             title="Este mês"
             items={actions.month}
             tertiary
             pendingActionKeys={pendingActionKeys}
+            categoryColors={categoryColors}
           />
         </div>
         <div className={styles.contextSlot}>{context}</div>

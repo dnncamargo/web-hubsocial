@@ -29,6 +29,7 @@ export interface ActionProjectionItem {
   completed: boolean
   completedToday?: boolean
   inProgress?: boolean
+  categories?: string[]
   automation: AutomationEvaluation
   date?: string
   time?: string

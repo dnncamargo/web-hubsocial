@@ -251,6 +251,20 @@
   font-size: 0.625rem;
 }
 
+.eventCategoryMarkers {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.eventCategoryMarker {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: var(--entity-color, var(--color-border-strong));
+}
+
 @media (min-width: 768px) {
   .calendar {
     min-width: 0;

@@ -2,6 +2,7 @@
 
 import { useNavigate } from 'react-router';
 import { Person } from '../../utils/interfaces';
+import { getEntityColor, type EntityColorMap } from '../../utils/entityColors';
 import { Heart, Mail, Pencil, Phone } from 'lucide-react';
 import styles from './PersonCard.module.css';
 
@@ -16,6 +17,7 @@ interface PersonCardProps {
   person: Person;
   onEditPerson: (person: Person) => void;
   onToggleFavorite: (personId: string, currentValue: boolean) => void;
+  relationshipColors?: EntityColorMap;
 }
 
 /**
@@ -24,7 +26,7 @@ interface PersonCardProps {
  * @param {PersonCardProps} { person, onEditPerson, onToggleFavorite } - Props para o componente.
  * @returns {JSX.Element} Um cartão representando as informações da pessoa.
  */
-const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps) => {
+const PersonCard = ({ person, onEditPerson, onToggleFavorite, relationshipColors }: PersonCardProps) => {
   const navigate = useNavigate();
   const relationships = person.relationships ?? [];
 
@@ -85,6 +87,7 @@ const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps)
                 <span
                   key={rel}
                   className={styles.relationship}
+                  style={getEntityColorStyle(getEntityColor(relationshipColors, rel))}
                 >
                   {rel}
                 </span>
@@ -112,3 +115,7 @@ const PersonCard = ({ person, onEditPerson, onToggleFavorite }: PersonCardProps)
 };
 
 export default PersonCard;
+
+function getEntityColorStyle(color: string | undefined): React.CSSProperties | undefined {
+  return color ? { '--entity-color': color } as React.CSSProperties : undefined;
+}

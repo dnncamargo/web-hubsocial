@@ -40,7 +40,7 @@ const PeopleDirectory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const { availableRelationships } = usePersonRelationships();
+  const { availableRelationships, relationshipColors } = usePersonRelationships();
 
   const fetchPeople = async (): Promise<void> => {
     if (!uid) return;
@@ -236,6 +236,7 @@ const PeopleDirectory = () => {
                   person={person}
                   onEditPerson={openEditPersonModal}
                   onToggleFavorite={toggleFavorite}
+                  relationshipColors={relationshipColors}
                 />
               </div>
             ))}

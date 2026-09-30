@@ -8,6 +8,7 @@ import { useAuth } from '../../components/auth/AuthProvider';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { Event, Person } from '../../utils/interfaces';
 import { OptionalField } from '../../types/optionalFields';
+import { usePersonRelationships } from '../../hooks/usePersonRelationships';
 import { db } from '../../utils/firebaseConfig';
 import styles from '../PersonDetails.module.css';
 
@@ -25,6 +26,7 @@ const PersonDetails = () => {
   const [person, setPerson] = useState<Person | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
+  const { relationshipColors } = usePersonRelationships();
 
   const fetchPerson = async () => {
     if (!uid || !personId) return;
@@ -125,9 +127,15 @@ const PersonDetails = () => {
               <span className={styles.label}>Relacionamentos</span>
               {relationships.length > 0 ? (
                 <div className={styles.tagList}>
-                  {relationships.map((relationship) => (
-                    <span key={relationship} className={styles.tag}>{relationship}</span>
-                  ))}
+                    {relationships.map((relationship) => (
+                      <span
+                        key={relationship}
+                        className={styles.tag}
+                        style={getEntityColorStyle(relationshipColors[relationship])}
+                      >
+                        {relationship}
+                      </span>
+                    ))}
                 </div>
               ) : (
                 <span className={styles.value}>Nenhum relacionamento registrado.</span>
@@ -221,3 +229,7 @@ const PersonDetails = () => {
 };
 
 export default PersonDetails;
+
+function getEntityColorStyle(color: string | undefined): React.CSSProperties | undefined {
+  return color ? { '--entity-color': color } as React.CSSProperties : undefined;
+}

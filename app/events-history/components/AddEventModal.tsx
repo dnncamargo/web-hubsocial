@@ -67,9 +67,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const eventCategoriesControl = useEventCategories()
   const {
     availableCategories,
+    categoryColors,
     selectedCategories,
     toggleCategory,
     handleAddCategory,
+    setCategoryColor,
   } = eventCategoriesControl
 
   const {
@@ -227,7 +229,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   />
                 ))}
 
-                <EventCategoriesRenderer selectedCategories={selectedCategories} />
+                <EventCategoriesRenderer
+                  selectedCategories={selectedCategories}
+                  categoryColors={categoryColors}
+                />
 
                 {showOptionalFieldModal && (
                   <OptionalFieldModal
@@ -245,6 +250,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     selectedCategories={selectedCategories}
                     toggleCategory={toggleCategory}
                     handleAddCategory={handleAddCategory}
+                    categoryColors={categoryColors}
+                    setCategoryColor={setCategoryColor}
                   />
                 )}
 

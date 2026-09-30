@@ -30,9 +30,11 @@ interface PersonEditorFieldsProps {
   updateOptionalField: (fieldId: string, updates: Partial<OptionalField>) => void;
   updateLabel: (fieldId: string, label: string) => void;
   availableRelationships: string[];
+  relationshipColors: Record<string, string>;
   selectedRelationships: string[];
   toggleRelationship: (relationship: string) => void;
   handleAddRelationship: (relationship: string) => void | Promise<void>;
+  setRelationshipColor: (relationship: string, color: string) => Promise<void>;
   showOptionalFieldModal: boolean;
   setShowOptionalFieldModal: (value: boolean) => void;
   showRelationshipsModal: boolean;
@@ -61,9 +63,11 @@ export default function PersonEditorFields({
   updateOptionalField,
   updateLabel,
   availableRelationships,
+  relationshipColors,
   selectedRelationships,
   toggleRelationship,
   handleAddRelationship,
+  setRelationshipColor,
   showOptionalFieldModal,
   setShowOptionalFieldModal,
   showRelationshipsModal,
@@ -163,7 +167,10 @@ export default function PersonEditorFields({
             </div>
           ))}
 
-          <PeopleRelationshipsRenderer selectedRelationships={selectedRelationships} />
+          <PeopleRelationshipsRenderer
+            selectedRelationships={selectedRelationships}
+            relationshipColors={relationshipColors}
+          />
 
           {showOptionalFieldModal && (
             <OptionalFieldModal
@@ -181,6 +188,8 @@ export default function PersonEditorFields({
               selectedRelationships={selectedRelationships}
               toggleRelationship={toggleRelationship}
               handleAddRelationship={handleAddRelationship}
+              relationshipColors={relationshipColors}
+              setRelationshipColor={setRelationshipColor}
             />
           )}
 

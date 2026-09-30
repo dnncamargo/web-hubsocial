@@ -9,7 +9,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:filters": "node --test app/events-history/utils/eventFilters.test.mjs"
+    "test:filters": "node --test app/events-history/utils/eventFilters.test.mjs",
+    "test:colors": "node --test app/utils/entityColors.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

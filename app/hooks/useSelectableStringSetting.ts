@@ -2,25 +2,30 @@ import { useCallback, useEffect, useState } from 'react'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../utils/firebaseConfig'
 import { useAuth } from '../components/auth/AuthProvider'
+import { normalizeEntityColors, sanitizeEntityColor } from '../utils/entityColors'
 
 interface UseSelectableStringSettingOptions {
   documentId: string
   fieldName: string
   errorLabel: string
+  colorFieldName?: string
 }
 
 export function useSelectableStringSetting({
   documentId,
   fieldName,
   errorLabel,
+  colorFieldName,
 }: UseSelectableStringSettingOptions) {
   const { uid } = useAuth()
   const [availableValues, setAvailableValues] = useState<string[]>([])
+  const [availableColors, setAvailableColors] = useState<Record<string, string>>({})
   const [selectedValues, setSelectedValues] = useState<string[]>([])
 
   const fetchAvailableValues = useCallback(async () => {
     if (!uid) {
       setAvailableValues([])
+      setAvailableColors({})
       return
     }
 
@@ -28,10 +33,17 @@ export function useSelectableStringSetting({
     const snapshot = await getDoc(settingRef)
 
     if (snapshot.exists()) {
-      const values = snapshot.data()?.[fieldName]
+      const data = snapshot.data()
+      const values = data?.[fieldName]
       setAvailableValues(Array.isArray(values) ? values : [])
+      setAvailableColors(normalizeEntityColors(
+        colorFieldName ? data?.[colorFieldName] : undefined,
+      ))
+    } else {
+      setAvailableValues([])
+      setAvailableColors({})
     }
-  }, [documentId, fieldName, uid])
+  }, [colorFieldName, documentId, fieldName, uid])
 
   const handleAddValue = async (value: string) => {
     if (!uid) return
@@ -62,6 +74,22 @@ export function useSelectableStringSetting({
     setSelectedValues([])
   }
 
+  const setValueColor = async (value: string, color: string) => {
+    if (!uid || !colorFieldName) return
+
+    const normalizedColor = sanitizeEntityColor(color)
+    if (!normalizedColor) return
+
+    const updatedColors = { ...availableColors, [value]: normalizedColor }
+    try {
+      const settingRef = doc(db, `users/${uid}/settings`, documentId)
+      await setDoc(settingRef, { [colorFieldName]: updatedColors }, { merge: true })
+      setAvailableColors(updatedColors)
+    } catch (error) {
+      console.error(`Erro ao salvar a cor de ${errorLabel}:`, error)
+    }
+  }
+
   useEffect(() => {
     void fetchAvailableValues()
   }, [fetchAvailableValues])
@@ -69,9 +97,11 @@ export function useSelectableStringSetting({
   return {
     availableValues,
     selectedValues,
+    availableColors,
     setSelectedValues,
     toggleValue,
     clearSelectedValues,
+    setValueColor,
     handleAddValue,
   }
 }

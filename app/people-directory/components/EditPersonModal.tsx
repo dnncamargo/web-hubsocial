@@ -45,9 +45,11 @@ const EditPersonModal = ({
   } = optionalFieldsControl;
   const {
     availableRelationships,
+    relationshipColors,
     selectedRelationships,
     toggleRelationship,
     handleAddRelationship,
+    setRelationshipColor,
   } = personRelationshipsControl;
   const {
     name,
@@ -148,9 +150,11 @@ const EditPersonModal = ({
               updateOptionalField={updateOptionalField}
               updateLabel={updateLabel}
               availableRelationships={availableRelationships}
+              relationshipColors={relationshipColors}
               selectedRelationships={selectedRelationships}
               toggleRelationship={toggleRelationship}
               handleAddRelationship={handleAddRelationship}
+              setRelationshipColor={setRelationshipColor}
               showOptionalFieldModal={showOptionalFieldModal}
               setShowOptionalFieldModal={setShowOptionalFieldModal}
               showRelationshipsModal={showRelationshipsModal}

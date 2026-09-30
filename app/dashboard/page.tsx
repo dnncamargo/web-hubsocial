@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, JSX } from 'react';
 import { deleteField, getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
+import { useEventCategories } from '../hooks/useEventCategories';
 import { Event, Person, Task } from '../utils/interfaces';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
 import { AutomationRuleSet } from '../types/automation';
@@ -47,6 +48,7 @@ type PlannedActionSource = {
  */
 export default function Dashboard(): JSX.Element {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
+  const { categoryColors } = useEventCategories();
   const [person, setPerson] = useState<Person[]>([]); /** @state {Person[]} person - Array de pessoas buscadas do Firestore. */
   const [events, setEvents] = useState<GroupedEvents>({
     today: [],
@@ -120,6 +122,7 @@ export default function Dashboard(): JSX.Element {
                 title: event.title,
                 completed: event.status === 1,
                 date: event.startDate,
+                categories: event.categories,
                 ...(event.startTime ? { time: event.startTime } : {}),
               },
               automation: event.automation,
@@ -404,6 +407,7 @@ export default function Dashboard(): JSX.Element {
           actions={actions}
           onCompleteAction={handleCompleteAction}
           pendingActionKeys={pendingActionKeys}
+          categoryColors={categoryColors}
           context={(
             <section className={styles.contextPanel} aria-labelledby="context-title">
               <header className={styles.contextHeader}>

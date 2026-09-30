@@ -3,6 +3,7 @@
 import { JSX } from 'react';
 import { useNavigate } from 'react-router';
 import { Event } from '../../utils/interfaces';
+import { getEntityColor, type EntityColorMap } from '../../utils/entityColors';
 import { ArrowRight, Clock, Link, MapPin, SquarePen } from 'lucide-react';
 import { formatDateRange } from '../../utils/services';
 import styles from './EventCard.module.css';
@@ -16,6 +17,7 @@ import styles from './EventCard.module.css';
 interface EventCardProps {
   event: Event;
   onEditEvent: (event: Event) => void;
+  categoryColors?: EntityColorMap;
 }
 
 /**
@@ -24,7 +26,7 @@ interface EventCardProps {
  * @param {EventCardProps} { event, onEditEvent } - Props para o componente.
  * @returns {JSX.Element} Um cartão representando as informações do evento.
  */
-const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
+const EventCard = ({ event, onEditEvent, categoryColors }: EventCardProps): JSX.Element => {
   const navigate = useNavigate();
 
   const description = event.optionalFields?.find(
@@ -99,7 +101,11 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
       <footer className={styles.footer}>
         <div className={styles.categories}>
           {event.categories?.map((category) => (
-            <span key={category} className={styles.category}>
+            <span
+              key={category}
+              className={styles.category}
+              style={getEntityColorStyle(getEntityColor(categoryColors, category))}
+            >
               {category}
             </span>
           ))}
@@ -121,3 +127,7 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
 }
 
 export default EventCard
+
+function getEntityColorStyle(color: string | undefined): React.CSSProperties | undefined {
+  return color ? { '--entity-color': color } as React.CSSProperties : undefined
+}

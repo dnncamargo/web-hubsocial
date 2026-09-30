@@ -16,10 +16,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import type { Event } from '../../utils/interfaces'
+import { getEntityColor, type EntityColorMap } from '../../utils/entityColors'
 import styles from './EventCalendarMonth.module.css'
 
 interface EventCalendarMonthProps {
   events: Event[]
+  categoryColors?: EntityColorMap
 }
 
 interface CalendarSegment {
@@ -152,7 +154,7 @@ function createCalendarWeeks(
   })
 }
 
-export default function EventCalendarMonth({ events }: EventCalendarMonthProps) {
+export default function EventCalendarMonth({ events, categoryColors }: EventCalendarMonthProps) {
   const navigate = useNavigate()
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
   const monthStart = visibleMonth
@@ -289,6 +291,20 @@ export default function EventCalendarMonth({ events }: EventCalendarMonthProps) 
                       <span className={styles.eventTitle}>{event.title}</span>
                       {showStartTime && event.startTime && (
                         <span className={styles.eventTime}>{event.startTime}</span>
+                      )}
+                      {event.categories && event.categories.length > 0 && (
+                        <span className={styles.eventCategoryMarkers} aria-hidden="true">
+                          {event.categories.map(category => {
+                            const color = getEntityColor(categoryColors, category)
+                            return (
+                              <span
+                                key={category}
+                                className={styles.eventCategoryMarker}
+                                style={color ? { '--entity-color': color } as React.CSSProperties : undefined}
+                              />
+                            )
+                          })}
+                        </span>
                       )}
                     </button>
                   )

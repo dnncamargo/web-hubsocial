@@ -1,4 +1,5 @@
 import styles from './EventDialogs.module.css'
+import { getEntityColor, type EntityColorMap } from '../../utils/entityColors'
 
 type EventCategoriesModalProps = {
   onClose: () => void
@@ -6,6 +7,8 @@ type EventCategoriesModalProps = {
   selectedCategories: string[]
   toggleCategory: (cat: string) => void
   handleAddCategory: (category: string) => void
+  categoryColors: EntityColorMap
+  setCategoryColor: (category: string, color: string) => Promise<void>
 }
 
 export function EventCategoriesModal({
@@ -14,6 +17,8 @@ export function EventCategoriesModal({
   selectedCategories,
   toggleCategory,
   handleAddCategory,
+  categoryColors,
+  setCategoryColor,
 }: EventCategoriesModalProps) {
   return (
     <div className={styles.overlay}>
@@ -34,20 +39,29 @@ export function EventCategoriesModal({
             {availableCategories.map((category) => {
               const selected = selectedCategories.includes(category)
               return (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    toggleCategory(category)
-                  }}
-                  className={selected
-                    ? `${styles.choice} ${styles.choiceSelected}`
-                    : styles.choice}
-                  aria-pressed={selected}
-                >
-                  {category}
-                </button>
+                <div key={category} className={styles.choiceWithColor}>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      toggleCategory(category)
+                    }}
+                    className={selected
+                      ? `${styles.choice} ${styles.choiceSelected}`
+                      : styles.choice}
+                    style={getEntityColorStyle(getEntityColor(categoryColors, category))}
+                    aria-pressed={selected}
+                  >
+                    {category}
+                  </button>
+                  <input
+                    type="color"
+                    className={styles.colorInput}
+                    value={categoryColors[category] ?? '#536d82'}
+                    onChange={(event) => void setCategoryColor(category, event.target.value)}
+                    aria-label={`Cor da categoria ${category}`}
+                  />
+                </div>
               )
             })}
           </div>
@@ -83,4 +97,8 @@ export function EventCategoriesModal({
       </section>
     </div>
   )
+}
+
+function getEntityColorStyle(color: string | undefined): React.CSSProperties | undefined {
+  return color ? { '--entity-color': color } as React.CSSProperties : undefined
 }

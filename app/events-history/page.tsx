@@ -39,7 +39,7 @@ const EventsHistory = (): JSX.Element => {
   const [showSearchModal, setShowSearchModal] = useState(false)
   const [viewMode, setViewMode] = useState<EventViewMode>('list')
 
-  const { availableCategories } = useEventCategories()
+  const { availableCategories, categoryColors } = useEventCategories()
 
   useEffect(() => {
     if (uid) {
@@ -239,7 +239,7 @@ const EventsHistory = (): JSX.Element => {
         </div>
 
         {viewMode === 'calendar' ? (
-          <EventCalendarMonth events={visibleEvents} />
+          <EventCalendarMonth events={visibleEvents} categoryColors={categoryColors} />
         ) : events.length === 0 ? (
           <p className={styles.emptyState}>Nenhum evento registrado.</p>
         ) : visibleEvents.length === 0 ? (
@@ -251,7 +251,11 @@ const EventsHistory = (): JSX.Element => {
             <div className={styles.grid}>
               {visibleEvents.map(event => (
                 <div key={event.id} className={styles.eventItem}>
-                  <EventCard event={event} onEditEvent={openEditEventModal} />
+                  <EventCard
+                    event={event}
+                    onEditEvent={openEditEventModal}
+                    categoryColors={categoryColors}
+                  />
                 </div>
               ))}
             </div>
