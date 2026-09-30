@@ -83,7 +83,7 @@ export default function TasksList() {
       <main className={styles.page}>
         <header className={styles.header}>
           <div className={styles.heading}>
-            <h1 className={styles.title}>Tarefas</h1>
+            <h1 className={styles.title}>Lista de Tarefas</h1>
             <p className={styles.subtitle}>
               Acompanhe o trabalho em fluxo, da entrada à conclusão.
             </p>

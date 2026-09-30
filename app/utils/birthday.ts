@@ -1,3 +1,5 @@
+import { formatCompactDate, formatDirectDate } from './datePresentation.ts'
+
 export interface BirthdayParts {
   day: number
   month: number
@@ -59,8 +61,9 @@ export function formatBirthday(value: string | null | undefined): string {
   const parts = parseBirthday(value)
   if (!parts) return ''
 
-  const formatted = `${String(parts.day).padStart(2, '0')}/${String(parts.month).padStart(2, '0')}`
-  return parts.year === undefined ? formatted : `${formatted}/${parts.year}`
+  return parts.year === undefined
+    ? formatCompactDate(value)
+    : formatDirectDate(value)
 }
 
 export function birthdayMonthDay(value: string | null | undefined): Pick<BirthdayParts, 'month' | 'day'> | null {

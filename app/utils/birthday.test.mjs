@@ -15,20 +15,20 @@ import { buildPersonPayload, hydratePerson } from './personPayload.ts'
 test('accepts legacy full birthdays and preserves their year', () => {
   assert.deepEqual(parseBirthday('1994-04-30'), { year: 1994, month: 4, day: 30 })
   assert.equal(normalizeBirthday('1994-04-30'), '1994-04-30')
-  assert.equal(formatBirthday('1994-04-30'), '30/04/1994')
+  assert.equal(formatBirthday('1994-04-30'), '30 / abr / 1994')
   assert.equal(birthdayHasYear('1994-04-30'), true)
 })
 test('accepts canonical birthdays without a year and never invents one', () => {
   assert.deepEqual(parseBirthday('--04-30'), { month: 4, day: 30 })
   assert.equal(normalizeBirthday('--04-30'), '--04-30')
-  assert.equal(formatBirthday('--04-30'), '30/04')
+  assert.equal(formatBirthday('--04-30'), '30/abr')
   assert.equal(serializeBirthday({ month: 4, day: 30 }), '--04-30')
   assert.equal(birthdayHasYear('--04-30'), false)
 })
 
 test('normalizes the legacy Google Contacts zero-year placeholder', () => {
   assert.equal(normalizeBirthday('0000-04-30'), '--04-30')
-  assert.equal(formatBirthday('0000-04-30'), '30/04')
+  assert.equal(formatBirthday('0000-04-30'), '30/abr')
 })
 
 test('keeps the Person payload on one field without inventing a year', () => {

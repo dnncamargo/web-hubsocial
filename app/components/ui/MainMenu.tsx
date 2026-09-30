@@ -2,10 +2,10 @@ import { JSX, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { CalendarDays, House, ListTodo, Users } from 'lucide-react'
 import { Link, useLocation } from 'react-router'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../auth/AuthProvider'
 import { useTheme } from '../../hooks/useTheme'
+import { getTodayISO } from '../../utils/dateHelpers'
+import { formatSpecificDate } from '../../utils/datePresentation'
 import LogoutButton from './LogoutButton'
 import ImportContactsModal from './ImportContactsModal'
 import CurrentWeather from './CurrentWeather'
@@ -43,8 +43,7 @@ export default function MainMenu(): JSX.Element {
       : pathname === path || pathname.startsWith(`${path}/`)
 
   const avatarInitial = user?.name.trim().charAt(0).toUpperCase() || 'U'
-  const dateText = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
-  const formattedDate = dateText.charAt(0).toUpperCase() + dateText.slice(1)
+  const formattedDate = formatSpecificDate(getTodayISO())
 
   const renderNavLink = ({ path, label, icon: Icon }: (typeof navItems)[number]) => (
     <Link

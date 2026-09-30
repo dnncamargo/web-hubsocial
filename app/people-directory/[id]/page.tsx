@@ -14,6 +14,8 @@ import { usePageTitle } from '../../hooks/usePageTitle';
 import { db } from '../../utils/firebaseConfig';
 import { formatBirthday } from '../../utils/birthday';
 import { getPersonDocumentPath, hydratePerson } from '../../utils/personPayload';
+import { formatDateRange } from '../../utils/services';
+import { formatTimeRange } from '../../utils/datePresentation';
 import detailStyles from '../../events-history/[id]/EventDetails.module.css';
 import styles from '../PersonDetails.module.css';
 import {
@@ -263,7 +265,15 @@ const PersonDetails = () => {
                     <div key={event.id} className={detailStyles.optionalItem}>
                       <p className={styles.eventTitle}>{event.title}</p>
                       <p className={styles.eventMeta}>
-                        {event.startDate} {event.startTime && `• ${event.startTime}`}
+                        {formatDateRange(
+                          event.startDate,
+                          event.endDate,
+                          event.startTime,
+                          event.endTime,
+                          event.allDay,
+                        ).start}
+                        {formatTimeRange(event.startTime, event.endTime)
+                          && ` · ${formatTimeRange(event.startTime, event.endTime)}`}
                       </p>
                     </div>
                   ))}

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { CalendarDays, ListChecks } from 'lucide-react'
 import { ActionProjection, ActionProjectionItem } from '../../types/actions'
 import { getEntityColor, type EntityColorMap } from '../../utils/entityColors'
+import { formatSpecificDate } from '../../utils/datePresentation'
 import styles from './ActionsOverview.module.css'
 
 interface ActionsOverviewProps {
@@ -58,6 +59,7 @@ function ActionRow({
   categoryColors?: EntityColorMap
 }) {
   const automationStatus = getAutomationStatus(item)
+  const formattedDate = item.date ? formatSpecificDate(item.date) : ''
   const SourceIcon = item.sourceType === 'event' ? CalendarDays : ListChecks
   const attentionState = getAttentionState(item)
   const markerClassName = item.completed
@@ -101,7 +103,7 @@ function ActionRow({
         <span className={styles.meta}>
           <SourceIcon className={styles.sourceIcon} aria-hidden="true" />
           {item.sourceType === 'event' ? 'Evento' : 'Tarefa'}
-          {item.date ? ` · ${item.date}` : ''}
+          {formattedDate ? ` · ${formattedDate}` : ''}
           {item.time ? ` · ${item.time}` : ''}
           {item.sourceType === 'event' && item.categories && item.categories.length > 0 && (
             <span className={styles.categoryMarkers} aria-label="Categorias do evento">

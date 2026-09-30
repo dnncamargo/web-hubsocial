@@ -188,7 +188,7 @@ const EventsHistory = (): JSX.Element => {
       <main className={styles.page}>
         <header className={styles.header}>
           <div className={styles.headingBlock}>
-            <h1 className={styles.title}>Eventos</h1>
+            <h1 className={styles.title}>Histórico de Eventos</h1>
             <p className={styles.subtitle}>Consulte seus eventos em lista ou calendário.</p>
           </div>
 

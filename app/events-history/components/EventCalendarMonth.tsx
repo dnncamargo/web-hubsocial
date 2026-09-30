@@ -17,6 +17,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import type { Event } from '../../utils/interfaces'
 import { getEntityColor, type EntityColorMap } from '../../utils/entityColors'
+import { formatMonthYear } from '../../utils/datePresentation'
 import styles from './EventCalendarMonth.module.css'
 
 interface EventCalendarMonthProps {
@@ -168,9 +169,7 @@ export default function EventCalendarMonth({ events, categoryColors }: EventCale
   const currentMonth = startOfMonth(new Date())
   const isCurrentMonth = isSameMonth(monthStart, currentMonth)
 
-  const monthLabel = format(monthStart, "MMMM 'de' yyyy", { locale: ptBR })
-  const formattedMonthLabel =
-    monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)
+  const formattedMonthLabel = formatMonthYear(monthStart)
 
   return (
     <section className={styles.section} aria-labelledby="events-calendar-month">

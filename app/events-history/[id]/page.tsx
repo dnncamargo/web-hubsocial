@@ -10,6 +10,8 @@ import { OptionalField } from '@/app/types/optionalFields'
 import { getEventDocumentPath } from '@/app/utils/eventPayload'
 import { getPersonDocumentPath, hydratePerson } from '@/app/utils/personPayload'
 import { createGoogleCalendarEvent } from '@/app/utils/googleCalendar'
+import { formatDateRange } from '../../utils/services'
+import { formatTimeRange } from '../../utils/datePresentation'
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
 import { usePageTitle } from '../../hooks/usePageTitle'
 import EditEventModal from '../components/EditEventModal'
@@ -159,6 +161,17 @@ const EventDetails = () => {
     return <div className={styles.loading}>Carregando as informações do evento...</div>
   }
 
+  const dateRange = formatDateRange(
+    event.startDate,
+    event.endDate,
+    event.startTime,
+    event.endTime,
+    event.allDay,
+  )
+  const timeRange = event.allDay
+    ? 'Dia inteiro'
+    : formatTimeRange(event.startTime, event.endTime)
+
   return (
     <ProtectedRoute>
       <main className={styles.page}>
@@ -194,12 +207,17 @@ const EventDetails = () => {
               <dl className={styles.definitionList}>
                 <div className={styles.definitionRow}>
                   <dt className={styles.term}>Data</dt>
-                  <dd className={styles.value}>{event.startDate}</dd>
+                  <dd className={styles.value}>
+                    {dateRange.start}
+                    {dateRange.end && ` → ${dateRange.end}`}
+                  </dd>
                 </div>
-                <div className={styles.definitionRow}>
-                  <dt className={styles.term}>Hora</dt>
-                  <dd className={styles.value}>{event.startTime || 'Dia inteiro'}</dd>
-                </div>
+                {timeRange && (
+                  <div className={styles.definitionRow}>
+                    <dt className={styles.term}>Horário</dt>
+                    <dd className={styles.value}>{timeRange}</dd>
+                  </div>
+                )}
                 {event.location && (
                   <div className={styles.definitionRow}>
                     <dt className={styles.term}>Local</dt>

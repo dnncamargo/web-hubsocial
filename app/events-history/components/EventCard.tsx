@@ -6,6 +6,7 @@ import { Event } from '../../utils/interfaces';
 import { getEntityColor, type EntityColorMap } from '../../utils/entityColors';
 import { ArrowRight, Clock, Link, MapPin, SquarePen } from 'lucide-react';
 import { formatDateRange } from '../../utils/services';
+import { formatTimeRange } from '../../utils/datePresentation';
 import styles from './EventCard.module.css';
 
 /**
@@ -41,6 +42,7 @@ const EventCard = ({ event, onEditEvent, categoryColors }: EventCardProps): JSX.
     event.endTime,
     event.allDay,
   )
+  const timeRange = formatTimeRange(event.startTime, event.endTime)
 
   return (
     <article
@@ -70,21 +72,25 @@ const EventCard = ({ event, onEditEvent, categoryColors }: EventCardProps): JSX.
       </header>
 
       <div className={styles.metaList}>
-        {event.startTime && (
+        {(timeRange || event.location) && (
           <div className={styles.metaRow}>
-            <Clock className={styles.metaIcon} aria-hidden="true" />
-            <span className={styles.metaText}>{event.startTime}</span>
-          </div>
-        )}
-
-        {event.location && (
-          <div className={styles.metaRow}>
-            {event.location.startsWith('http') ? (
+            {timeRange ? (
+              <Clock className={styles.metaIcon} aria-hidden="true" />
+            ) : event.location?.startsWith('http') ? (
               <Link className={styles.metaIcon} aria-hidden="true" />
             ) : (
               <MapPin className={styles.metaIcon} aria-hidden="true" />
             )}
-            <span className={styles.metaText}>{event.location}</span>
+            <span className={styles.metaText}>
+              {timeRange}
+              {timeRange && event.location && ' · '}
+              {event.location && (
+                <>
+                  {timeRange && (event.location.startsWith('http') ? <Link className={styles.metaIcon} aria-hidden="true" /> : <MapPin className={styles.metaIcon} aria-hidden="true" />)}
+                  {event.location}
+                </>
+              )}
+            </span>
           </div>
         )}
 
