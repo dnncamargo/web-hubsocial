@@ -160,6 +160,21 @@
   object-fit: cover;
 }
 
+.avatarFallback {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-round);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
 .accountMenu {
   position: fixed;
   top: 4.25rem;

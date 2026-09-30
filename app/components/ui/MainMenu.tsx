@@ -20,11 +20,16 @@ const navItems = [
 ] as const
 
 export default function MainMenu(): JSX.Element {
-  const { uid, user } = useAuth()
-  const isAuthenticated = !!uid
+  const { uid, user, loading } = useAuth()
+  const isAuthenticated = !loading && !!uid
+  const [avatarFailed, setAvatarFailed] = useState(false)
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [showImportContacts, setShowImportContacts] = useState(false)
   const { pathname } = useLocation()
+
+  useEffect(() => {
+    setAvatarFailed(false)
+  }, [user?.name, user?.picture])
 
   useEffect(() => {
     setIsAccountOpen(false)
@@ -35,9 +40,7 @@ export default function MainMenu(): JSX.Element {
       ? pathname === path
       : pathname === path || pathname.startsWith(`${path}/`)
 
-  const avatarUrl =
-    user?.picture ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name?.[0] || 'U')}&background=ccc&color=000`
+  const avatarInitial = user?.name.trim().charAt(0).toUpperCase() || 'U'
   const dateText = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
   const formattedDate = dateText.charAt(0).toUpperCase() + dateText.slice(1)
 
@@ -63,7 +66,18 @@ export default function MainMenu(): JSX.Element {
       aria-controls="account-menu"
       aria-label="Abrir menu da conta"
     >
-      <img src={avatarUrl} alt="" className={styles.avatarImage} />
+      {user?.picture && !avatarFailed ? (
+        <img
+          src={user.picture}
+          alt=""
+          className={styles.avatarImage}
+          onError={() => setAvatarFailed(true)}
+        />
+      ) : (
+        <span className={styles.avatarFallback} aria-hidden="true">
+          {avatarInitial}
+        </span>
+      )}
       <span className={styles.accountLabel}>Conta</span>
     </button>
   )
