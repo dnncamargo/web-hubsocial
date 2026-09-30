@@ -160,3 +160,33 @@
   font-size: 0.6875rem;
   font-weight: 600;
 }
+
+.footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.editButton {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-people-strong);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editButton:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.editButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

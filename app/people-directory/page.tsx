@@ -12,6 +12,7 @@ import { getPersonDocumentPath, hydratePerson } from '../utils/personPayload';
 import { usePersonRelationships } from '../hooks/usePersonRelationships';
 import PersonCard from './components/PersonCard';
 import AddPersonModal from './components/AddPersonModal';
+import EditPersonModal from './components/EditPersonModal';
 import FilterPersonModal, { PersonFilter } from './components/FilterPersonModal';
 import styles from './PeopleDirectory.module.css';
 
@@ -32,6 +33,8 @@ const PeopleDirectory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [people, setPeople] = useState<Person[]>([]);
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
   const [filters, setFilters] = useState<PersonFilter>(defaultFilters);
@@ -119,6 +122,11 @@ const PeopleDirectory = () => {
     const personReference = doc(db, getPersonDocumentPath(uid, personId));
     await updateDoc(personReference, { favorite: !currentValue });
     await fetchPeople();
+  };
+
+  const openEditPersonModal = (person: Person): void => {
+    setSelectedPerson(person);
+    setIsEditPersonModalOpen(true);
   };
 
   const filteredPeople = (!filters.enabled || !filtersLoaded)
@@ -222,6 +230,7 @@ const PeopleDirectory = () => {
                 <PersonCard
                   person={person}
                   onToggleFavorite={toggleFavorite}
+                  onEditPerson={openEditPersonModal}
                   relationshipColors={relationshipColors}
                 />
               </div>
@@ -291,6 +300,19 @@ const PeopleDirectory = () => {
             onClose={() => setIsAddPersonModalOpen(false)}
             onAdded={fetchPeople}
             isOpen={isAddPersonModalOpen}
+          />
+        )}
+
+        {isEditPersonModalOpen && selectedPerson && (
+          <EditPersonModal
+            person={selectedPerson}
+            isOpen={isEditPersonModalOpen}
+            onClose={() => setIsEditPersonModalOpen(false)}
+            onUpdated={fetchPeople}
+            onDeleted={async () => {
+              await fetchPeople();
+              setSelectedPerson(null);
+            }}
           />
         )}
 

@@ -15,6 +15,7 @@ import styles from './PersonCard.module.css';
 interface PersonCardProps {
   person: Person;
   onToggleFavorite: (personId: string, currentValue: boolean) => void;
+  onEditPerson: (person: Person) => void;
   relationshipColors?: EntityColorMap;
 }
 
@@ -24,7 +25,12 @@ interface PersonCardProps {
  * @param {PersonCardProps} { person, onToggleFavorite } - Props para o componente.
  * @returns {JSX.Element} Um cartão representando as informações da pessoa.
  */
-const PersonCard = ({ person, onToggleFavorite, relationshipColors }: PersonCardProps) => {
+const PersonCard = ({
+  person,
+  onToggleFavorite,
+  onEditPerson,
+  relationshipColors,
+}: PersonCardProps) => {
   const navigate = useNavigate();
   const relationships = person.relationships ?? [];
 
@@ -94,6 +100,16 @@ const PersonCard = ({ person, onToggleFavorite, relationshipColors }: PersonCard
         )}
       </span>
       </button>
+
+      <footer className={styles.footer}>
+        <button
+          type="button"
+          className={styles.editButton}
+          onClick={() => onEditPerson(person)}
+        >
+          Editar
+        </button>
+      </footer>
 
     </article>
   );
