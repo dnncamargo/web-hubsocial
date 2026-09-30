@@ -27,6 +27,7 @@ import { ptBR } from 'date-fns/locale';
 import { ArrowUpRight, CalendarDays, Check, MapPin, Star, UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
+import { usePageTitle } from '../hooks/usePageTitle'
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
 import styles from './Dashboard.module.css'
@@ -47,6 +48,7 @@ type GroupedEvents = {
  */
 export default function Dashboard(): JSX.Element {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
+  usePageTitle('Hoje')
   const { categoryColors } = useEventCategories();
   const [person, setPerson] = useState<Person[]>([]); /** @state {Person[]} person - Array de pessoas buscadas do Firestore. */
   const [events, setEvents] = useState<GroupedEvents>({

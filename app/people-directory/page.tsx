@@ -11,6 +11,7 @@ import { Person } from '../utils/interfaces';
 import { parseBirthday } from '../utils/birthday';
 import { getPersonDocumentPath, hydratePerson } from '../utils/personPayload';
 import { usePersonRelationships } from '../hooks/usePersonRelationships';
+import { usePageTitle } from '../hooks/usePageTitle';
 import PersonCard from './components/PersonCard';
 import AddPersonModal from './components/AddPersonModal';
 import EditPersonModal from './components/EditPersonModal';
@@ -35,6 +36,7 @@ const defaultFilters: PersonFilter = {
 
 const PeopleDirectory = () => {
   const { uid } = useAuth();
+  usePageTitle('Pessoas');
   const [searchParams, setSearchParams] = useSearchParams();
   const [people, setPeople] = useState<Person[]>([]);
   const [addPersonDraft, dispatchAddPersonDraft] = useReducer(

@@ -10,6 +10,7 @@ import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { Event, Person } from '../../utils/interfaces';
 import { OptionalField } from '../../types/optionalFields';
 import { usePersonRelationships } from '../../hooks/usePersonRelationships';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { db } from '../../utils/firebaseConfig';
 import { formatBirthday } from '../../utils/birthday';
 import { getPersonDocumentPath, hydratePerson } from '../../utils/personPayload';
@@ -40,6 +41,7 @@ const PersonDetails = () => {
   const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { relationshipColors } = usePersonRelationships();
+  usePageTitle('Pessoa', person?.id === personId ? person?.name : undefined);
 
   const openAddEventModal = () => {
     dispatchAddEventDraft({ type: 'open' });
@@ -94,6 +96,8 @@ const PersonDetails = () => {
 
   useEffect(() => {
     if (!uid || !personId) return;
+    setPerson(null);
+    setEvents([]);
     void fetchPerson();
     void fetchEvents();
   }, [uid, personId]);

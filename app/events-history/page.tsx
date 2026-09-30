@@ -20,6 +20,7 @@ import {
 } from './utils/eventFilters'
 import type { EventFilter } from './utils/eventFilters'
 import { useEventCategories } from '../hooks/useEventCategories'
+import { usePageTitle } from '../hooks/usePageTitle'
 import {
   initialCreationDraftLifecycleState,
   reduceCreationDraftLifecycle,
@@ -30,6 +31,7 @@ type EventViewMode = 'list' | 'calendar'
 
 const EventsHistory = (): JSX.Element => {
   const { uid } = useAuth()
+  usePageTitle('Eventos')
   const [searchParams, setSearchParams] = useSearchParams()
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)

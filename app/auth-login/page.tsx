@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../components/auth/AuthProvider'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { instance } from '../config/instance'
 import { auth } from '../utils/firebaseConfig'
 import styles from './LoginPage.module.css'
@@ -12,6 +13,7 @@ import styles from './LoginPage.module.css'
 export default function LoginPage() {
   const navigate = useNavigate()
   const { uid, loading, setGoogleAccessToken } = useAuth()
+  usePageTitle('Login')
 
   useEffect(() => {
     if (!loading && uid) {

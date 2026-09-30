@@ -11,6 +11,7 @@ import { getEventDocumentPath } from '@/app/utils/eventPayload'
 import { getPersonDocumentPath, hydratePerson } from '@/app/utils/personPayload'
 import { createGoogleCalendarEvent } from '@/app/utils/googleCalendar'
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
+import { usePageTitle } from '../../hooks/usePageTitle'
 import EditEventModal from '../components/EditEventModal'
 import { CheckCircle, Circle, Star } from 'lucide-react'
 import styles from './EventDetails.module.css'
@@ -24,8 +25,11 @@ const EventDetails = () => {
   const [people, setPeople] = useState<Person[]>([])
   const [currentRating, setCurrentRating] = useState(0)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  usePageTitle('Evento', event?.id === id ? event?.title : undefined)
 
   useEffect(() => {
+    setEvent(null)
+    setPeople([])
     if (uid && id) {
       fetchEvent()
     }
