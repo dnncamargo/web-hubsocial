@@ -14,7 +14,7 @@ const editPersonModal = readAppFile('people-directory', 'components', 'EditPerso
 
 test('PersonCard offers textual editing without a pencil icon', () => {
   assert.match(personCard, /onEditPerson: \(person: Person\) => void/)
-  assert.match(personCard, /onClick=\{\(\) => onEditPerson\(person\)\}/)
+  assert.match(personCard, /onClick=\{\(event\) => \{[\s\S]*?event\.stopPropagation\(\)[\s\S]*?onEditPerson\(person\)/)
   assert.match(personCard, />\s*Editar\s*</)
   assert.doesNotMatch(personCard, /Pencil|SquarePen/)
 })
