@@ -2,17 +2,9 @@
 
 import { Star, X } from 'lucide-react'
 import styles from './EventDialogs.module.css'
+import type { EventFilter } from '../utils/eventFilters'
 
-export interface EventFilter {
-  enabled: boolean
-  startDate: string
-  endDate: string
-  hasRating: number
-  hasTasks: boolean
-  hasNotes: boolean
-  hasAddressByCEP: boolean
-  selectedCategories: string[]
-}
+export type { EventFilter } from '../utils/eventFilters'
 
 interface EventFilterModalProps {
   isOpen: boolean

@@ -13,20 +13,14 @@ import AddEventModal from './components/AddEventModal'
 import EditEventModal from './components/EditEventModal'
 import { CalendarDays, List, ListFilter, Plus, Search } from 'lucide-react'
 import EventFilterModal from './components/FilterEventModal'
-import type { EventFilter } from './components/FilterEventModal'
+import {
+  defaultEventFilters,
+  evaluateEventFilters,
+  normalizeEventFilters,
+} from './utils/eventFilters'
+import type { EventFilter } from './utils/eventFilters'
 import { useEventCategories } from '../hooks/useEventCategories'
 import styles from './EventsHistory.module.css'
-
-const defaultFilters: EventFilter = {
-  enabled: true,
-  startDate: '',
-  endDate: '',
-  hasRating: 0,
-  hasTasks: false,
-  hasNotes: false,
-  hasAddressByCEP: false,
-  selectedCategories: [],
-}
 
 type EventViewMode = 'list' | 'calendar'
 
@@ -39,10 +33,7 @@ const EventsHistory = (): JSX.Element => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [filtersLoaded, setFiltersLoaded] = useState(false)
-  const [filters, setFilters] = useState<EventFilter>({
-    ...defaultFilters,
-    selectedCategories: [],
-  })
+  const [filters, setFilters] = useState<EventFilter>(defaultEventFilters)
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [showSearchModal, setShowSearchModal] = useState(false)
@@ -74,14 +65,7 @@ const EventsHistory = (): JSX.Element => {
         const snapshot = await getDoc(eventSettingRef)
 
         if (snapshot.exists()) {
-          const data = snapshot.data()
-          setFilters(previous => ({
-            ...defaultFilters,
-            ...data,
-            selectedCategories: Array.isArray(data?.selectedCategories)
-              ? data.selectedCategories
-              : [],
-          }))
+          setFilters(normalizeEventFilters(snapshot.data()))
         }
       } catch (error) {
         console.error('Erro ao carregar filtros:', error)
@@ -135,36 +119,7 @@ const EventsHistory = (): JSX.Element => {
 
   const filteredEvents = (!filters.enabled || !filtersLoaded)
     ? events
-    : events.filter(event => {
-      const from = filters.startDate || null
-      const to = filters.endDate || null
-      const eventDate = event.startDate
-
-      const matchesDate =
-        (!from || eventDate >= from)
-        && (!to || eventDate <= to)
-
-      const matchesRating =
-        filters.hasRating === 0 || (event.rating ?? 0) >= filters.hasRating
-
-      const hasNotes =
-        Array.isArray(event.optionalFields)
-        && event.optionalFields.some(
-          field => field.type === 'text'
-            && typeof field.value === 'string'
-            && field.value.trim() !== '',
-        )
-
-      const matchesNotes = !filters.hasNotes || hasNotes
-
-      const matchesCategory =
-        (filters.selectedCategories?.length ?? 0) === 0
-        || (event.categories ?? []).some(category =>
-          filters.selectedCategories.includes(category),
-        )
-
-      return matchesDate && matchesRating && matchesNotes && matchesCategory
-    })
+    : events.filter(event => evaluateEventFilters(event, filters).matches)
 
   const visibleEvents = filteredEvents.filter(event => {
     if (!isSearching || searchQuery.trim() === '') return true
@@ -184,7 +139,9 @@ const EventsHistory = (): JSX.Element => {
     filters.startDate
     || filters.endDate
     || filters.hasRating > 0
+    || filters.hasTasks
     || filters.hasNotes
+    || filters.hasAddressByCEP
     || filters.selectedCategories.length > 0,
   )
   const filtersAreActive = filters.enabled && hasEffectiveFilter
