@@ -13,6 +13,11 @@ import { useEventForm } from '@/app/hooks/useEventForm'
 import { useEventCategories } from '@/app/hooks/useEventCategories'
 import { useAssociatePerson } from '@/app/hooks/useAssociatePerson'
 import { useOptionalFields } from '@/app/hooks/useOptionalFields'
+import { useLocalEditorDraft } from '../../hooks/useLocalEditorDraft'
+import {
+  isEventEditorDraft,
+  type EventEditorDraft,
+} from '../../utils/editorDraftStorage'
 import useEventDate from '@/app/hooks/useEventDate'
 import { AssociatePersonModal } from './AssociatePersonModal'
 import { AssociatedPeopleModal } from './AssociatedPeopleModal'
@@ -66,6 +71,7 @@ const EditEventModal = ({
     associatedPersonIds: personIds,
     associatePerson,
     disassociatePerson,
+    setAssociatedPersonIds,
   } = associatePersonControl
 
   const eventCategoriesControl = useEventCategories()
@@ -77,6 +83,7 @@ const EditEventModal = ({
     handleAddCategory,
     removeCategory,
     setCategoryColor,
+    setSelectedCategories,
     error: categoryError,
   } = eventCategoriesControl
 
@@ -90,6 +97,8 @@ const EditEventModal = ({
     automation,
     setAutomation,
     error,
+    setError,
+    resetForm,
     updateEvent,
   } = useEventForm({
     uid: effectiveUid,
@@ -100,6 +109,61 @@ const EditEventModal = ({
     eventCategoriesControl,
   })
 
+  const closeNestedModals = () => {
+    setShowOptionalFieldModal(false)
+    setShowAddPersonModal(false)
+    setShowPersonListModal(false)
+    setShowCategoriesModal(false)
+  }
+
+  const editorDraft = useLocalEditorDraft<EventEditorDraft>({
+    scope: {
+      uid,
+      entity: 'event',
+      operation: 'edit',
+      entityId: event.id,
+    },
+    isOpen,
+    isValid: isEventEditorDraft,
+    getSnapshot: () => ({
+      title,
+      location,
+      allDay: dateControl.allDay,
+      startDate: dateControl.startDate,
+      endDate: dateControl.endDate,
+      startTime: dateControl.startTime,
+      endTime: dateControl.endTime,
+      timeZone: dateControl.timeZone,
+      categories: selectedCategories,
+      personIds,
+      optionalFields,
+      actionPlanning,
+      automation,
+      showMore,
+    }),
+    restoreSnapshot: (draft) => {
+      setTitle(draft.title)
+      setLocation(draft.location)
+      dateControl.setAllDay(draft.allDay)
+      dateControl.setStartDate(draft.startDate)
+      dateControl.setEndDate(draft.endDate)
+      dateControl.setStartTime(draft.startTime)
+      dateControl.setEndTime(draft.endTime)
+      setSelectedCategories(draft.categories)
+      setAssociatedPersonIds(draft.personIds)
+      resetOptionalFields(draft.optionalFields)
+      setActionPlanning(draft.actionPlanning)
+      setAutomation(draft.automation)
+      setShowMore(draft.showMore)
+      setError(null)
+    },
+    resetState: () => {
+      resetForm()
+      setShowMore(false)
+      closeNestedModals()
+    },
+  })
+
   useEffect(() => {
     if (!isOpen) return
 
@@ -108,12 +172,6 @@ const EditEventModal = ({
 
     return () => {
       document.body.style.overflow = previousOverflow
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) {
-      resetOptionalFields()
     }
   }, [isOpen])
 
@@ -135,6 +193,7 @@ const EditEventModal = ({
     const success = await updateEvent()
 
     if (success) {
+      editorDraft.consumeAfterSave()
       await onUpdated()
       onClose()
     }
@@ -146,11 +205,22 @@ const EditEventModal = ({
     try {
       const eventRef = doc(db, getEventDocumentPath(uid, event.id))
       await deleteDoc(eventRef)
+      editorDraft.consumeAfterSave()
       await onUpdated()
       onClose()
     } catch (deleteError) {
       console.error('Erro ao excluir o evento: ', deleteError)
     }
+  }
+
+  const handleDismiss = () => {
+    editorDraft.saveOnDismiss()
+    closeNestedModals()
+    onClose()
+  }
+
+  const handleClear = () => {
+    editorDraft.clearDraft()
   }
 
   if (!isOpen || !uid) return null
@@ -160,6 +230,9 @@ const EditEventModal = ({
       <motion.div
         id="edit-event-modal"
         className={styles.modal}
+        onClick={(clickEvent) => {
+          if (clickEvent.target === clickEvent.currentTarget) handleDismiss()
+        }}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 12 }}
@@ -171,7 +244,7 @@ const EditEventModal = ({
         <form onSubmit={handleUpdate} className={styles.form}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={onClose} className={styles.toolbarButton}>
+              <button type="button" onClick={handleDismiss} className={styles.toolbarButton}>
                 Cancelar
               </button>
               <h3 id="edit-event-title" className={styles.toolbarTitle}>Editar evento</h3>
@@ -329,6 +402,12 @@ const EditEventModal = ({
                 </div>
               </div>
             )}
+
+            <div className={styles.draftActions}>
+              <button type="button" onClick={handleClear} className={styles.textAction}>
+                Limpar
+              </button>
+            </div>
 
             <div className={styles.destructiveRow}>
               <button

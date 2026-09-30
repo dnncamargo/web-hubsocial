@@ -7,6 +7,11 @@ import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { useOptionalFields } from '../../hooks/useOptionalFields';
 import { usePersonRelationships } from '../../hooks/usePersonRelationships';
 import { usePersonForm } from '../../hooks/usePersonForm';
+import { useLocalEditorDraft } from '../../hooks/useLocalEditorDraft';
+import {
+  isPersonEditorDraft,
+  type PersonEditorDraft,
+} from '../../utils/editorDraftStorage';
 import PersonEditorFields from './PersonEditorFields';
 import styles from './PersonEditor.module.css';
 
@@ -33,11 +38,13 @@ const AddPersonModal = ({ isOpen, onDismiss, onCancel, onSaved, onAdded }: AddPe
     removeOptionalField,
     updateOptionalField,
     updateLabel,
+    resetOptionalFields,
   } = optionalFieldsControl;
   const {
     availableRelationships,
     relationshipColors,
     selectedRelationships,
+    setSelectedRelationships,
     toggleRelationship,
     handleAddRelationship,
     removeRelationship,
@@ -58,11 +65,56 @@ const AddPersonModal = ({ isOpen, onDismiss, onCancel, onSaved, onAdded }: AddPe
     contactFrequency,
     setContactFrequency,
     error,
+    setError,
+    resetForm,
     createPerson,
   } = usePersonForm({
     uid: uid ?? '',
     optionalFieldsControl,
     personRelationshipsControl,
+  });
+
+  const closeNestedModals = () => {
+    setShowOptionalFieldModal(false);
+    setShowRelationshipsModal(false);
+  };
+
+  const editorDraft = useLocalEditorDraft<PersonEditorDraft>({
+    scope: {
+      uid,
+      entity: 'person',
+      operation: 'add',
+    },
+    isOpen,
+    isValid: isPersonEditorDraft,
+    getSnapshot: () => ({
+      name,
+      phone,
+      email,
+      birthday,
+      favorite,
+      contactFrequency,
+      relationships: selectedRelationships,
+      optionalFields,
+      showMore,
+    }),
+    restoreSnapshot: (draft) => {
+      setName(draft.name);
+      setPhone(draft.phone);
+      setEmail(draft.email);
+      setBirthday(draft.birthday);
+      setFavorite(draft.favorite);
+      setContactFrequency(draft.contactFrequency ?? null);
+      setSelectedRelationships(draft.relationships);
+      resetOptionalFields(draft.optionalFields);
+      setShowMore(draft.showMore);
+      setError(null);
+    },
+    resetState: () => {
+      resetForm();
+      setShowMore(false);
+      closeNestedModals();
+    },
   });
 
   useEffect(() => {
@@ -73,19 +125,20 @@ const AddPersonModal = ({ isOpen, onDismiss, onCancel, onSaved, onAdded }: AddPe
     };
   }, [isOpen]);
 
-  const closeNestedModals = () => {
-    setShowOptionalFieldModal(false);
-    setShowRelationshipsModal(false);
-  };
-
   const handleDismiss = () => {
+    editorDraft.saveOnDismiss();
     closeNestedModals();
     onDismiss();
   };
 
   const handleCancel = () => {
+    editorDraft.saveOnDismiss();
     closeNestedModals();
     onCancel();
+  };
+
+  const handleClear = () => {
+    editorDraft.clearDraft();
   };
 
   const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -98,6 +151,7 @@ const AddPersonModal = ({ isOpen, onDismiss, onCancel, onSaved, onAdded }: AddPe
     const success = await createPerson();
     if (!success) return;
 
+    editorDraft.consumeAfterSave();
     await onAdded();
     onSaved();
   };
@@ -163,6 +217,12 @@ const AddPersonModal = ({ isOpen, onDismiss, onCancel, onSaved, onAdded }: AddPe
               showRelationshipsModal={showRelationshipsModal}
               setShowRelationshipsModal={setShowRelationshipsModal}
             />
+
+            <div className={styles.draftActions}>
+              <button type="button" onClick={handleClear} className={styles.textAction}>
+                Limpar
+              </button>
+            </div>
 
             {error && <p className={styles.error} role="alert">{error}</p>}
           </div>

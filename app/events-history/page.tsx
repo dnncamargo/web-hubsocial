@@ -346,7 +346,7 @@ const EventsHistory = (): JSX.Element => {
             key={addEventDraft.revision}
             isOpen={addEventDraft.isOpen}
             onDismiss={dismissAddEventModal}
-            onCancel={discardAddEventDraft}
+            onCancel={dismissAddEventModal}
             onSaved={discardAddEventDraft}
             onAdded={fetchEvents}
           />

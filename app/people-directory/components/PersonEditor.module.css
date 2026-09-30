@@ -228,6 +228,13 @@
   color: var(--color-people-strong);
 }
 
+.draftActions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
 .deleteRow {
   display: flex;
   justify-content: flex-end;

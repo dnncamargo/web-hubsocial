@@ -285,7 +285,7 @@ const PersonDetails = () => {
             key={`${personId ?? 'unknown'}-${addEventDraft.revision}`}
             isOpen={addEventDraft.isOpen}
             onDismiss={dismissAddEventModal}
-            onCancel={discardAddEventDraft}
+            onCancel={dismissAddEventModal}
             onSaved={discardAddEventDraft}
             onAdded={() => { void fetchEvents(); }}
             initialPersonId={personId}

@@ -50,7 +50,7 @@ test('event creation separates dismiss, cancel and successful save', () => {
   assert.doesNotMatch(eventModal, /if \(!isOpen\)\s*\{\s*resetOptionalFields\(\)/)
   assert.ok(eventList.includes('key={addEventDraft.revision}'))
   assert.ok(eventList.includes('onDismiss={dismissAddEventModal}'))
-  assert.ok(eventList.includes('onCancel={discardAddEventDraft}'))
+  assert.ok(eventList.includes('onCancel={dismissAddEventModal}'))
 })
 
 test('person creation preserves composite form state across dismiss and resets only on discard', () => {
@@ -64,7 +64,7 @@ test('person creation preserves composite form state across dismiss and resets o
   assert.doesNotMatch(personModal, /if \(!isOpen\)\s*resetOptionalFields\(\)/)
   assert.ok(peopleList.includes('key={addPersonDraft.revision}'))
   assert.ok(peopleList.includes('onDismiss={dismissAddPersonModal}'))
-  assert.ok(peopleList.includes('onCancel={discardAddPersonDraft}'))
+  assert.ok(peopleList.includes('onCancel={dismissAddPersonModal}'))
   assert.ok(personDetails.includes('initialPersonId={personId}'))
 })
 

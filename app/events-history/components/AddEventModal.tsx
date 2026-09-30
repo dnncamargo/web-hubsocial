@@ -16,6 +16,11 @@ import { AssociatePersonRenderer } from './AssociatePersonRenderer'
 import { AssociatedPeopleModal } from './AssociatedPeopleModal'
 import { EventCategoriesModal } from './EventCategoriesModal'
 import { useEventCategories } from '@/app/hooks/useEventCategories'
+import { useLocalEditorDraft } from '../../hooks/useLocalEditorDraft'
+import {
+  isEventEditorDraft,
+  type EventEditorDraft,
+} from '../../utils/editorDraftStorage'
 import { EventCategoriesRenderer } from './EventCategoriesRenderer'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
@@ -56,6 +61,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     removeOptionalField,
     updateOptionalField,
     updateLabel,
+    resetOptionalFields,
   } = optionalFieldsControl
 
   const associatePersonControl = useAssociatePerson({ uid: effectiveUid })
@@ -76,6 +82,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     handleAddCategory,
     removeCategory,
     setCategoryColor,
+    setSelectedCategories,
     error: categoryError,
   } = eventCategoriesControl
 
@@ -89,6 +96,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     automation,
     setAutomation,
     error,
+    setError,
+    resetForm,
     createEvent,
   } = useEventForm({
     uid: effectiveUid,
@@ -97,6 +106,61 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     optionalFieldsControl,
     associatePersonControl,
     eventCategoriesControl,
+  })
+
+  const closeNestedModals = () => {
+    setShowOptionalFieldModal(false)
+    setShowAddPersonModal(false)
+    setShowPersonListModal(false)
+    setShowCategoriesModal(false)
+  }
+
+  const editorDraft = useLocalEditorDraft<EventEditorDraft>({
+    scope: {
+      uid,
+      entity: 'event',
+      operation: 'add',
+      context: initialPersonId ? `person:${initialPersonId}` : undefined,
+    },
+    isOpen,
+    isValid: isEventEditorDraft,
+    getSnapshot: () => ({
+      title,
+      location,
+      allDay: dateControl.allDay,
+      startDate: dateControl.startDate,
+      endDate: dateControl.endDate,
+      startTime: dateControl.startTime,
+      endTime: dateControl.endTime,
+      timeZone: dateControl.timeZone,
+      categories: selectedCategories,
+      personIds,
+      optionalFields,
+      actionPlanning,
+      automation,
+      showMore,
+    }),
+    restoreSnapshot: (draft) => {
+      setTitle(draft.title)
+      setLocation(draft.location)
+      dateControl.setAllDay(draft.allDay)
+      dateControl.setStartDate(draft.startDate)
+      dateControl.setEndDate(draft.endDate)
+      dateControl.setStartTime(draft.startTime)
+      dateControl.setEndTime(draft.endTime)
+      setSelectedCategories(draft.categories)
+      associatePersonControl.setAssociatedPersonIds(draft.personIds)
+      resetOptionalFields(draft.optionalFields)
+      setActionPlanning(draft.actionPlanning)
+      setAutomation(draft.automation)
+      setShowMore(draft.showMore)
+      setError(null)
+    },
+    resetState: () => {
+      resetForm()
+      setShowMore(false)
+      closeNestedModals()
+    },
   })
 
   useEffect(() => {
@@ -115,21 +179,20 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setShowAddPersonModal(true)
   }
 
-  const closeNestedModals = () => {
-    setShowOptionalFieldModal(false)
-    setShowAddPersonModal(false)
-    setShowPersonListModal(false)
-    setShowCategoriesModal(false)
-  }
-
   const handleDismiss = () => {
+    editorDraft.saveOnDismiss()
     closeNestedModals()
     onDismiss()
   }
 
   const handleCancel = () => {
+    editorDraft.saveOnDismiss()
     closeNestedModals()
     onCancel()
+  }
+
+  const handleClear = () => {
+    editorDraft.clearDraft()
   }
 
   const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -142,6 +205,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     const success = await createEvent()
 
     if (success) {
+      editorDraft.consumeAfterSave()
       onAdded()
       onSaved()
     }
@@ -323,6 +387,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 </div>
               </div>
             )}
+
+            <div className={styles.draftActions}>
+              <button type="button" onClick={handleClear} className={styles.textAction}>
+                Limpar
+              </button>
+            </div>
 
             {error && <p className={styles.error}>{error}</p>}
           </div>

@@ -11,6 +11,11 @@ import { getPersonDocumentPath } from '../../utils/personPayload';
 import { useOptionalFields } from '../../hooks/useOptionalFields';
 import { usePersonRelationships } from '../../hooks/usePersonRelationships';
 import { usePersonForm } from '../../hooks/usePersonForm';
+import { useLocalEditorDraft } from '../../hooks/useLocalEditorDraft';
+import {
+  isPersonEditorDraft,
+  type PersonEditorDraft,
+} from '../../utils/editorDraftStorage';
 import PersonEditorFields from './PersonEditorFields';
 import styles from './PersonEditor.module.css';
 
@@ -43,11 +48,13 @@ const EditPersonModal = ({
     removeOptionalField,
     updateOptionalField,
     updateLabel,
+    resetOptionalFields,
   } = optionalFieldsControl;
   const {
     availableRelationships,
     relationshipColors,
     selectedRelationships,
+    setSelectedRelationships,
     toggleRelationship,
     handleAddRelationship,
     removeRelationship,
@@ -69,12 +76,57 @@ const EditPersonModal = ({
     setContactFrequency,
     error,
     setError,
+    resetForm,
     updatePerson,
   } = usePersonForm({
     uid: uid ?? '',
     person,
     optionalFieldsControl,
     personRelationshipsControl,
+  });
+
+  const closeNestedModals = () => {
+    setShowOptionalFieldModal(false);
+    setShowRelationshipsModal(false);
+  };
+
+  const editorDraft = useLocalEditorDraft<PersonEditorDraft>({
+    scope: {
+      uid,
+      entity: 'person',
+      operation: 'edit',
+      entityId: person.id,
+    },
+    isOpen,
+    isValid: isPersonEditorDraft,
+    getSnapshot: () => ({
+      name,
+      phone,
+      email,
+      birthday,
+      favorite,
+      contactFrequency,
+      relationships: selectedRelationships,
+      optionalFields,
+      showMore,
+    }),
+    restoreSnapshot: (draft) => {
+      setName(draft.name);
+      setPhone(draft.phone);
+      setEmail(draft.email);
+      setBirthday(draft.birthday);
+      setFavorite(draft.favorite);
+      setContactFrequency(draft.contactFrequency ?? null);
+      setSelectedRelationships(draft.relationships);
+      resetOptionalFields(draft.optionalFields);
+      setShowMore(draft.showMore);
+      setError(null);
+    },
+    resetState: () => {
+      resetForm();
+      setShowMore(false);
+      closeNestedModals();
+    },
   });
 
   useEffect(() => {
@@ -90,6 +142,7 @@ const EditPersonModal = ({
     const success = await updatePerson();
     if (!success) return;
 
+    editorDraft.consumeAfterSave();
     await onUpdated();
     onClose();
   };
@@ -100,6 +153,7 @@ const EditPersonModal = ({
 
     try {
       await deleteDoc(doc(db, getPersonDocumentPath(uid, person.id)));
+      editorDraft.consumeAfterSave();
       await onDeleted();
       onClose();
     } catch (error) {
@@ -108,12 +162,25 @@ const EditPersonModal = ({
     }
   };
 
+  const handleDismiss = () => {
+    editorDraft.saveOnDismiss();
+    closeNestedModals();
+    onClose();
+  };
+
+  const handleClear = () => {
+    editorDraft.clearDraft();
+  };
+
   if (!isOpen || !uid) return null;
 
   return (
     <ProtectedRoute>
       <motion.div
         className={styles.overlay}
+        onClick={(clickEvent) => {
+          if (clickEvent.target === clickEvent.currentTarget) handleDismiss();
+        }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-person-title"
@@ -125,7 +192,7 @@ const EditPersonModal = ({
         <form className={styles.form} onSubmit={handleUpdate}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={onClose} className={styles.toolbarButton}>
+              <button type="button" onClick={handleDismiss} className={styles.toolbarButton}>
                 Cancelar
               </button>
               <h2 id="edit-person-title" className={styles.toolbarTitle}>Editar pessoa</h2>
@@ -168,6 +235,12 @@ const EditPersonModal = ({
               showRelationshipsModal={showRelationshipsModal}
               setShowRelationshipsModal={setShowRelationshipsModal}
             />
+
+            <div className={styles.draftActions}>
+              <button type="button" onClick={handleClear} className={styles.textAction}>
+                Limpar
+              </button>
+            </div>
 
             {error && <p className={styles.error} role="alert">{error}</p>}
 

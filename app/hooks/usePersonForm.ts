@@ -42,7 +42,9 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
         }
     }, [name]);
 
-    useEffect(() => {
+    function resetForm() {
+        setError(null);
+
         if (person) {
             setName(person.name || '');
             setEmail(person.email || '');
@@ -50,13 +52,25 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
             setBirthday(person.birthday || '');
             setFavorite(person.favorite || false);
             setContactFrequency(person.contactFrequency || null);
-
             personRelationshipsControl.setSelectedRelationships(person.relationships || []);
-
             optionalFieldsControl.resetOptionalFields(
                 Array.isArray(person.optionalFields) ? person.optionalFields : []
             );
+            return;
         }
+
+        setName('');
+        setEmail('');
+        setPhone('');
+        setBirthday('');
+        setFavorite(false);
+        setContactFrequency(null);
+        personRelationshipsControl.setSelectedRelationships([]);
+        optionalFieldsControl.resetOptionalFields([]);
+    }
+
+    useEffect(() => {
+        resetForm();
     }, [person]);
 
     /**
@@ -144,6 +158,7 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
         favorite, setFavorite,
         contactFrequency, setContactFrequency,
         error, setError,
+        resetForm,
         createPerson,
         updatePerson
     }

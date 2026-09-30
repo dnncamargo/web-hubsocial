@@ -319,7 +319,7 @@ const PeopleDirectory = () => {
           <AddPersonModal
             key={addPersonDraft.revision}
             onDismiss={dismissAddPersonModal}
-            onCancel={discardAddPersonDraft}
+            onCancel={dismissAddPersonModal}
             onSaved={discardAddPersonDraft}
             onAdded={fetchPeople}
             isOpen={addPersonDraft.isOpen}

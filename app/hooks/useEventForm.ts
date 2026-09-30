@@ -64,7 +64,9 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         }
     }, [title]);
 
-    useEffect(() => {
+    function resetForm() {
+        setError(null);
+
         if (event) {
             setTitle(event.title || '');
             setLocation(event.location || '');
@@ -76,26 +78,30 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
             dateControl.setEndDate(event.endDate);
             dateControl.setStartTime(event.startTime ?? '');
             dateControl.setEndTime(event.endTime ?? '');
-
             eventCategoriesControl.setSelectedCategories(event.categories || []);
-
             associatePersonControl.resetAssociatedPeople();
             associatePersonControl.setAssociatedPersonIds(event.personIds || []);
             optionalFieldsControl.resetOptionalFields(
                 Array.isArray(event.optionalFields) ? event.optionalFields : []
             );
-
-            dateControl.setStartDate(event.startDate); // ✅ hidratar start
-            dateControl.setEndDate(event.endDate);     // ✅ hidratar end
             return;
         }
 
+        setTitle('');
+        setLocation('');
         setActionPlanning({});
         setAutomation({ match: 'all', rules: [] });
+        dateControl.resetToDefaults();
+        eventCategoriesControl.setSelectedCategories([]);
         associatePersonControl.resetAssociatedPeople();
         if (initialPersonId) {
             associatePersonControl.setAssociatedPersonIds([initialPersonId]);
         }
+        optionalFieldsControl.resetOptionalFields([]);
+    }
+
+    useEffect(() => {
+        resetForm();
     }, [event, initialPersonId]);
 
 
@@ -182,6 +188,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         actionPlanning, setActionPlanning,
         automation, setAutomation,
         error, setError,
+        resetForm,
         createEvent,
         updateEvent,
     };
