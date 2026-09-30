@@ -7,8 +7,10 @@ import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
 import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
+import { TaskSchedule } from '../../types/tasks'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
+import TaskScheduleControl from '../../components/actions/TaskScheduleControl'
 import styles from './TaskEditor.module.css'
 
 interface AddTaskModalProps {
@@ -26,6 +28,7 @@ export default function AddTaskModal({
   const [content, setContent] = useState('')
   const [adding, setAdding] = useState(false)
   const [actionPlanning, setActionPlanning] = useState<ActionPlanning>({})
+  const [schedule, setSchedule] = useState<TaskSchedule | undefined>()
   const [automation, setAutomation] = useState<AutomationRuleSet>({
     match: 'all',
     rules: [],
@@ -66,10 +69,12 @@ export default function AddTaskModal({
         createdAt: new Date(),
         actionPlanning,
         automation,
+        ...(schedule ? { schedule } : {}),
       })
 
       onAdded()
       setActionPlanning({})
+      setSchedule(undefined)
       setAutomation({ match: 'all', rules: [] })
       onClose()
     } catch (error) {
@@ -83,6 +88,7 @@ export default function AddTaskModal({
   const handleCancel = () => {
     setContent('')
     setActionPlanning({})
+    setSchedule(undefined)
     setAutomation({ match: 'all', rules: [] })
     onClose()
   }
@@ -122,6 +128,12 @@ export default function AddTaskModal({
           <ActionPlanningControl
             planning={actionPlanning}
             onChange={setActionPlanning}
+          />
+
+          <TaskScheduleControl
+            uid={uid}
+            value={schedule}
+            onChange={setSchedule}
           />
 
           <AutomationRulesEditor

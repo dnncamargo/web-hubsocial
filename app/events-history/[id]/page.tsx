@@ -7,8 +7,14 @@ import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '@/app/components/auth/AuthProvider'
 import { Event, Person } from '@/app/utils/interfaces'
 import { OptionalField } from '@/app/types/optionalFields'
+import { getEventDocumentPath } from '@/app/utils/eventPayload'
+import { getPersonDocumentPath, hydratePerson } from '@/app/utils/personPayload'
 import { createGoogleCalendarEvent } from '@/app/utils/googleCalendar'
+import { formatDateRange } from '../../utils/services'
+import { formatTimeRange } from '../../utils/datePresentation'
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
+import { usePageTitle } from '../../hooks/usePageTitle'
+import EditEventModal from '../components/EditEventModal'
 import { CheckCircle, Circle, Star } from 'lucide-react'
 import styles from './EventDetails.module.css'
 
@@ -20,8 +26,12 @@ const EventDetails = () => {
   const [event, setEvent] = useState<Event | null>(null)
   const [people, setPeople] = useState<Person[]>([])
   const [currentRating, setCurrentRating] = useState(0)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  usePageTitle('Evento', event?.id === id ? event?.title : undefined)
 
   useEffect(() => {
+    setEvent(null)
+    setPeople([])
     if (uid && id) {
       fetchEvent()
     }
@@ -35,10 +45,14 @@ const EventDetails = () => {
 
   const fetchEvent = async (): Promise<void> => {
     try {
-      const docRef = doc(db, `users/${uid}/events-history/${id}`)
+      const docRef = doc(db, getEventDocumentPath(uid ?? '', id ?? ''))
       const docSnap = await getDoc(docRef)
 
-      if (!docSnap.exists()) return
+      if (!docSnap.exists()) {
+        setEvent(null)
+        setPeople([])
+        return
+      }
 
       const eventData = {
         id: docSnap.id,
@@ -49,11 +63,11 @@ const EventDetails = () => {
 
       if (eventData.personIds && eventData.personIds.length > 0) {
         const personPromises = eventData.personIds.map(async (personId) => {
-          const personRef = doc(db, `users/${uid}/people-directory`, personId)
+          const personRef = doc(db, getPersonDocumentPath(uid ?? '', personId))
           const personSnap = await getDoc(personRef)
 
           if (personSnap.exists()) {
-            return { id: personSnap.id, ...personSnap.data() } as Person
+            return hydratePerson(personSnap.id, personSnap.data())
           }
 
           return null
@@ -72,8 +86,11 @@ const EventDetails = () => {
   const handleRatingChange = async (value: number) => {
     const newRating = currentRating === value ? 0 : value
     setCurrentRating(newRating)
+    setEvent(previousEvent => previousEvent
+      ? { ...previousEvent, rating: newRating }
+      : previousEvent)
 
-    await updateDoc(doc(db, `users/${uid}/events-history/${id}`), {
+    await updateDoc(doc(db, getEventDocumentPath(uid ?? '', id ?? '')), {
       rating: newRating,
     })
   }
@@ -144,6 +161,14 @@ const EventDetails = () => {
     return <div className={styles.loading}>Carregando as informações do evento...</div>
   }
 
+  const dateRange = formatDateRange(
+    event.startDate,
+    event.endDate,
+  )
+  const timeRange = event.allDay
+    ? 'Dia inteiro'
+    : formatTimeRange(event.startTime, event.endTime)
+
   return (
     <ProtectedRoute>
       <main className={styles.page}>
@@ -152,13 +177,22 @@ const EventDetails = () => {
             <p className={styles.eyebrow}>Evento</p>
             <h1 className={styles.title}>{event.title}</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className={styles.backButton}
-          >
-            Voltar
-          </button>
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(true)}
+              className={styles.editButton}
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className={styles.backButton}
+            >
+              Voltar
+            </button>
+          </div>
         </header>
 
         <div className={styles.layout}>
@@ -170,12 +204,17 @@ const EventDetails = () => {
               <dl className={styles.definitionList}>
                 <div className={styles.definitionRow}>
                   <dt className={styles.term}>Data</dt>
-                  <dd className={styles.value}>{event.startDate}</dd>
+                  <dd className={styles.value}>
+                    {dateRange.start}
+                    {dateRange.end && ` → ${dateRange.end}`}
+                  </dd>
                 </div>
-                <div className={styles.definitionRow}>
-                  <dt className={styles.term}>Hora</dt>
-                  <dd className={styles.value}>{event.startTime || 'Dia inteiro'}</dd>
-                </div>
+                {timeRange && (
+                  <div className={styles.definitionRow}>
+                    <dt className={styles.term}>Horário</dt>
+                    <dd className={styles.value}>{timeRange}</dd>
+                  </div>
+                )}
                 {event.location && (
                   <div className={styles.definitionRow}>
                     <dt className={styles.term}>Local</dt>
@@ -263,6 +302,12 @@ const EventDetails = () => {
           </aside>
         </div>
       </main>
+      <EditEventModal
+        event={event}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onUpdated={fetchEvent}
+      />
     </ProtectedRoute>
   )
 }

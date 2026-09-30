@@ -8,7 +8,19 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:auth": "node --test app/utils/authProfile.test.mjs",
+    "test:automation": "node --test app/utils/actionProjection.test.mjs app/utils/weather.test.mjs",
+    "test:events": "node --test app/utils/eventPayload.test.mjs app/events-history/editorEntryPointsContract.test.mjs",
+    "test:filters": "node --test app/events-history/utils/eventFilters.test.mjs",
+    "test:colors": "node --test app/utils/entityColors.test.mjs",
+    "test:dates": "node --test app/utils/datePresentation.test.mjs app/utils/birthday.test.mjs",
+    "test:titles": "node --test app/hooks/usePageTitle.test.mjs",
+    "test:settings": "node --test app/utils/selectableStringSetting.test.mjs",
+    "test:people": "node --test app/utils/personPayload.test.mjs app/utils/birthday.test.mjs app/utils/googleContactsBirthday.test.mjs app/people-directory/birthdayUsageContract.test.mjs app/people-directory/peopleEditingContract.test.mjs app/people-directory/personCardVisualContract.test.mjs app/people-directory/personDetailsVisualContract.test.mjs",
+    "test:drafts": "node --test app/utils/creationDraftLifecycle.test.mjs app/utils/editorDraftStorage.test.mjs",
+    "test:theme": "node --test app/utils/theme.test.mjs",
+    "test:task-visual": "node --test app/tasks-list/components/taskVisualContract.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

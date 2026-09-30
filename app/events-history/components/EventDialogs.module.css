@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgb(24 28 31 / 0.28);
+  background: var(--color-overlay);
 }
 
 .dialog {
@@ -69,10 +69,42 @@
   font-size: 0.875rem;
 }
 
+.dateControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.clearDateButton {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.clearDateButton:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.clearDateIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
 .input:focus-visible,
 .switch:focus-visible,
 .starButton:focus-visible,
 .choice:focus-visible,
+.clearDateButton:focus-visible,
 .textButton:focus-visible,
 .secondaryButton:focus-visible,
 .dangerButton:focus-visible,
@@ -125,7 +157,7 @@
   width: 0.95rem;
   height: 0.95rem;
   border-radius: 50%;
-  background: #fff;
+  background: var(--color-control-thumb);
   box-shadow: var(--shadow-sm);
   transform: translateX(0);
   transition: transform var(--duration-fast) ease;
@@ -198,12 +230,33 @@
   gap: var(--space-2);
 }
 
+.choiceWithColor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.colorInput {
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.colorInput:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
 .choice {
   min-height: 1.9rem;
   padding: 0 var(--space-2);
-  border: 1px solid var(--color-border);
+  border: 1px solid color-mix(in srgb, var(--entity-color, var(--color-border-strong)) 42%, var(--color-border));
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: color-mix(in srgb, var(--entity-color, var(--color-border-strong)) 8%, var(--color-surface));
   color: var(--color-text-secondary);
   font: inherit;
   font-size: 0.75rem;
@@ -216,9 +269,9 @@
 }
 
 .choiceSelected {
-  border-color: var(--color-events);
-  background: var(--color-events-soft);
-  color: var(--color-events-strong);
+  border-color: color-mix(in srgb, var(--entity-color, var(--color-border-strong)) 62%, var(--color-border));
+  background: color-mix(in srgb, var(--entity-color, var(--color-border-strong)) 14%, var(--color-surface-elevated));
+  color: var(--color-text-primary);
 }
 
 .empty {

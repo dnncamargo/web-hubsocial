@@ -27,6 +27,9 @@ export interface ActionProjectionItem {
   sourceId: string
   title: string
   completed: boolean
+  completedToday?: boolean
+  inProgress?: boolean
+  categories?: string[]
   automation: AutomationEvaluation
   date?: string
   time?: string

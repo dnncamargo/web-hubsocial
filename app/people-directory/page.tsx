@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import { ListFilter, Search, UserPlus, X } from 'lucide-react';
 import { db } from '../utils/firebaseConfig';
@@ -8,12 +8,19 @@ import { useAuth } from '../components/auth/AuthProvider';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useSearchParams } from 'react-router';
 import { Person } from '../utils/interfaces';
+import { parseBirthday } from '../utils/birthday';
+import { getPersonDocumentPath, hydratePerson } from '../utils/personPayload';
 import { usePersonRelationships } from '../hooks/usePersonRelationships';
+import { usePageTitle } from '../hooks/usePageTitle';
 import PersonCard from './components/PersonCard';
 import AddPersonModal from './components/AddPersonModal';
 import EditPersonModal from './components/EditPersonModal';
 import FilterPersonModal, { PersonFilter } from './components/FilterPersonModal';
 import styles from './PeopleDirectory.module.css';
+import {
+  initialCreationDraftLifecycleState,
+  reduceCreationDraftLifecycle,
+} from '../utils/creationDraftLifecycle';
 
 const defaultFilters: PersonFilter = {
   enabled: true,
@@ -29,10 +36,14 @@ const defaultFilters: PersonFilter = {
 
 const PeopleDirectory = () => {
   const { uid } = useAuth();
+  usePageTitle('Pessoas');
   const [searchParams, setSearchParams] = useSearchParams();
   const [people, setPeople] = useState<Person[]>([]);
+  const [addPersonDraft, dispatchAddPersonDraft] = useReducer(
+    reduceCreationDraftLifecycle,
+    initialCreationDraftLifecycleState,
+  );
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
-  const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
   const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
@@ -40,17 +51,16 @@ const PeopleDirectory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const { availableRelationships } = usePersonRelationships();
+  const { availableRelationships, relationshipColors } = usePersonRelationships();
 
   const fetchPeople = async (): Promise<void> => {
     if (!uid) return;
 
     try {
       const querySnapshot = await getDocs(collection(db, `users/${uid}/people-directory`));
-      const peopleData = querySnapshot.docs.map((personDocument) => ({
-        id: personDocument.id,
-        ...personDocument.data(),
-      })) as Person[];
+      const peopleData = querySnapshot.docs.map((personDocument) =>
+        hydratePerson(personDocument.id, personDocument.data())
+      );
 
       peopleData.sort((left, right) => {
         const favoriteDifference = Number(right.favorite) - Number(left.favorite);
@@ -71,11 +81,23 @@ const PeopleDirectory = () => {
   useEffect(() => {
     if (searchParams.get('create') !== 'person') return;
 
-    setIsAddPersonModalOpen(true);
+    dispatchAddPersonDraft({ type: 'open' });
     const nextSearchParams = new URLSearchParams(searchParams);
     nextSearchParams.delete('create');
     setSearchParams(nextSearchParams, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  const openAddPersonModal = () => {
+    dispatchAddPersonDraft({ type: 'open' });
+  };
+
+  const dismissAddPersonModal = () => {
+    dispatchAddPersonDraft({ type: 'dismiss' });
+  };
+
+  const discardAddPersonDraft = () => {
+    dispatchAddPersonDraft({ type: 'discard' });
+  };
 
   useEffect(() => {
     const loadFilters = async () => {
@@ -116,22 +138,17 @@ const PeopleDirectory = () => {
     }));
   }, [availableRelationships]);
 
-  const openEditPersonModal = (person: Person) => {
-    setSelectedPerson(person);
-    setIsEditPersonModalOpen(true);
-  };
-
-  const handlePersonDeleted = () => {
-    setSelectedPerson(null);
-    void fetchPeople();
-  };
-
   const toggleFavorite = async (personId: string, currentValue: boolean) => {
     if (!uid) return;
 
-    const personReference = doc(db, `users/${uid}/people-directory`, personId);
+    const personReference = doc(db, getPersonDocumentPath(uid, personId));
     await updateDoc(personReference, { favorite: !currentValue });
     await fetchPeople();
+  };
+
+  const openEditPersonModal = (person: Person): void => {
+    setSelectedPerson(person);
+    setIsEditPersonModalOpen(true);
   };
 
   const filteredPeople = (!filters.enabled || !filtersLoaded)
@@ -139,7 +156,7 @@ const PeopleDirectory = () => {
     : people.filter((person) => {
       const matchesPhone = !filters.hasPhone || !!person.phone;
       const matchesEmail = !filters.hasEmail || !!person.email;
-      const matchesBirthday = !filters.hasBirthday || !!person.birthday;
+      const matchesBirthday = !filters.hasBirthday || !!parseBirthday(person.birthday);
       const matchesFavorite = !filters.isFavorite || !!person.favorite;
       const matchesFrequency = !filters.hasContactFrequency || !!person.contactFrequency;
       const matchesRelationship =
@@ -205,7 +222,7 @@ const PeopleDirectory = () => {
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={() => setIsAddPersonModalOpen(true)}
+              onClick={openAddPersonModal}
             >
               <UserPlus className={styles.buttonIcon} aria-hidden="true" />
               Nova pessoa
@@ -234,8 +251,9 @@ const PeopleDirectory = () => {
               <div key={person.id}>
                 <PersonCard
                   person={person}
-                  onEditPerson={openEditPersonModal}
                   onToggleFavorite={toggleFavorite}
+                  onEditPerson={openEditPersonModal}
+                  relationshipColors={relationshipColors}
                 />
               </div>
             ))}
@@ -299,11 +317,14 @@ const PeopleDirectory = () => {
           </div>
         )}
 
-        {isAddPersonModalOpen && (
+        {addPersonDraft.hasMounted && (
           <AddPersonModal
-            onClose={() => setIsAddPersonModalOpen(false)}
+            key={addPersonDraft.revision}
+            onDismiss={dismissAddPersonModal}
+            onCancel={dismissAddPersonModal}
+            onSaved={discardAddPersonDraft}
             onAdded={fetchPeople}
-            isOpen={isAddPersonModalOpen}
+            isOpen={addPersonDraft.isOpen}
           />
         )}
 
@@ -313,9 +334,13 @@ const PeopleDirectory = () => {
             isOpen={isEditPersonModalOpen}
             onClose={() => setIsEditPersonModalOpen(false)}
             onUpdated={fetchPeople}
-            onDeleted={handlePersonDeleted}
+            onDeleted={async () => {
+              await fetchPeople();
+              setSelectedPerson(null);
+            }}
           />
         )}
+
       </main>
     </ProtectedRoute>
   );

@@ -7,16 +7,23 @@ import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { useOptionalFields } from '../../hooks/useOptionalFields';
 import { usePersonRelationships } from '../../hooks/usePersonRelationships';
 import { usePersonForm } from '../../hooks/usePersonForm';
+import { useLocalEditorDraft } from '../../hooks/useLocalEditorDraft';
+import {
+  isPersonEditorDraft,
+  type PersonEditorDraft,
+} from '../../utils/editorDraftStorage';
 import PersonEditorFields from './PersonEditorFields';
 import styles from './PersonEditor.module.css';
 
 interface AddPersonModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  onAdded: () => void;
+  onDismiss: () => void;
+  onCancel: () => void;
+  onSaved: () => void;
+  onAdded: () => void | Promise<void>;
 }
 
-const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
+const AddPersonModal = ({ isOpen, onDismiss, onCancel, onSaved, onAdded }: AddPersonModalProps) => {
   const { uid } = useAuth();
   const [showMore, setShowMore] = useState(false);
   const [showOptionalFieldModal, setShowOptionalFieldModal] = useState(false);
@@ -35,9 +42,14 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
   } = optionalFieldsControl;
   const {
     availableRelationships,
+    relationshipColors,
     selectedRelationships,
+    setSelectedRelationships,
     toggleRelationship,
     handleAddRelationship,
+    removeRelationship,
+    setRelationshipColor,
+    error: relationshipError,
   } = personRelationshipsControl;
   const {
     name,
@@ -53,11 +65,56 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
     contactFrequency,
     setContactFrequency,
     error,
+    setError,
+    resetForm,
     createPerson,
   } = usePersonForm({
     uid: uid ?? '',
     optionalFieldsControl,
     personRelationshipsControl,
+  });
+
+  const closeNestedModals = () => {
+    setShowOptionalFieldModal(false);
+    setShowRelationshipsModal(false);
+  };
+
+  const editorDraft = useLocalEditorDraft<PersonEditorDraft>({
+    scope: {
+      uid,
+      entity: 'person',
+      operation: 'add',
+    },
+    isOpen,
+    isValid: isPersonEditorDraft,
+    getSnapshot: () => ({
+      name,
+      phone,
+      email,
+      birthday,
+      favorite,
+      contactFrequency,
+      relationships: selectedRelationships,
+      optionalFields,
+      showMore,
+    }),
+    restoreSnapshot: (draft) => {
+      setName(draft.name);
+      setPhone(draft.phone);
+      setEmail(draft.email);
+      setBirthday(draft.birthday);
+      setFavorite(draft.favorite);
+      setContactFrequency(draft.contactFrequency ?? null);
+      setSelectedRelationships(draft.relationships);
+      resetOptionalFields(draft.optionalFields);
+      setShowMore(draft.showMore);
+      setError(null);
+    },
+    resetState: () => {
+      resetForm();
+      setShowMore(false);
+      closeNestedModals();
+    },
   });
 
   useEffect(() => {
@@ -68,17 +125,35 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) resetOptionalFields();
-  }, [isOpen, resetOptionalFields]);
+  const handleDismiss = () => {
+    editorDraft.saveOnDismiss();
+    closeNestedModals();
+    onDismiss();
+  };
+
+  const handleCancel = () => {
+    editorDraft.saveOnDismiss();
+    closeNestedModals();
+    onCancel();
+  };
+
+  const handleClear = () => {
+    editorDraft.clearDraft();
+  };
+
+  const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    handleDismiss();
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const success = await createPerson();
     if (!success) return;
 
-    onAdded();
-    onClose();
+    editorDraft.consumeAfterSave();
+    await onAdded();
+    onSaved();
   };
 
   if (!isOpen || !uid) return null;
@@ -87,6 +162,7 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
     <ProtectedRoute>
       <motion.div
         className={styles.overlay}
+        onClick={handleBackdropClick}
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-person-title"
@@ -98,7 +174,7 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={onClose} className={styles.toolbarButton}>
+              <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
                 Cancelar
               </button>
               <h2 id="add-person-title" className={styles.toolbarTitle}>Nova pessoa</h2>
@@ -129,14 +205,24 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
               updateOptionalField={updateOptionalField}
               updateLabel={updateLabel}
               availableRelationships={availableRelationships}
+              relationshipColors={relationshipColors}
               selectedRelationships={selectedRelationships}
               toggleRelationship={toggleRelationship}
               handleAddRelationship={handleAddRelationship}
+              removeRelationship={removeRelationship}
+              relationshipError={relationshipError}
+              setRelationshipColor={setRelationshipColor}
               showOptionalFieldModal={showOptionalFieldModal}
               setShowOptionalFieldModal={setShowOptionalFieldModal}
               showRelationshipsModal={showRelationshipsModal}
               setShowRelationshipsModal={setShowRelationshipsModal}
             />
+
+            <div className={styles.draftActions}>
+              <button type="button" onClick={handleClear} className={styles.textAction}>
+                Limpar
+              </button>
+            </div>
 
             {error && <p className={styles.error} role="alert">{error}</p>}
           </div>

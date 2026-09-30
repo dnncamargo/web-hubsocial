@@ -1,20 +1,33 @@
 'use client';
 
-import { useState, useEffect, JSX } from 'react';
-import { getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
+import { useState, useEffect, useRef, JSX } from 'react';
+import { deleteField, getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
+import { useEventCategories } from '../hooks/useEventCategories';
 import { Event, Person, Task } from '../utils/interfaces';
+import { hydratePerson } from '../utils/personPayload';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
-import { AutomationRuleSet } from '../types/automation';
-import { AutomationEventContext, evaluateAutomation } from '../utils/automation';
-import { getCurrentBrowserWeather, getWeatherConditionLabel, WeatherSnapshot } from '../utils/weather';
+import {
+  WeatherSnapshot,
+  resolveWeatherWithinDeadline,
+} from '../utils/weather';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
+import {
+  hasWeatherRules,
+  PlannedActionSource,
+  projectActionSources,
+} from '../utils/actionProjection';
+import {
+  getTaskActionCandidates,
+  TaskScheduleEventContext,
+} from '../utils/taskSchedule';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { ArrowUpRight, CalendarDays, Check, MapPin, Star, UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
+import { usePageTitle } from '../hooks/usePageTitle'
+import { formatDateTime } from '../utils/datePresentation'
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
 import styles from './Dashboard.module.css'
@@ -28,11 +41,6 @@ type GroupedEvents = {
   future: Event[]
 }
 
-type PlannedActionSource = {
-  item: Omit<ActionProjectionItem, 'automation'>
-  automation?: AutomationRuleSet
-}
-
 /**
  * @component
  * @description Componente principal da página inicial, exibindo os próximos eventos e permitindo adicionar novos eventos.
@@ -40,6 +48,8 @@ type PlannedActionSource = {
  */
 export default function Dashboard(): JSX.Element {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
+  usePageTitle('Hoje')
+  const { categoryColors } = useEventCategories();
   const [person, setPerson] = useState<Person[]>([]); /** @state {Person[]} person - Array de pessoas buscadas do Firestore. */
   const [events, setEvents] = useState<GroupedEvents>({
     today: [],
@@ -54,16 +64,28 @@ export default function Dashboard(): JSX.Element {
     week: [],
     month: [],
   });
-  const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const [pendingActionKeys, setPendingActionKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const pendingActionKeysRef = useRef(new Set<string>());
+  const actionRequestIdRef = useRef(0);
+  const isMountedRef = useRef(false);
   const [showSuggestions, setShowSuggestions] = useState(false); /** @state {boolean} showSuggestions - Controla a visibilidade do painel de sugestões de eventos. */
 
   useEffect(() => {
+    isMountedRef.current = true
+
     // Chama as funções fetchPerson e fetchAndGroupEvents quando o componente é montado.
     // Isso garante que a lista de pessoas e eventos seja carregada assim que o componente for exibido.
     if (uid) {
       fetchAndGroupEvents()
       fetchPlannedActions()
       fetchPerson();
+    }
+
+    return () => {
+      isMountedRef.current = false
+      actionRequestIdRef.current += 1
     }
   }, [uid]); // <- Executa quando user estiver pronto
 
@@ -75,102 +97,88 @@ export default function Dashboard(): JSX.Element {
   */
   const fetchPerson = async (): Promise<void> => {
     const querySnapshot = await getDocs(collection(db, `users/${uid}/people-directory`));
-    const personData = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Person[];
+    const personData = querySnapshot.docs.map(doc => hydratePerson(doc.id, doc.data()));
     setPerson(personData);
   };
 
-  const fetchPlannedActions = async (): Promise<void> => {
+  const fetchPlannedActions = async (
+    weatherOverride?: WeatherSnapshot | null,
+  ): Promise<void> => {
     if (!uid) return
 
+    const requestId = ++actionRequestIdRef.current
+    const canCommit = () =>
+      isMountedRef.current && actionRequestIdRef.current === requestId
     const referenceDate = new Date()
-    const periods = getActionPeriodKeys(referenceDate)
     const horizons: ActionHorizon[] = ['day', 'week', 'month']
-
-    const sourcesByHorizon = await Promise.all(
-      horizons.map(async (horizon) => {
-        const [eventSnapshot, taskSnapshot] = await Promise.all([
-          getDocs(
+    const [eventSourcesByHorizon, taskSnapshot] = await Promise.all([
+      Promise.all(
+        horizons.map(async (horizon) => {
+          const periods = getActionPeriodKeys(referenceDate)
+          const eventSnapshot = await getDocs(
             query(
               collection(db, `users/${uid}/events-history`),
               where(`actionPlanning.${horizon}`, '==', periods[horizon]),
             ),
-          ),
-          getDocs(
-            query(
-              collection(db, `users/${uid}/tasks-list`),
-              where(`actionPlanning.${horizon}`, '==', periods[horizon]),
-            ),
-          ),
-        ])
+          )
 
-        const eventActions: PlannedActionSource[] = eventSnapshot.docs.map((snapshot) => {
-          const event = { id: snapshot.id, ...snapshot.data() } as Event
-          return {
-            item: {
-              key: `event:${event.id}`,
-              sourceType: 'event',
-              sourceId: event.id,
-              title: event.title,
-              completed: event.status === 1,
-              date: event.startDate,
-              ...(event.startTime ? { time: event.startTime } : {}),
-            },
-            automation: event.automation,
-          }
-        })
+          const eventActions: PlannedActionSource[] = eventSnapshot.docs.map((snapshot) => {
+            const event = { id: snapshot.id, ...snapshot.data() } as Event
+            return {
+              item: {
+                key: `event:${event.id}`,
+                sourceType: 'event',
+                sourceId: event.id,
+                title: event.title,
+                completed: event.status === 1,
+                date: event.startDate,
+                categories: event.categories,
+                ...(event.startTime ? { time: event.startTime } : {}),
+              },
+              automation: event.automation,
+            }
+          })
 
-        const taskActions: PlannedActionSource[] = taskSnapshot.docs.map((snapshot) => {
-          const task = { id: snapshot.id, ...snapshot.data() } as Task
-          return {
-            item: {
-              key: `task:${task.id}`,
-              sourceType: 'task',
-              sourceId: task.id,
-              title: task.content,
-              completed: task.status === 2,
-            },
-            automation: task.automation,
-          }
-        })
-
-        return [horizon, [...eventActions, ...taskActions]] as const
-      }),
-    )
-
-    const needsWeather = sourcesByHorizon.some(([, sources]) =>
-      sources.some((source) =>
-        source.automation?.rules.some((rule) => rule.type === 'weather'),
+          return [horizon, eventActions] as const
+        }),
       ),
-    )
+      getDocs(collection(db, `users/${uid}/tasks-list`)),
+    ])
 
-    let currentWeather: WeatherSnapshot | null = null
+    const tasks = taskSnapshot.docs.map(snapshot => ({
+      id: snapshot.id,
+      ...snapshot.data(),
+    }) as Task)
 
-    if (needsWeather) {
-      try {
-        currentWeather = await getCurrentBrowserWeather()
-      } catch (error) {
-        console.warn('Contexto de clima indisponível para automação:', error)
-      }
-    }
-
-    setWeather(currentWeather)
+    if (!canCommit()) return
 
     const referencedEventIds = new Set<string>()
-
-    for (const [, sources] of sourcesByHorizon) {
-      for (const source of sources) {
-        for (const rule of source.automation?.rules ?? []) {
-          if (rule.type === 'upcomingEvent') {
-            referencedEventIds.add(rule.eventId)
-          }
+    const collectEventReferences = (source: PlannedActionSource) => {
+      for (const rule of source.automation?.rules ?? []) {
+        if (rule.type === 'upcomingEvent') {
+          referencedEventIds.add(rule.eventId)
         }
       }
     }
 
-    const linkedEvents = (
+    for (const [, sources] of eventSourcesByHorizon) {
+      sources.forEach(collectEventReferences)
+    }
+
+    for (const task of tasks) {
+      if (task.schedule?.type === 'eventRelative' && task.schedule.eventId) {
+        referencedEventIds.add(task.schedule.eventId)
+      }
+      collectEventReferences({ item: {
+        key: `task:${task.id}`,
+        sourceType: 'task',
+        sourceId: task.id,
+        title: task.content,
+        completed: task.status === 2,
+      }, automation: task.automation })
+    }
+
+    const linkedEvents: TaskScheduleEventContext[] = (
       await Promise.all(
         Array.from(referencedEventIds).map(async (eventId) => {
           const snapshot = await getDoc(
@@ -183,37 +191,64 @@ export default function Dashboard(): JSX.Element {
           return {
             id: snapshot.id,
             startDate: event.startDate,
-          } satisfies AutomationEventContext
+          }
         }),
       )
-    ).filter((event): event is AutomationEventContext => event !== null)
+    ).filter((event): event is TaskScheduleEventContext => event !== null)
 
-    const entries = sourcesByHorizon.map(([horizon, sources]) => {
-      const items: ActionProjectionItem[] = sources
-        .map(({ item, automation }) => ({
-          ...item,
-          automation: evaluateAutomation(automation, {
-            referenceDate,
-            events: linkedEvents,
-            ...(currentWeather
-              ? { weather: { condition: currentWeather.condition } }
-              : {}),
-          }),
-        }))
-        .sort((a, b) => {
-          if (a.automation.highlighted !== b.automation.highlighted) {
-            return a.automation.highlighted ? -1 : 1
-          }
+    if (!canCommit()) return
 
-          const timeOrder = (a.time ?? '99:99').localeCompare(b.time ?? '99:99')
-          return timeOrder !== 0 ? timeOrder : a.title.localeCompare(b.title, 'pt-BR')
+    const taskSourcesByHorizon: Record<ActionHorizon, PlannedActionSource[]> = {
+      day: [],
+      week: [],
+      month: [],
+    }
+
+    for (const task of tasks) {
+      const candidates = getTaskActionCandidates(task, referenceDate, linkedEvents)
+
+      for (const candidate of candidates) {
+        taskSourcesByHorizon[candidate.horizon].push({
+          item: {
+            key: `task:${task.id}`,
+            sourceType: 'task',
+            sourceId: task.id,
+            title: task.content,
+            completed: task.status === 2 || candidate.completedToday === true,
+            completedToday: candidate.completedToday,
+            inProgress: task.status === 1,
+            ...(candidate.date ? { date: candidate.date } : {}),
+          },
+          automation: task.automation,
         })
+      }
+    }
 
-      return [horizon, items] as const
-    })
+    const sourcesByHorizon = eventSourcesByHorizon.map(([horizon, sources]) => (
+      [horizon, [...sources, ...taskSourcesByHorizon[horizon]]] as const
+    ))
+    const projectionContext = {
+      referenceDate,
+      events: linkedEvents,
+    }
 
-    setActions(Object.fromEntries(entries) as ActionProjection)
-  };
+    setActions(projectActionSources(sourcesByHorizon, projectionContext))
+
+    if (!hasWeatherRules(sourcesByHorizon)) return
+
+    const currentWeather = weatherOverride === undefined
+      ? await resolveWeatherWithinDeadline()
+      : weatherOverride
+
+    if (!canCommit()) return
+
+    setActions(projectActionSources(sourcesByHorizon, {
+      ...projectionContext,
+      ...(currentWeather
+        ? { weatherCondition: currentWeather.condition }
+        : {}),
+    }))
+  }
 
   /**
    * @async
@@ -223,7 +258,6 @@ export default function Dashboard(): JSX.Element {
    */
   const fetchAndGroupEvents = async (): Promise<void> => {
     const today = new Date()
-    console.log('today', today)
     const q = query(
       collection(db, `users/${uid}/events-history`),
       where('startDate', '>=', format(today, 'yyyy-MM-dd')),
@@ -313,6 +347,42 @@ export default function Dashboard(): JSX.Element {
     }
   };
 
+  const handleCompleteAction = async (item: ActionProjectionItem): Promise<void> => {
+    if (!uid || (item.completed && !item.completedToday)) return
+    if (pendingActionKeysRef.current.has(item.key)) return
+
+    pendingActionKeysRef.current.add(item.key)
+    setPendingActionKeys(previous => {
+      const next = new Set(previous)
+      next.add(item.key)
+      return next
+    })
+
+    try {
+      if (item.sourceType === 'event') {
+        await handleToggleEventStatus(item.sourceId, 1)
+        return
+      }
+
+      await updateDoc(
+        doc(db, `users/${uid}/tasks-list`, item.sourceId),
+        item.completedToday
+          ? { lastActionCompletedDate: deleteField() }
+          : { lastActionCompletedDate: format(new Date(), 'yyyy-MM-dd') },
+      )
+      await fetchPlannedActions()
+    } catch (error) {
+      console.error('Erro ao concluir ação do dia:', error)
+    } finally {
+      pendingActionKeysRef.current.delete(item.key)
+      setPendingActionKeys(previous => {
+        const next = new Set(previous)
+        next.delete(item.key)
+        return next
+      })
+    }
+  }
+
   const totalUpcomingEvents = Object.values(events).flat().length
   const nearestEvents = Object.values(events).flat().slice(0, 3)
 
@@ -321,6 +391,9 @@ export default function Dashboard(): JSX.Element {
       <main className={styles.page}>
         <ActionsOverview
           actions={actions}
+          onCompleteAction={handleCompleteAction}
+          pendingActionKeys={pendingActionKeys}
+          categoryColors={categoryColors}
           context={(
             <section className={styles.contextPanel} aria-labelledby="context-title">
               <header className={styles.contextHeader}>
@@ -344,16 +417,6 @@ export default function Dashboard(): JSX.Element {
                 </div>
               </header>
 
-              {weather && (
-                <div className={styles.weatherContext}>
-                  <span>{getWeatherConditionLabel(weather.condition)} · {Math.round(weather.temperatureC)}°C</span>
-                  <span className={styles.weatherAttribution}>
-                    Clima por{' '}
-                    <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
-                  </span>
-                </div>
-              )}
-
               <div className={styles.contextEvents}>
                 <div className={styles.contextEventsHeading}>
                   <h3 className={styles.contextSectionTitle}>Próximos eventos</h3>
@@ -371,8 +434,7 @@ export default function Dashboard(): JSX.Element {
                           <div className={styles.contextEventBody}>
                             <span className={styles.contextEventDate}>
                               <CalendarDays className={styles.contextEventIcon} aria-hidden="true" />
-                              {format(parseISO(event.startDate), "EEE, d MMM", { locale: ptBR })}
-                              {event.startTime ? ` · ${event.startTime}` : ''}
+                              {formatDateTime(event.startDate, event.startTime)}
                             </span>
                             <h4 className={styles.contextEventTitle}>{event.title}</h4>
                             {(associatedPerson || event.location) && (

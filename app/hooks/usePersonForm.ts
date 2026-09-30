@@ -1,10 +1,12 @@
 // hooks/usePersonForm.ts
 import { Person } from '../utils/interfaces'
+import { buildPersonPayload, getPersonDocumentPath, validatePersonName } from '../utils/personPayload'
 import { useState, useEffect } from 'react';
 import { db } from '../utils/firebaseConfig';
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { useOptionalFields } from './useOptionalFields';
 import { usePersonRelationships } from './usePersonRelationships';
+import { validateBirthday } from '../utils/birthday';
 
 interface UsePersonFormProps {
     uid: string;
@@ -40,7 +42,9 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
         }
     }, [name]);
 
-    useEffect(() => {
+    function resetForm() {
+        setError(null);
+
         if (person) {
             setName(person.name || '');
             setEmail(person.email || '');
@@ -48,13 +52,25 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
             setBirthday(person.birthday || '');
             setFavorite(person.favorite || false);
             setContactFrequency(person.contactFrequency || null);
-
             personRelationshipsControl.setSelectedRelationships(person.relationships || []);
-
             optionalFieldsControl.resetOptionalFields(
                 Array.isArray(person.optionalFields) ? person.optionalFields : []
             );
+            return;
         }
+
+        setName('');
+        setEmail('');
+        setPhone('');
+        setBirthday('');
+        setFavorite(false);
+        setContactFrequency(null);
+        personRelationshipsControl.setSelectedRelationships([]);
+        optionalFieldsControl.resetOptionalFields([]);
+    }
+
+    useEffect(() => {
+        resetForm();
     }, [person]);
 
     /**
@@ -63,24 +79,10 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
        * @returns {string | null} Uma string contendo a mensagem de erro se a validação falhar, ou `null` se a validação for bem-sucedida.
        */
     function validatePerson(): string | null {
-        if (name.length === 0) return "Nome da Pessoa é obrigatório.";
+        if (!validatePersonName(name)) return "Nome da Pessoa é obrigatório.";
+        const birthdayError = validateBirthday(birthday);
+        if (birthdayError) return birthdayError;
         return null;
-    }
-
-    function formatPerson(): any {
-        const base = {
-            name: name.trim(),
-            email,
-            phone,
-            birthday,
-            favorite,
-            contactFrequency,
-            optionalFields,
-            relationships: selectedRelationships.length > 0 ? selectedRelationships : null,
-            createdAt: person?.createdAt || new Date(),
-        }
-
-        return base
     }
 
     async function createPerson() {
@@ -91,7 +93,16 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
         }
 
         try {
-            const personRef = formatPerson();
+            const personRef = buildPersonPayload({
+                name,
+                email,
+                phone,
+                birthday,
+                favorite,
+                contactFrequency,
+                optionalFields,
+                relationships: selectedRelationships,
+            });
             await addDoc(collection(db, `users/${uid}/people-directory`), personRef);
 
             resetOptionalFields();
@@ -111,10 +122,24 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
             setError(error);
             return false;
         }
+        if (!person?.id) {
+            setError('Não foi possível identificar a pessoa para atualizar.');
+            return false;
+        }
 
         try {
-            const personRef = formatPerson();
-            await updateDoc(doc(db, `users/${uid}/people-directory/${person?.id}`), { ...personRef });
+            const personRef = buildPersonPayload({
+                name,
+                email,
+                phone,
+                birthday,
+                favorite,
+                contactFrequency,
+                optionalFields,
+                relationships: selectedRelationships,
+                createdAt: person?.createdAt,
+            });
+            await updateDoc(doc(db, getPersonDocumentPath(uid, person.id)), personRef);
             resetOptionalFields();
             return true;
 
@@ -133,6 +158,7 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
         favorite, setFavorite,
         contactFrequency, setContactFrequency,
         error, setError,
+        resetForm,
         createPerson,
         updatePerson
     }

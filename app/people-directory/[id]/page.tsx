@@ -1,15 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useNavigate, useParams } from 'react-router';
 import AddEventModal from '../../events-history/components/AddEventModal';
+import EditPersonModal from '../components/EditPersonModal';
 import { useAuth } from '../../components/auth/AuthProvider';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { Event, Person } from '../../utils/interfaces';
 import { OptionalField } from '../../types/optionalFields';
+import { usePersonRelationships } from '../../hooks/usePersonRelationships';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { db } from '../../utils/firebaseConfig';
+import { formatBirthday } from '../../utils/birthday';
+import { getPersonDocumentPath, hydratePerson } from '../../utils/personPayload';
+import { formatDateRange } from '../../utils/services';
+import { formatTimeRange } from '../../utils/datePresentation';
+import detailStyles from '../../events-history/[id]/EventDetails.module.css';
 import styles from '../PersonDetails.module.css';
+import {
+  initialCreationDraftLifecycleState,
+  reduceCreationDraftLifecycle,
+} from '../../utils/creationDraftLifecycle';
 
 const contactFrequencyLabels: Record<NonNullable<Person['contactFrequency']>, string> = {
   weekly: 'Semanal',
@@ -24,19 +36,44 @@ const PersonDetails = () => {
   const navigate = useNavigate();
   const [person, setPerson] = useState<Person | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
-  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
+  const [addEventDraft, dispatchAddEventDraft] = useReducer(
+    reduceCreationDraftLifecycle,
+    initialCreationDraftLifecycleState,
+  );
+  const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { relationshipColors } = usePersonRelationships();
+  usePageTitle('Pessoa', person?.id === personId ? person?.name : undefined);
+
+  const openAddEventModal = () => {
+    dispatchAddEventDraft({ type: 'open' });
+  };
+
+  const dismissAddEventModal = () => {
+    dispatchAddEventDraft({ type: 'dismiss' });
+  };
+
+  const discardAddEventDraft = () => {
+    dispatchAddEventDraft({ type: 'discard' });
+  };
 
   const fetchPerson = async () => {
     if (!uid || !personId) return;
 
     try {
-      const personReference = doc(db, `users/${uid}/people-directory/${personId}`);
+      setIsLoading(true);
+      const personReference = doc(db, getPersonDocumentPath(uid, personId));
       const snapshot = await getDoc(personReference);
       if (snapshot.exists()) {
-        setPerson({ id: snapshot.id, ...snapshot.data() } as Person);
+        setPerson(hydratePerson(snapshot.id, snapshot.data()));
+      } else {
+        setPerson(null);
+        setEvents([]);
       }
     } catch (error) {
       console.error('Erro ao buscar pessoa:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -61,163 +98,259 @@ const PersonDetails = () => {
 
   useEffect(() => {
     if (!uid || !personId) return;
+    setPerson(null);
+    setEvents([]);
     void fetchPerson();
     void fetchEvents();
   }, [uid, personId]);
 
+  if (isLoading) {
+    return <p className={detailStyles.loading}>Carregando as informações da pessoa...</p>;
+  }
+
   if (!person) {
-    return <p className={styles.loading}>Carregando as informações da pessoa...</p>;
+    return (
+      <main className={detailStyles.page}>
+        <p className={styles.panelEmpty}>Pessoa não encontrada.</p>
+        <button
+          type="button"
+          onClick={() => navigate('/people-directory')}
+          className={detailStyles.backButton}
+        >
+          Voltar para pessoas
+        </button>
+      </main>
+    );
   }
 
   const relationships = person.relationships ?? [];
   const optionalFields = Array.isArray(person.optionalFields) ? person.optionalFields : [];
+  const formattedBirthday = formatBirthday(person.birthday);
 
   return (
     <ProtectedRoute>
-      <main className={styles.page}>
-        <header className={styles.header}>
-          <button type="button" onClick={() => navigate(-1)} className={styles.backButton}>
-            Voltar
-          </button>
-          <div className={styles.heading}>
-            <h1 className={styles.title}>{person.name}</h1>
-            <p className={styles.subtitle}>Registro de pessoa</p>
+      <main className={detailStyles.page}>
+        <header className={`${detailStyles.header} ${styles.header}`}>
+          <div className={detailStyles.heading}>
+            <p className={detailStyles.eyebrow}>Pessoa</p>
+            <h1 className={detailStyles.title}>{person.name}</h1>
+          </div>
+          <div className={detailStyles.headerActions}>
+            <button
+              type="button"
+              onClick={() => setIsEditPersonModalOpen(true)}
+              className={detailStyles.editButton}
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className={detailStyles.backButton}
+            >
+              Voltar
+            </button>
           </div>
         </header>
 
-        <section className={styles.section} aria-labelledby="person-contact-title">
-          <h2 id="person-contact-title" className={styles.sectionTitle}>Contato</h2>
-          <div>
-            {person.phone && (
-              <div className={styles.record}>
-                <span className={styles.label}>Telefone</span>
-                <span className={styles.value}>{person.phone}</span>
-              </div>
-            )}
-            {person.email && (
-              <div className={styles.record}>
-                <span className={styles.label}>E-mail</span>
-                <a className={`${styles.value} ${styles.link}`} href={`mailto:${person.email}`}>
-                  {person.email}
-                </a>
-              </div>
-            )}
-            {!person.phone && !person.email && <p className={styles.empty}>Nenhum contato principal registrado.</p>}
-          </div>
-        </section>
-
-        <section className={styles.section} aria-labelledby="person-context-title">
-          <h2 id="person-context-title" className={styles.sectionTitle}>Contexto</h2>
-          <div>
-            {person.birthday && (
-              <div className={styles.record}>
-                <span className={styles.label}>Aniversário</span>
-                <span className={styles.value}>{person.birthday}</span>
-              </div>
-            )}
-            {person.note && (
-              <div className={styles.record}>
-                <span className={styles.label}>Notas</span>
-                <span className={styles.value}>{person.note}</span>
-              </div>
-            )}
-            <div className={styles.record}>
-              <span className={styles.label}>Relacionamentos</span>
-              {relationships.length > 0 ? (
-                <div className={styles.tagList}>
-                  {relationships.map((relationship) => (
-                    <span key={relationship} className={styles.tag}>{relationship}</span>
-                  ))}
-                </div>
-              ) : (
-                <span className={styles.value}>Nenhum relacionamento registrado.</span>
-              )}
-            </div>
-            <div className={styles.record}>
-              <span className={styles.label}>Frequência de contato</span>
-              <span className={styles.value}>
-                {person.contactFrequency
-                  ? contactFrequencyLabels[person.contactFrequency]
-                  : 'Nenhuma frequência definida.'}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {optionalFields.length > 0 && (
-          <section className={styles.section} aria-labelledby="person-optional-title">
-            <h2 id="person-optional-title" className={styles.sectionTitle}>Informações adicionais</h2>
-            <div className={styles.optionalList}>
-              {optionalFields.map((field: OptionalField, index) => (
-                <div key={field.id || index} className={styles.record}>
-                  <span className={styles.label}>{field.label}</span>
-                  {field.type === 'text' && <span className={styles.value}>{field.value}</span>}
-                  {field.type === 'url' && (
-                    <a href={field.value} target="_blank" rel="noopener noreferrer" className={`${styles.value} ${styles.link}`}>
-                      {field.value}
-                    </a>
-                  )}
-                  {field.type === 'additionalPhone' && <span className={styles.value}>{field.value}</span>}
-                  {field.type === 'additionalEmail' && (
-                    <a href={`mailto:${field.value}`} className={`${styles.value} ${styles.link}`}>
-                      {field.value}
-                    </a>
-                  )}
-                  {field.type === 'address' && typeof field.value === 'object' && (
-                    <div className={styles.address}>
-                      {field.value.location && <span className={styles.value}>Localidade: {field.value.location}</span>}
-                      {field.value.zipcode && <span className={styles.value}>CEP: {field.value.zipcode}</span>}
-                      {field.value.address && <span className={styles.value}>Endereço: {field.value.address}</span>}
-                      {field.value.number && <span className={styles.value}>Número: {field.value.number}</span>}
-                      {field.value.district && <span className={styles.value}>Bairro: {field.value.district}</span>}
-                      {field.value.city && <span className={styles.value}>Cidade: {field.value.city}</span>}
-                      {field.value.state && <span className={styles.value}>Estado: {field.value.state}</span>}
+        <div className={detailStyles.layout}>
+          <div className={detailStyles.column}>
+            <section className={detailStyles.section} aria-labelledby="person-contact-title">
+              <header className={detailStyles.sectionHeader}>
+                <h2 id="person-contact-title" className={detailStyles.sectionTitle}>Contato</h2>
+              </header>
+              {person.phone || person.email ? (
+                <dl className={detailStyles.definitionList}>
+                  {person.phone && (
+                    <div className={detailStyles.definitionRow}>
+                      <dt className={detailStyles.term}>Telefone</dt>
+                      <dd className={detailStyles.value}>{person.phone}</dd>
                     </div>
                   )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+                  {person.email && (
+                    <div className={detailStyles.definitionRow}>
+                      <dt className={detailStyles.term}>E-mail</dt>
+                      <dd className={detailStyles.value}>
+                        <a className={styles.link} href={`mailto:${person.email}`}>
+                          {person.email}
+                        </a>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              ) : (
+                <p className={styles.panelEmpty}>Nenhum contato principal registrado.</p>
+              )}
+            </section>
 
-        <section className={styles.section} aria-labelledby="person-events-title">
-          <h2 id="person-events-title" className={styles.sectionTitle}>Eventos associados</h2>
-          {events.length > 0 ? (
-            <div className={styles.eventList}>
-              {events.map((event) => (
-                <div key={event.id} className={styles.eventItem}>
-                  <span className={styles.eventTitle}>{event.title}</span>
-                  <span className={styles.eventMeta}>
-                    {event.startDate} {event.startTime && `• ${event.startTime}`}
-                  </span>
+            <section className={detailStyles.section} aria-labelledby="person-context-title">
+              <header className={detailStyles.sectionHeader}>
+                <h2 id="person-context-title" className={detailStyles.sectionTitle}>Contexto</h2>
+              </header>
+              <dl className={detailStyles.definitionList}>
+                {formattedBirthday && (
+                  <div className={detailStyles.definitionRow}>
+                    <dt className={detailStyles.term}>Aniversário</dt>
+                    <dd className={detailStyles.value}>{formattedBirthday}</dd>
+                  </div>
+                )}
+                {person.note && (
+                  <div className={detailStyles.definitionRow}>
+                    <dt className={detailStyles.term}>Notas</dt>
+                    <dd className={detailStyles.value}>{person.note}</dd>
+                  </div>
+                )}
+                <div className={detailStyles.definitionRow}>
+                  <dt className={detailStyles.term}>Relacionamentos</dt>
+                  <dd className={detailStyles.value}>
+                    {relationships.length > 0 ? (
+                      <div className={styles.tagList}>
+                        {relationships.map((relationship) => (
+                          <span
+                            key={relationship}
+                            className={styles.tag}
+                            style={getEntityColorStyle(relationshipColors[relationship])}
+                          >
+                            {relationship}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      'Nenhum relacionamento registrado.'
+                    )}
+                  </dd>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.empty}>Nenhum evento associado.</p>
-          )}
-        </section>
+                <div className={detailStyles.definitionRow}>
+                  <dt className={detailStyles.term}>Frequência de contato</dt>
+                  <dd className={detailStyles.value}>
+                    {person.contactFrequency
+                      ? contactFrequencyLabels[person.contactFrequency]
+                      : 'Nenhuma frequência definida.'}
+                  </dd>
+                </div>
+              </dl>
+            </section>
 
-        <div className={styles.actionRow}>
-          <button type="button" onClick={() => setIsAddEventModalOpen(true)} className={styles.primaryButton}>
-            Adicionar evento
-          </button>
+            {optionalFields.length > 0 && (
+              <section className={detailStyles.section} aria-labelledby="person-optional-title">
+                <header className={detailStyles.sectionHeader}>
+                  <h2 id="person-optional-title" className={detailStyles.sectionTitle}>
+                    Informações adicionais
+                  </h2>
+                </header>
+                <dl className={detailStyles.definitionList}>
+                  {optionalFields.map((field: OptionalField, index) => (
+                    <div key={field.id || index} className={detailStyles.definitionRow}>
+                      <dt className={detailStyles.term}>{field.label}</dt>
+                      <dd className={detailStyles.value}>
+                        {renderOptionalFieldValue(field)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+          </div>
+
+          <aside className={detailStyles.column}>
+            <section className={detailStyles.section} aria-labelledby="person-events-title">
+              <header className={detailStyles.sectionHeader}>
+                <h2 id="person-events-title" className={detailStyles.sectionTitle}>
+                  Eventos associados
+                </h2>
+              </header>
+              {events.length > 0 ? (
+                <div className={detailStyles.optionalList}>
+                  {events.map((event) => {
+                    const dateRange = formatDateRange(event.startDate, event.endDate)
+                    const timeRange = formatTimeRange(event.startTime, event.endTime)
+
+                    return (
+                      <div key={event.id} className={detailStyles.optionalItem}>
+                        <p className={styles.eventTitle}>{event.title}</p>
+                        <p className={styles.eventMeta}>
+                          {dateRange.start}
+                          {dateRange.end && ` → ${dateRange.end}`}
+                          {timeRange && ` · ${timeRange}`}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className={styles.panelEmpty}>Nenhum evento associado.</p>
+              )}
+              <div className={detailStyles.actions}>
+                <button
+                  type="button"
+                  onClick={openAddEventModal}
+                  className={detailStyles.calendarButton}
+                >
+                  Adicionar evento
+                </button>
+              </div>
+            </section>
+          </aside>
         </div>
 
-        {isAddEventModalOpen && (
+        {addEventDraft.hasMounted && (
           <AddEventModal
-            isOpen={isAddEventModalOpen}
-            onClose={() => setIsAddEventModalOpen(false)}
-            onAdded={() => {
-              setIsAddEventModalOpen(false);
-              void fetchEvents();
-            }}
+            key={`${personId ?? 'unknown'}-${addEventDraft.revision}`}
+            isOpen={addEventDraft.isOpen}
+            onDismiss={dismissAddEventModal}
+            onCancel={dismissAddEventModal}
+            onSaved={discardAddEventDraft}
+            onAdded={() => { void fetchEvents(); }}
             initialPersonId={personId}
           />
         )}
+
+        <EditPersonModal
+          person={person}
+          isOpen={isEditPersonModalOpen}
+          onClose={() => setIsEditPersonModalOpen(false)}
+          onUpdated={fetchPerson}
+          onDeleted={async () => {
+            navigate('/people-directory');
+          }}
+        />
       </main>
     </ProtectedRoute>
   );
 };
 
 export default PersonDetails;
+
+function renderOptionalFieldValue(field: OptionalField) {
+  switch (field.type) {
+    case 'text':
+    case 'additionalPhone':
+      return <span>{field.value}</span>;
+    case 'additionalEmail':
+      return <a className={styles.link} href={`mailto:${field.value}`}>{field.value}</a>;
+    case 'url':
+      return (
+        <a href={field.value} target="_blank" rel="noopener noreferrer" className={styles.link}>
+          {field.value}
+        </a>
+      );
+    case 'address':
+      return typeof field.value === 'object' ? (
+        <div className={styles.address}>
+          {field.value.location && <span>Localidade: {field.value.location}</span>}
+          {field.value.zipcode && <span>CEP: {field.value.zipcode}</span>}
+          {field.value.address && <span>Endereço: {field.value.address}</span>}
+          {field.value.number && <span>Número: {field.value.number}</span>}
+          {field.value.district && <span>Bairro: {field.value.district}</span>}
+          {field.value.city && <span>Cidade: {field.value.city}</span>}
+          {field.value.state && <span>Estado: {field.value.state}</span>}
+        </div>
+      ) : null;
+    default:
+      return 'Valor não suportado';
+  }
+}
+
+function getEntityColorStyle(color: string | undefined): React.CSSProperties | undefined {
+  return color ? { '--entity-color': color } as React.CSSProperties : undefined;
+}

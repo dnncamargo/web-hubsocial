@@ -1,11 +1,17 @@
 import styles from './PersonDialogs.module.css';
+import { getEntityColor, type EntityColorMap } from '../../utils/entityColors';
+import RemoveSelectableValueButton from '../../components/ui/RemoveSelectableValueButton';
 
 type PeopleRelationshipsModalProps = {
   onClose: () => void;
   availableRelationships: string[];
   selectedRelationships: string[];
   toggleRelationship: (rel: string) => void;
-  handleAddRelationship: (relationship: string) => void;
+  handleAddRelationship: (relationship: string) => Promise<boolean>;
+  removeRelationship: (relationship: string) => Promise<boolean>;
+  error: string | null;
+  relationshipColors: EntityColorMap;
+  setRelationshipColor: (relationship: string, color: string) => Promise<void>;
 };
 
 export function PeopleRelationshipsModal({
@@ -14,6 +20,10 @@ export function PeopleRelationshipsModal({
   selectedRelationships,
   toggleRelationship,
   handleAddRelationship,
+  removeRelationship,
+  error,
+  relationshipColors,
+  setRelationshipColor,
 }: PeopleRelationshipsModalProps) {
   return (
     <div className={styles.overlay} role="presentation">
@@ -30,18 +40,33 @@ export function PeopleRelationshipsModal({
         <div className={styles.body}>
           <div className={styles.relationshipGrid}>
           {availableRelationships.map((rel) => (
-            <button
-              key={rel}
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                toggleRelationship(rel);
-              }}
-              aria-pressed={selectedRelationships.includes(rel)}
-              className={`${styles.relationshipChoice} ${selectedRelationships.includes(rel) ? styles.relationshipChoiceSelected : ''}`}
-            >
-              {rel}
-            </button>
+            <div key={rel} className={styles.choiceWithColor}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleRelationship(rel);
+                }}
+                aria-pressed={selectedRelationships.includes(rel)}
+                className={`${styles.relationshipChoice} ${selectedRelationships.includes(rel) ? styles.relationshipChoiceSelected : ''}`}
+                style={getEntityColorStyle(getEntityColor(relationshipColors, rel))}
+              >
+                {rel}
+              </button>
+              <input
+                type="color"
+                className={styles.colorInput}
+                value={relationshipColors[rel] ?? '#627662'}
+                onChange={(event) => void setRelationshipColor(rel, event.target.value)}
+                aria-label={`Cor do relacionamento ${rel}`}
+              />
+              <RemoveSelectableValueButton
+                value={rel}
+                entityLabel="relacionamento"
+                existingEntitiesLabel="Pessoas"
+                onRemove={() => removeRelationship(rel)}
+              />
+            </div>
           ))}
           </div>
 
@@ -50,14 +75,15 @@ export function PeopleRelationshipsModal({
             onClick={async () => {
               const newRel = prompt('Novo relacionamento:')?.trim();
               if (newRel) {
-                await handleAddRelationship(newRel);
-                toggleRelationship(newRel);
+                const added = await handleAddRelationship(newRel);
+                if (added) toggleRelationship(newRel);
               }
             }}
             className={styles.actionLink}
           >
             + Novo relacionamento
           </button>
+          {error && <p className={styles.error} role="alert">{error}</p>}
         </div>
 
         <div className={styles.footer}>
@@ -68,4 +94,8 @@ export function PeopleRelationshipsModal({
       </div>
     </div>
   );
+}
+
+function getEntityColorStyle(color: string | undefined): React.CSSProperties | undefined {
+  return color ? { '--entity-color': color } as React.CSSProperties : undefined;
 }

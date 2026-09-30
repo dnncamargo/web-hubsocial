@@ -1,7 +1,7 @@
 .fieldset {
   display: grid;
   gap: 1rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   padding: 1rem;
 }
@@ -15,7 +15,7 @@
 .description,
 .hint {
   margin: 0;
-  color: #6b7280;
+  color: var(--color-text-muted);
   font-size: 0.875rem;
   line-height: 1.4;
 }
@@ -24,14 +24,14 @@
 .field {
   display: grid;
   gap: 0.4rem;
-  color: #374151;
+  color: var(--color-text-secondary);
   font-size: 0.875rem;
 }
 
 .rule {
   display: grid;
   gap: 0.75rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
   padding-top: 0.875rem;
 }
 
@@ -54,7 +54,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 0.375rem;
   padding: 0.35rem 0.5rem;
   font-size: 0.8125rem;
@@ -68,11 +68,11 @@
 .select,
 .numberInput {
   width: 100%;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 0.375rem;
-  background: #ffffff;
+  background: var(--color-surface);
   padding: 0.5rem 0.625rem;
-  color: #111827;
+  color: var(--color-text-primary);
   font: inherit;
 }
 
@@ -80,7 +80,7 @@
 .numberInput:focus-visible,
 .ruleToggle input:focus-visible,
 .weekday input:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
@@ -89,7 +89,7 @@
   grid-template-columns: minmax(5rem, 7rem) auto;
   align-items: center;
   gap: 0.5rem;
-  color: #6b7280;
+  color: var(--color-text-muted);
   font-size: 0.875rem;
 }
 

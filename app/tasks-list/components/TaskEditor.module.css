@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgb(24 28 31 / 0.28);
+  background: var(--color-overlay);
 }
 
 .dialog {
@@ -158,12 +158,12 @@
 .primaryButton {
   border: 1px solid var(--color-tasks);
   background: var(--color-tasks);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 
 .primaryButton:hover {
-  border-color: color-mix(in srgb, var(--color-tasks) 82%, #000);
-  background: color-mix(in srgb, var(--color-tasks) 82%, #000);
+  border-color: var(--color-tasks-strong);
+  background: var(--color-tasks-strong);
 }
 
 .primaryButton:disabled {

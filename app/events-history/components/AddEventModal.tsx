@@ -16,6 +16,11 @@ import { AssociatePersonRenderer } from './AssociatePersonRenderer'
 import { AssociatedPeopleModal } from './AssociatedPeopleModal'
 import { EventCategoriesModal } from './EventCategoriesModal'
 import { useEventCategories } from '@/app/hooks/useEventCategories'
+import { useLocalEditorDraft } from '../../hooks/useLocalEditorDraft'
+import {
+  isEventEditorDraft,
+  type EventEditorDraft,
+} from '../../utils/editorDraftStorage'
 import { EventCategoriesRenderer } from './EventCategoriesRenderer'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
@@ -23,14 +28,18 @@ import styles from './EventEditor.module.css'
 
 interface AddEventModalProps {
   isOpen: boolean
-  onClose: () => void
+  onDismiss: () => void
+  onCancel: () => void
+  onSaved: () => void
   onAdded: () => void
   initialPersonId?: string
 }
 
 const AddEventModal: React.FC<AddEventModalProps> = ({
   isOpen,
-  onClose,
+  onDismiss,
+  onCancel,
+  onSaved,
   onAdded,
   initialPersonId,
 }) => {
@@ -67,9 +76,14 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const eventCategoriesControl = useEventCategories()
   const {
     availableCategories,
+    categoryColors,
     selectedCategories,
     toggleCategory,
     handleAddCategory,
+    removeCategory,
+    setCategoryColor,
+    setSelectedCategories,
+    error: categoryError,
   } = eventCategoriesControl
 
   const {
@@ -82,6 +96,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     automation,
     setAutomation,
     error,
+    setError,
+    resetForm,
     createEvent,
   } = useEventForm({
     uid: effectiveUid,
@@ -90,6 +106,61 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     optionalFieldsControl,
     associatePersonControl,
     eventCategoriesControl,
+  })
+
+  const closeNestedModals = () => {
+    setShowOptionalFieldModal(false)
+    setShowAddPersonModal(false)
+    setShowPersonListModal(false)
+    setShowCategoriesModal(false)
+  }
+
+  const editorDraft = useLocalEditorDraft<EventEditorDraft>({
+    scope: {
+      uid,
+      entity: 'event',
+      operation: 'add',
+      context: initialPersonId ? `person:${initialPersonId}` : undefined,
+    },
+    isOpen,
+    isValid: isEventEditorDraft,
+    getSnapshot: () => ({
+      title,
+      location,
+      allDay: dateControl.allDay,
+      startDate: dateControl.startDate,
+      endDate: dateControl.endDate,
+      startTime: dateControl.startTime,
+      endTime: dateControl.endTime,
+      timeZone: dateControl.timeZone,
+      categories: selectedCategories,
+      personIds,
+      optionalFields,
+      actionPlanning,
+      automation,
+      showMore,
+    }),
+    restoreSnapshot: (draft) => {
+      setTitle(draft.title)
+      setLocation(draft.location)
+      dateControl.setAllDay(draft.allDay)
+      dateControl.setStartDate(draft.startDate)
+      dateControl.setEndDate(draft.endDate)
+      dateControl.setStartTime(draft.startTime)
+      dateControl.setEndTime(draft.endTime)
+      setSelectedCategories(draft.categories)
+      associatePersonControl.setAssociatedPersonIds(draft.personIds)
+      resetOptionalFields(draft.optionalFields)
+      setActionPlanning(draft.actionPlanning)
+      setAutomation(draft.automation)
+      setShowMore(draft.showMore)
+      setError(null)
+    },
+    resetState: () => {
+      resetForm()
+      setShowMore(false)
+      closeNestedModals()
+    },
   })
 
   useEffect(() => {
@@ -103,15 +174,30 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
   }, [isOpen])
 
-  useEffect(() => {
-    if (!isOpen) {
-      resetOptionalFields()
-    }
-  }, [isOpen])
-
   const handleOpenAssociatePerson = async () => {
     await fetchPeople()
     setShowAddPersonModal(true)
+  }
+
+  const handleDismiss = () => {
+    editorDraft.saveOnDismiss()
+    closeNestedModals()
+    onDismiss()
+  }
+
+  const handleCancel = () => {
+    editorDraft.saveOnDismiss()
+    closeNestedModals()
+    onCancel()
+  }
+
+  const handleClear = () => {
+    editorDraft.clearDraft()
+  }
+
+  const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return
+    handleDismiss()
   }
 
   const handleSubmit = async (event: React.FormEvent): Promise<void> => {
@@ -119,8 +205,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     const success = await createEvent()
 
     if (success) {
+      editorDraft.consumeAfterSave()
       onAdded()
-      onClose()
+      onSaved()
     }
   }
 
@@ -131,6 +218,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       <motion.div
         id="add-event-modal"
         className={styles.modal}
+        onClick={handleBackdropClick}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 12 }}
@@ -142,7 +230,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={onClose} className={styles.toolbarButton}>
+              <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
                 Cancelar
               </button>
               <h3 id="add-event-title" className={styles.toolbarTitle}>Novo evento</h3>
@@ -227,7 +315,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   />
                 ))}
 
-                <EventCategoriesRenderer selectedCategories={selectedCategories} />
+                <EventCategoriesRenderer
+                  selectedCategories={selectedCategories}
+                  categoryColors={categoryColors}
+                />
 
                 {showOptionalFieldModal && (
                   <OptionalFieldModal
@@ -245,6 +336,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     selectedCategories={selectedCategories}
                     toggleCategory={toggleCategory}
                     handleAddCategory={handleAddCategory}
+                    removeCategory={removeCategory}
+                    error={categoryError}
+                    categoryColors={categoryColors}
+                    setCategoryColor={setCategoryColor}
                   />
                 )}
 
@@ -292,6 +387,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 </div>
               </div>
             )}
+
+            <div className={styles.draftActions}>
+              <button type="button" onClick={handleClear} className={styles.textAction}>
+                Limpar
+              </button>
+            </div>
 
             {error && <p className={styles.error}>{error}</p>}
           </div>

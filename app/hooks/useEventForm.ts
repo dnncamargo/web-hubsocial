@@ -9,7 +9,13 @@ import useEventDate from './useEventDate';
 import { useOptionalFields } from './useOptionalFields';
 import { useAssociatePerson } from './useAssociatePerson';
 import { useEventCategories } from './useEventCategories';
-import { buildEventPayload, EventPayload } from '../utils/eventPayload';
+import {
+    buildEventPayload,
+    buildEventUpdate,
+    EventPayload,
+    EventPayloadInput,
+    getEventDocumentPath,
+} from '../utils/eventPayload';
 
 interface UseEventFormProps {
     uid: string;
@@ -58,7 +64,9 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         }
     }, [title]);
 
-    useEffect(() => {
+    function resetForm() {
+        setError(null);
+
         if (event) {
             setTitle(event.title || '');
             setLocation(event.location || '');
@@ -70,26 +78,30 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
             dateControl.setEndDate(event.endDate);
             dateControl.setStartTime(event.startTime ?? '');
             dateControl.setEndTime(event.endTime ?? '');
-
             eventCategoriesControl.setSelectedCategories(event.categories || []);
-
             associatePersonControl.resetAssociatedPeople();
             associatePersonControl.setAssociatedPersonIds(event.personIds || []);
             optionalFieldsControl.resetOptionalFields(
                 Array.isArray(event.optionalFields) ? event.optionalFields : []
             );
-
-            dateControl.setStartDate(event.startDate); // ✅ hidratar start
-            dateControl.setEndDate(event.endDate);     // ✅ hidratar end
             return;
         }
 
+        setTitle('');
+        setLocation('');
         setActionPlanning({});
         setAutomation({ match: 'all', rules: [] });
+        dateControl.resetToDefaults();
+        eventCategoriesControl.setSelectedCategories([]);
         associatePersonControl.resetAssociatedPeople();
         if (initialPersonId) {
             associatePersonControl.setAssociatedPersonIds([initialPersonId]);
         }
+        optionalFieldsControl.resetOptionalFields([]);
+    }
+
+    useEffect(() => {
+        resetForm();
     }, [event, initialPersonId]);
 
 
@@ -105,8 +117,8 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         return null;
     }
 
-    function buildCurrentEventPayload(): EventPayload {
-        return buildEventPayload({
+    function buildCurrentEventInput(): EventPayloadInput {
+        return {
             title: title.trim(),
             location,
             allDay, timeZone,
@@ -118,8 +130,13 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
             actionPlanning,
             automation,
             status: event?.status,
+            rating: event?.rating,
             createdAt: event?.createdAt || new Date(),
-        })
+        }
+    }
+
+    function buildCurrentEventPayload(): EventPayload {
+        return buildEventPayload(buildCurrentEventInput())
     }
 
     async function createEvent() {
@@ -153,8 +170,8 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         }
 
         try {
-            const eventRef = buildCurrentEventPayload();
-            await updateDoc(doc(db, `users/${uid}/events-history/${event?.id}`), { ...eventRef });
+            const eventRef = buildEventUpdate(buildCurrentEventInput());
+            await updateDoc(doc(db, getEventDocumentPath(uid, event?.id ?? '')), eventRef);
             resetOptionalFields();
             return true;
 
@@ -171,6 +188,7 @@ export function useEventForm({ uid, event, initialPersonId, dateControl, optiona
         actionPlanning, setActionPlanning,
         automation, setAutomation,
         error, setError,
+        resetForm,
         createEvent,
         updateEvent,
     };

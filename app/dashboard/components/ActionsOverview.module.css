@@ -30,7 +30,14 @@
 }
 
 .planningGrid {
-  display: contents;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.planningColumn {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
 }
 
 .contextSlot {
@@ -84,11 +91,12 @@
 }
 
 .row {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   gap: var(--space-3);
-  padding: var(--space-3) 0;
+  padding: var(--space-3) var(--space-2);
   border-top: 1px solid var(--color-border);
 }
 
@@ -96,16 +104,55 @@
   border-top: 0;
 }
 
+.markerButton {
+  display: block;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.markerButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.markerButton:disabled {
+  cursor: default;
+}
+
 .highlightedRow {
-  margin-inline: calc(var(--space-2) * -1);
-  padding-inline: var(--space-2);
   border-radius: var(--radius-sm);
   background: var(--color-events-soft);
-  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.inProgressRow {
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-task-status-in-progress) 8%, var(--color-surface));
+}
+
+.highlightedRow::before,
+.inProgressRow::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  content: '';
+  pointer-events: none;
+}
+
+.highlightedRow::before {
+  background: var(--color-accent);
+}
+
+.inProgressRow::before {
+  background: var(--color-task-status-in-progress);
 }
 
 .pendingMarker,
-.completedMarker {
+.completedMarker,
+.inProgressMarker {
   width: 0.625rem;
   height: 0.625rem;
   margin-top: 0.3rem;
@@ -113,8 +160,18 @@
   border-radius: 50%;
 }
 
+.inProgressMarker {
+  border-color: var(--color-task-status-in-progress);
+  background: radial-gradient(
+    circle,
+    var(--color-task-status-in-progress) 0 2px,
+    transparent 2.5px
+  );
+}
+
 .completedMarker {
-  background: var(--color-text-muted);
+  border-color: var(--color-task-status-completed);
+  background: var(--color-task-status-completed);
 }
 
 .rowContent {
@@ -136,8 +193,45 @@
 }
 
 .meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   color: var(--color-text-muted);
   font-size: 0.75rem;
+}
+
+.sourceIcon {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: none;
+}
+
+.categoryMarkers {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: 0.15rem;
+}
+
+.categoryMarker {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: var(--entity-color, var(--color-border-strong));
+}
+
+.inProgressLabel {
+  width: fit-content;
+  color: var(--color-task-status-in-progress);
+  font-size: 0.6875rem;
+  font-weight: 650;
+}
+
+.completedTodayLabel {
+  width: fit-content;
+  color: var(--color-task-status-completed);
+  font-size: 0.6875rem;
+  font-weight: 650;
 }
 
 .automationMatched,
@@ -156,8 +250,8 @@
 }
 
 .automationPending {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-automation-pending);
+  color: var(--color-automation-pending-text);
 }
 
 .automationNotMatched {
@@ -204,16 +298,14 @@
     grid-column: 1 / -1;
   }
 
-  .secondarySection {
-    grid-column: 1;
+  .planningGrid {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+    align-items: start;
   }
 
   .contextSlot {
     grid-column: 2;
-    grid-row: 2;
-  }
-
-  .tertiarySection {
-    grid-column: 1;
+    align-self: start;
   }
 }

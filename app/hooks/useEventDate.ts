@@ -88,6 +88,19 @@ export default function useEventDate(initial?: {
         }
     }
 
+    function resetToDefaults() {
+        const nextToday = getTodayISO()
+        const nextNow = getNowTimeRounded()
+        const nextEnd = getLocalDateTimeAfter(nextToday, nextNow, 60)
+
+        setAllDay(false)
+        setStartDate(nextToday)
+        setEndDate(nextEnd.date)
+        setStartTime(nextNow)
+        setEndTime(nextEnd.time)
+        setError('')
+    }
+
     function getNextDay(dateStr: string): string {
         return getNextCivilDate(dateStr)
     }
@@ -124,6 +137,7 @@ export default function useEventDate(initial?: {
         timeZone,
         error, setError,
         handleStartTimeChange,
+        resetToDefaults,
         correctEnd,
         getNextDay,
         getGoogleCalendarFormat,

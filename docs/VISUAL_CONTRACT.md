@@ -255,6 +255,23 @@ Prefer weight, spacing, and contrast over large jumps in font size.
 
 The product should feel information-dense, not editorial.
 
+## 9.1. Date presentation
+
+Use the shared Brazilian Portuguese date presentation contracts:
+
+```text
+Date: 21 out
+Full date: 16 nov 1993
+Birthday: 25 abr
+Same-month range: 1 → 15 out
+Cross-month range: 29 set → 1 out
+```
+
+Dates omit the year only when it matches the reference civil year.
+Civil dates must not be converted through UTC for presentation.
+Event cards keep the date separate from time and location. When both are
+available, time and location share the metadata line.
+
 ## 10. Spacing
 
 Use a compact canonical scale.

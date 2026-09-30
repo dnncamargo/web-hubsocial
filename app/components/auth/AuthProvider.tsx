@@ -3,12 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../../utils/firebaseConfig'
-
-interface AuthUser {
-  name: string
-  email: string
-  picture: string
-}
+import { mapFirebaseUserToAuthUser, type AuthUser } from '../../utils/authProfile'
 
 interface AuthContextType {
   user: AuthUser | null
@@ -52,13 +47,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const unsubscribe = onAuthStateChanged(auth, firebaseUser => {
       setUid(firebaseUser?.uid ?? null)
-      setUser(firebaseUser
-        ? {
-            name: firebaseUser.displayName || firebaseUser.email || '',
-            email: firebaseUser.email || '',
-            picture: firebaseUser.photoURL || '',
-          }
-        : null)
+      setUser(firebaseUser ? mapFirebaseUserToAuthUser(firebaseUser) : null)
+      if (!firebaseUser) {
+        updateGoogleAccessToken(null)
+      }
       setLoading(false)
     })
 

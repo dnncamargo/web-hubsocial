@@ -84,7 +84,7 @@
 }
 
 .row:hover {
-  background: #f8f8f7;
+  background: var(--color-surface-muted);
 }
 
 .rowDragging {
@@ -93,7 +93,7 @@
 }
 
 .subtaskRow {
-  background: #f8f8f7;
+  background: var(--color-surface-muted);
 }
 
 .gripButton,

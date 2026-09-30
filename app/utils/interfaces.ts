@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 import { OptionalField as OptionalFieldType } from '../types/optionalFields';
 import { ActionPlanning } from '../types/actions';
 import { AutomationRuleSet } from '../types/automation';
+import { TaskSchedule } from '../types/tasks';
 
 export interface Person {
   id: string;
@@ -11,7 +12,7 @@ export interface Person {
   birthday?: string;
   note?: string;
   favorite?: boolean;
-  relationships?: string[];
+  relationships?: string[] | null;
   contactFrequency?: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | null;
   optionalFields?: OptionalFieldType[];
   createdAt?: Date | Timestamp;
@@ -45,8 +46,10 @@ export interface Task {
   subtasks: Task[] | undefined
   parentTaskId?: string | null
   createdAt?: Date | Timestamp;
+  lastActionCompletedDate?: string;
   actionPlanning?: ActionPlanning;
   automation?: AutomationRuleSet;
+  schedule?: TaskSchedule;
 }
 
 export interface EventSuggestion {

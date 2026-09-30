@@ -2,11 +2,13 @@ import { JSX, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { CalendarDays, House, ListTodo, Users } from 'lucide-react'
 import { Link, useLocation } from 'react-router'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../auth/AuthProvider'
+import { useTheme } from '../../hooks/useTheme'
+import { getTodayISO } from '../../utils/dateHelpers'
+import { formatDate } from '../../utils/datePresentation'
 import LogoutButton from './LogoutButton'
 import ImportContactsModal from './ImportContactsModal'
+import CurrentWeather from './CurrentWeather'
 import QuickCreateMenu from './QuickCreateMenu'
 import { instance } from '../../config/instance'
 import styles from './MainMenu.module.css'
@@ -19,11 +21,17 @@ const navItems = [
 ] as const
 
 export default function MainMenu(): JSX.Element {
-  const { uid, user } = useAuth()
-  const isAuthenticated = !!uid
+  const { uid, user, loading } = useAuth()
+  const { theme, selectTheme } = useTheme()
+  const isAuthenticated = !loading && !!uid
+  const [avatarFailed, setAvatarFailed] = useState(false)
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [showImportContacts, setShowImportContacts] = useState(false)
   const { pathname } = useLocation()
+
+  useEffect(() => {
+    setAvatarFailed(false)
+  }, [user?.name, user?.picture])
 
   useEffect(() => {
     setIsAccountOpen(false)
@@ -34,11 +42,8 @@ export default function MainMenu(): JSX.Element {
       ? pathname === path
       : pathname === path || pathname.startsWith(`${path}/`)
 
-  const avatarUrl =
-    user?.picture ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name?.[0] || 'U')}&background=ccc&color=000`
-  const dateText = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
-  const formattedDate = dateText.charAt(0).toUpperCase() + dateText.slice(1)
+  const avatarInitial = user?.name.trim().charAt(0).toUpperCase() || 'U'
+  const formattedDate = formatDate(getTodayISO())
 
   const renderNavLink = ({ path, label, icon: Icon }: (typeof navItems)[number]) => (
     <Link
@@ -62,7 +67,18 @@ export default function MainMenu(): JSX.Element {
       aria-controls="account-menu"
       aria-label="Abrir menu da conta"
     >
-      <img src={avatarUrl} alt="" className={styles.avatarImage} />
+      {user?.picture && !avatarFailed ? (
+        <img
+          src={user.picture}
+          alt=""
+          className={styles.avatarImage}
+          onError={() => setAvatarFailed(true)}
+        />
+      ) : (
+        <span className={styles.avatarFallback} aria-hidden="true">
+          {avatarInitial}
+        </span>
+      )}
       <span className={styles.accountLabel}>Conta</span>
     </button>
   )
@@ -92,7 +108,10 @@ export default function MainMenu(): JSX.Element {
           <span className={styles.mobileEyebrow}>Hoje</span>
           <span className={styles.mobileDate}>{formattedDate}</span>
         </Link>
-        {accountButton(styles.mobileAccountButton)}
+        <div className={styles.mobileActions}>
+          <CurrentWeather />
+          {accountButton(styles.mobileAccountButton)}
+        </div>
       </header>
 
       <nav className={styles.bottomNav} aria-label="Navegação principal">
@@ -130,6 +149,32 @@ export default function MainMenu(): JSX.Element {
             >
               Repositório
             </a>
+
+            <div className={styles.themeControl} role="group" aria-label="Tema da aplicação">
+              <span className={styles.themeLabel}>Tema</span>
+              <div className={styles.themeOptions}>
+                <button
+                  type="button"
+                  className={theme === 'light'
+                    ? `${styles.themeOption} ${styles.themeOptionActive}`
+                    : styles.themeOption}
+                  aria-pressed={theme === 'light'}
+                  onClick={() => selectTheme('light')}
+                >
+                  Claro
+                </button>
+                <button
+                  type="button"
+                  className={theme === 'dark'
+                    ? `${styles.themeOption} ${styles.themeOptionActive}`
+                    : styles.themeOption}
+                  aria-pressed={theme === 'dark'}
+                  onClick={() => selectTheme('dark')}
+                >
+                  Escuro
+                </button>
+              </div>
+            </div>
 
             <div className={styles.logoutRow}>
               <LogoutButton />

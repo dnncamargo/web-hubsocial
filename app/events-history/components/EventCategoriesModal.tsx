@@ -1,11 +1,17 @@
 import styles from './EventDialogs.module.css'
+import { getEntityColor, type EntityColorMap } from '../../utils/entityColors'
+import RemoveSelectableValueButton from '../../components/ui/RemoveSelectableValueButton'
 
 type EventCategoriesModalProps = {
   onClose: () => void
   availableCategories: string[]
   selectedCategories: string[]
   toggleCategory: (cat: string) => void
-  handleAddCategory: (category: string) => void
+  handleAddCategory: (category: string) => Promise<boolean>
+  removeCategory: (category: string) => Promise<boolean>
+  error: string | null
+  categoryColors: EntityColorMap
+  setCategoryColor: (category: string, color: string) => Promise<void>
 }
 
 export function EventCategoriesModal({
@@ -14,6 +20,10 @@ export function EventCategoriesModal({
   selectedCategories,
   toggleCategory,
   handleAddCategory,
+  removeCategory,
+  error,
+  categoryColors,
+  setCategoryColor,
 }: EventCategoriesModalProps) {
   return (
     <div className={styles.overlay}>
@@ -34,20 +44,35 @@ export function EventCategoriesModal({
             {availableCategories.map((category) => {
               const selected = selectedCategories.includes(category)
               return (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    toggleCategory(category)
-                  }}
-                  className={selected
-                    ? `${styles.choice} ${styles.choiceSelected}`
-                    : styles.choice}
-                  aria-pressed={selected}
-                >
-                  {category}
-                </button>
+                <div key={category} className={styles.choiceWithColor}>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      toggleCategory(category)
+                    }}
+                    className={selected
+                      ? `${styles.choice} ${styles.choiceSelected}`
+                      : styles.choice}
+                    style={getEntityColorStyle(getEntityColor(categoryColors, category))}
+                    aria-pressed={selected}
+                  >
+                    {category}
+                  </button>
+                  <input
+                    type="color"
+                    className={styles.colorInput}
+                    value={categoryColors[category] ?? '#536d82'}
+                    onChange={(event) => void setCategoryColor(category, event.target.value)}
+                    aria-label={`Cor da categoria ${category}`}
+                  />
+                  <RemoveSelectableValueButton
+                    value={category}
+                    entityLabel="categoria"
+                    existingEntitiesLabel="Eventos"
+                    onRemove={() => removeCategory(category)}
+                  />
+                </div>
               )
             })}
           </div>
@@ -58,14 +83,15 @@ export function EventCategoriesModal({
               event.preventDefault()
               const newCategory = prompt('Nova categoria:')?.trim()
               if (newCategory) {
-                await handleAddCategory(newCategory)
-                toggleCategory(newCategory)
+                const added = await handleAddCategory(newCategory)
+                if (added) toggleCategory(newCategory)
               }
             }}
             className={styles.textButton}
           >
             + Nova categoria
           </button>
+          {error && <p className={styles.error} role="alert">{error}</p>}
         </div>
 
         <footer className={styles.footer}>
@@ -83,4 +109,8 @@ export function EventCategoriesModal({
       </section>
     </div>
   )
+}
+
+function getEntityColorStyle(color: string | undefined): React.CSSProperties | undefined {
+  return color ? { '--entity-color': color } as React.CSSProperties : undefined
 }

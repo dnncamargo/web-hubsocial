@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, JSX } from 'react'
+import { useEffect, useReducer, useState, JSX } from 'react'
 import { getDocs, query, orderBy, collection, doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../utils/firebaseConfig'
 import { useAuth } from '../components/auth/AuthProvider'
@@ -13,42 +13,42 @@ import AddEventModal from './components/AddEventModal'
 import EditEventModal from './components/EditEventModal'
 import { CalendarDays, List, ListFilter, Plus, Search } from 'lucide-react'
 import EventFilterModal from './components/FilterEventModal'
-import type { EventFilter } from './components/FilterEventModal'
+import {
+  defaultEventFilters,
+  evaluateEventFilters,
+  normalizeEventFilters,
+} from './utils/eventFilters'
+import type { EventFilter } from './utils/eventFilters'
 import { useEventCategories } from '../hooks/useEventCategories'
+import { usePageTitle } from '../hooks/usePageTitle'
+import {
+  initialCreationDraftLifecycleState,
+  reduceCreationDraftLifecycle,
+} from '../utils/creationDraftLifecycle'
 import styles from './EventsHistory.module.css'
-
-const defaultFilters: EventFilter = {
-  enabled: true,
-  startDate: '',
-  endDate: '',
-  hasRating: 0,
-  hasTasks: false,
-  hasNotes: false,
-  hasAddressByCEP: false,
-  selectedCategories: [],
-}
 
 type EventViewMode = 'list' | 'calendar'
 
 const EventsHistory = (): JSX.Element => {
   const { uid } = useAuth()
+  usePageTitle('Eventos')
   const [searchParams, setSearchParams] = useSearchParams()
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false)
+  const [addEventDraft, dispatchAddEventDraft] = useReducer(
+    reduceCreationDraftLifecycle,
+    initialCreationDraftLifecycleState,
+  )
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [filtersLoaded, setFiltersLoaded] = useState(false)
-  const [filters, setFilters] = useState<EventFilter>({
-    ...defaultFilters,
-    selectedCategories: [],
-  })
+  const [filters, setFilters] = useState<EventFilter>(defaultEventFilters)
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [showSearchModal, setShowSearchModal] = useState(false)
   const [viewMode, setViewMode] = useState<EventViewMode>('list')
 
-  const { availableCategories } = useEventCategories()
+  const { availableCategories, categoryColors } = useEventCategories()
 
   useEffect(() => {
     if (uid) {
@@ -57,13 +57,38 @@ const EventsHistory = (): JSX.Element => {
   }, [uid])
 
   useEffect(() => {
+    if (!uid || !filtersLoaded || availableCategories.length === 0) return
+
+    const normalizedFilters = normalizeEventFilters(filters, availableCategories)
+    if (normalizedFilters.selectedCategories.join('\u0000') === filters.selectedCategories.join('\u0000')) {
+      return
+    }
+
+    setFilters(normalizedFilters)
+    const eventsSettingRef = doc(db, `users/${uid}/settings`, 'userEventsFilters')
+    void setDoc(eventsSettingRef, normalizedFilters)
+  }, [availableCategories, filters, filtersLoaded, uid])
+
+  useEffect(() => {
     if (searchParams.get('create') !== 'event') return
 
-    setIsAddEventModalOpen(true)
+    dispatchAddEventDraft({ type: 'open' })
     const nextSearchParams = new URLSearchParams(searchParams)
     nextSearchParams.delete('create')
     setSearchParams(nextSearchParams, { replace: true })
   }, [searchParams, setSearchParams])
+
+  const openAddEventModal = () => {
+    dispatchAddEventDraft({ type: 'open' })
+  }
+
+  const dismissAddEventModal = () => {
+    dispatchAddEventDraft({ type: 'dismiss' })
+  }
+
+  const discardAddEventDraft = () => {
+    dispatchAddEventDraft({ type: 'discard' })
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -74,14 +99,7 @@ const EventsHistory = (): JSX.Element => {
         const snapshot = await getDoc(eventSettingRef)
 
         if (snapshot.exists()) {
-          const data = snapshot.data()
-          setFilters(previous => ({
-            ...defaultFilters,
-            ...data,
-            selectedCategories: Array.isArray(data?.selectedCategories)
-              ? data.selectedCategories
-              : [],
-          }))
+          setFilters(normalizeEventFilters(snapshot.data()))
         }
       } catch (error) {
         console.error('Erro ao carregar filtros:', error)
@@ -92,17 +110,6 @@ const EventsHistory = (): JSX.Element => {
 
     init()
   }, [uid])
-
-  useEffect(() => {
-    if (availableCategories.length === 0) return
-
-    setFilters(previous => ({
-      ...previous,
-      selectedCategories: previous.selectedCategories.length === 0
-        ? availableCategories
-        : previous.selectedCategories,
-    }))
-  }, [availableCategories])
 
   const fetchEvents = async (): Promise<void> => {
     try {
@@ -146,36 +153,8 @@ const EventsHistory = (): JSX.Element => {
 
   const filteredEvents = (!filters.enabled || !filtersLoaded)
     ? events
-    : events.filter(event => {
-      const from = filters.startDate || null
-      const to = filters.endDate || null
-      const eventDate = event.startDate
-
-      const matchesDate =
-        (!from || eventDate >= from)
-        && (!to || eventDate <= to)
-
-      const matchesRating =
-        filters.hasRating === 0 || (event.rating ?? 0) >= filters.hasRating
-
-      const hasNotes =
-        Array.isArray(event.optionalFields)
-        && event.optionalFields.some(
-          field => field.type === 'text'
-            && typeof field.value === 'string'
-            && field.value.trim() !== '',
-        )
-
-      const matchesNotes = !filters.hasNotes || hasNotes
-
-      const matchesCategory =
-        (filters.selectedCategories?.length ?? 0) === 0
-        || (event.categories ?? []).some(category =>
-          filters.selectedCategories.includes(category),
-        )
-
-      return matchesDate && matchesRating && matchesNotes && matchesCategory
-    })
+    : events.filter(event =>
+      evaluateEventFilters(event, filters, availableCategories).matches)
 
   const visibleEvents = filteredEvents.filter(event => {
     if (!isSearching || searchQuery.trim() === '') return true
@@ -191,7 +170,17 @@ const EventsHistory = (): JSX.Element => {
     }
   }
 
-  const filtersAreActive = filters.enabled
+  const effectiveFilters = normalizeEventFilters(filters, availableCategories)
+  const hasEffectiveFilter = Boolean(
+    effectiveFilters.startDate
+    || effectiveFilters.endDate
+    || effectiveFilters.hasRating > 0
+    || effectiveFilters.hasTasks
+    || effectiveFilters.hasNotes
+    || effectiveFilters.hasAddressByCEP
+    || effectiveFilters.selectedCategories.length > 0,
+  )
+  const filtersAreActive = filters.enabled && hasEffectiveFilter
   const searchIsActive = isSearching && searchQuery.trim() !== ''
 
   return (
@@ -199,7 +188,7 @@ const EventsHistory = (): JSX.Element => {
       <main className={styles.page}>
         <header className={styles.header}>
           <div className={styles.headingBlock}>
-            <h1 className={styles.title}>Eventos</h1>
+            <h1 className={styles.title}>Histórico de Eventos</h1>
             <p className={styles.subtitle}>Consulte seus eventos em lista ou calendário.</p>
           </div>
 
@@ -255,7 +244,7 @@ const EventsHistory = (): JSX.Element => {
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={() => setIsAddEventModalOpen(true)}
+              onClick={openAddEventModal}
             >
               <Plus className={styles.icon} aria-hidden="true" />
               Novo evento
@@ -270,20 +259,24 @@ const EventsHistory = (): JSX.Element => {
           {(searchIsActive || filtersAreActive) && <span>Visualização filtrada</span>}
         </div>
 
-        {events.length === 0 ? (
+        {viewMode === 'calendar' ? (
+          <EventCalendarMonth events={visibleEvents} categoryColors={categoryColors} />
+        ) : events.length === 0 ? (
           <p className={styles.emptyState}>Nenhum evento registrado.</p>
         ) : visibleEvents.length === 0 ? (
           <p className={styles.emptyState}>
             Nenhum evento corresponde à pesquisa ou aos filtros atuais.
           </p>
-        ) : viewMode === 'calendar' ? (
-          <EventCalendarMonth events={visibleEvents} />
         ) : (
           <>
             <div className={styles.grid}>
               {visibleEvents.map(event => (
                 <div key={event.id} className={styles.eventItem}>
-                  <EventCard event={event} onEditEvent={openEditEventModal} />
+                  <EventCard
+                    event={event}
+                    onEditEvent={openEditEventModal}
+                    categoryColors={categoryColors}
+                  />
                 </div>
               ))}
             </div>
@@ -350,10 +343,13 @@ const EventsHistory = (): JSX.Element => {
           </div>
         )}
 
-        {isAddEventModalOpen && (
+        {addEventDraft.hasMounted && (
           <AddEventModal
-            isOpen={isAddEventModalOpen}
-            onClose={() => setIsAddEventModalOpen(false)}
+            key={addEventDraft.revision}
+            isOpen={addEventDraft.isOpen}
+            onDismiss={dismissAddEventModal}
+            onCancel={dismissAddEventModal}
+            onSaved={discardAddEventDraft}
             onAdded={fetchEvents}
           />
         )}

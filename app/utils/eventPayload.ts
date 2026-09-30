@@ -1,8 +1,9 @@
-import { Timestamp } from 'firebase/firestore'
-import { ActionPlanning } from '../types/actions'
-import { AutomationRuleSet } from '../types/automation'
-import { OptionalField } from '../types/optionalFields'
-import { Event } from './interfaces'
+import { deleteField } from 'firebase/firestore'
+import type { Timestamp, UpdateData } from 'firebase/firestore'
+import type { ActionPlanning } from '../types/actions'
+import type { AutomationRuleSet } from '../types/automation'
+import type { OptionalField } from '../types/optionalFields'
+import type { Event } from './interfaces'
 
 export type EventPayload = Omit<
   Event,
@@ -33,6 +34,10 @@ export interface EventPayloadInput {
   createdAt?: Date | Timestamp
 }
 
+export function getEventDocumentPath(uid: string, eventId: string): string {
+  return `users/${uid}/events-history/${eventId}`
+}
+
 export function buildEventPayload(input: EventPayloadInput): EventPayload {
   return {
     title: input.title,
@@ -51,5 +56,19 @@ export function buildEventPayload(input: EventPayloadInput): EventPayload {
     ...(!input.allDay && input.endTime !== undefined ? { endTime: input.endTime } : {}),
     ...(input.rating !== undefined ? { rating: input.rating } : {}),
     ...(input.timeZone !== undefined ? { timeZone: input.timeZone } : {}),
+  }
+}
+
+export function buildEventUpdate(input: EventPayloadInput): UpdateData<EventPayload> {
+  const payload = buildEventPayload(input)
+
+  return {
+    ...payload,
+    ...(input.allDay
+      ? {
+        startTime: deleteField(),
+        endTime: deleteField(),
+      }
+      : {}),
   }
 }

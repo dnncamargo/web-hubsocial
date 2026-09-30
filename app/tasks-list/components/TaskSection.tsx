@@ -48,6 +48,12 @@ export default function TaskSection({
     }),
   )
 
+  const resetDailyCompletion = (task: Task, newStatus: 0 | 1 | 2): Task => {
+    const updatedTask = { ...task, status: newStatus }
+    delete updatedTask.lastActionCompletedDate
+    return updatedTask
+  }
+
   const handlePromoteSubtask = async (subtask: Task, parentTaskId: string) => {
     if (!uid) return
 
@@ -113,7 +119,7 @@ export default function TaskSection({
     if (!isParent && !isSubtask) {
       await setDoc(
         doc(db, `users/${uid}/tasks-list`, task.id),
-        { ...task, status: newStatus },
+        resetDailyCompletion(task, newStatus),
       )
       refreshTasks()
       return
@@ -126,11 +132,9 @@ export default function TaskSection({
       if (!confirmed) return
 
       const updatedTask: Task = {
-        ...task,
-        status: newStatus,
+        ...resetDailyCompletion(task, newStatus),
         subtasks: (task.subtasks || []).map(subtask => ({
-          ...subtask,
-          status: newStatus,
+          ...resetDailyCompletion(subtask, newStatus),
         })),
       }
 
@@ -151,11 +155,9 @@ export default function TaskSection({
 
       if (updateParent) {
         const updatedParent: Task = {
-          ...parentTask,
-          status: newStatus,
+          ...resetDailyCompletion(parentTask, newStatus),
           subtasks: (parentTask.subtasks || []).map(subtask => ({
-            ...subtask,
-            status: newStatus,
+            ...resetDailyCompletion(subtask, newStatus),
           })),
         }
 
@@ -164,7 +166,10 @@ export default function TaskSection({
           updatedParent,
         )
       } else {
-        await handlePromoteSubtask({ ...task, status: newStatus }, parentTask.id)
+        await handlePromoteSubtask(
+          resetDailyCompletion(task, newStatus),
+          parentTask.id,
+        )
       }
 
       refreshTasks()

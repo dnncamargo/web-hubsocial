@@ -3,12 +3,13 @@
   inset: 0;
   z-index: 70;
   overflow-y: auto;
+  padding: var(--space-4);
   background: var(--color-background);
 }
 
 .form {
   width: min(100%, 48rem);
-  min-height: 100%;
+  min-height: calc(100dvh - 2rem);
   margin-inline: auto;
   background: var(--color-surface);
 }
@@ -30,7 +31,7 @@
   margin-inline: calc(var(--space-4) * -1);
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--color-border);
-  background: rgb(251 251 250 / 0.97);
+  background: var(--color-chrome);
   backdrop-filter: blur(8px);
 }
 
@@ -138,7 +139,7 @@
   width: 0.95rem;
   height: 0.95rem;
   border-radius: 50%;
-  background: #fff;
+  background: var(--color-control-thumb);
   box-shadow: var(--shadow-sm);
   transform: translateX(0);
   transition: transform var(--duration-fast) ease;
@@ -176,6 +177,13 @@
   text-underline-offset: 3px;
 }
 
+.draftActions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
 .destructiveRow {
   display: flex;
   justify-content: flex-end;
@@ -210,7 +218,7 @@
     display: grid;
     place-items: start center;
     padding: var(--space-8);
-    background: rgb(32 36 40 / 0.16);
+  background: var(--color-overlay);
   }
 
   .form {

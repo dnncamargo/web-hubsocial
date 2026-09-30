@@ -3,8 +3,10 @@
 import { JSX } from 'react';
 import { useNavigate } from 'react-router';
 import { Event } from '../../utils/interfaces';
-import { Clock, Link, MapPin, SquarePen } from 'lucide-react';
-import { formatDate } from '../../utils/services';
+import { getEntityColor, type EntityColorMap } from '../../utils/entityColors';
+import { ArrowRight, Clock, Link, MapPin, SquarePen } from 'lucide-react';
+import { formatDateRange } from '../../utils/services';
+import { formatTimeRange } from '../../utils/datePresentation';
 import styles from './EventCard.module.css';
 
 /**
@@ -16,6 +18,7 @@ import styles from './EventCard.module.css';
 interface EventCardProps {
   event: Event;
   onEditEvent: (event: Event) => void;
+  categoryColors?: EntityColorMap;
 }
 
 /**
@@ -24,7 +27,7 @@ interface EventCardProps {
  * @param {EventCardProps} { event, onEditEvent } - Props para o componente.
  * @returns {JSX.Element} Um cartão representando as informações do evento.
  */
-const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
+const EventCard = ({ event, onEditEvent, categoryColors }: EventCardProps): JSX.Element => {
   const navigate = useNavigate();
 
   const description = event.optionalFields?.find(
@@ -32,6 +35,11 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
   )
 
   const openEvent = () => navigate(`/events-history/${event.id}`)
+  const dateRange = formatDateRange(
+    event.startDate,
+    event.endDate,
+  )
+  const timeRange = formatTimeRange(event.startTime, event.endTime)
 
   return (
     <article
@@ -50,26 +58,36 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
       <header className={styles.header}>
         <h2 className={styles.title}>{event.title}</h2>
         <span className={styles.date}>
-          {formatDate(event.startDate, event.endDate, event.startTime, event.endTime, event.allDay)}
+          <span>{dateRange.start}</span>
+          {dateRange.end && (
+            <>
+              <ArrowRight className={styles.dateRangeIcon} aria-hidden="true" />
+              <span>{dateRange.end}</span>
+            </>
+          )}
         </span>
       </header>
 
       <div className={styles.metaList}>
-        {event.startTime && (
+        {(timeRange || event.location) && (
           <div className={styles.metaRow}>
-            <Clock className={styles.metaIcon} aria-hidden="true" />
-            <span className={styles.metaText}>{event.startTime}</span>
-          </div>
-        )}
-
-        {event.location && (
-          <div className={styles.metaRow}>
-            {event.location.startsWith('http') ? (
+            {timeRange ? (
+              <Clock className={styles.metaIcon} aria-hidden="true" />
+            ) : event.location?.startsWith('http') ? (
               <Link className={styles.metaIcon} aria-hidden="true" />
             ) : (
               <MapPin className={styles.metaIcon} aria-hidden="true" />
             )}
-            <span className={styles.metaText}>{event.location}</span>
+            <span className={styles.metaText}>
+              {timeRange}
+              {timeRange && event.location && ' · '}
+              {event.location && (
+                <>
+                  {timeRange && (event.location.startsWith('http') ? <Link className={styles.metaIcon} aria-hidden="true" /> : <MapPin className={styles.metaIcon} aria-hidden="true" />)}
+                  {event.location}
+                </>
+              )}
+            </span>
           </div>
         )}
 
@@ -86,7 +104,11 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
       <footer className={styles.footer}>
         <div className={styles.categories}>
           {event.categories?.map((category) => (
-            <span key={category} className={styles.category}>
+            <span
+              key={category}
+              className={styles.category}
+              style={getEntityColorStyle(getEntityColor(categoryColors, category))}
+            >
               {category}
             </span>
           ))}
@@ -108,3 +130,7 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
 }
 
 export default EventCard
+
+function getEntityColorStyle(color: string | undefined): React.CSSProperties | undefined {
+  return color ? { '--entity-color': color } as React.CSSProperties : undefined
+}

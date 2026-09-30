@@ -7,9 +7,15 @@ import { useAuth } from '../../components/auth/AuthProvider';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { Person } from '../../utils/interfaces';
 import { db } from '../../utils/firebaseConfig';
+import { getPersonDocumentPath } from '../../utils/personPayload';
 import { useOptionalFields } from '../../hooks/useOptionalFields';
 import { usePersonRelationships } from '../../hooks/usePersonRelationships';
 import { usePersonForm } from '../../hooks/usePersonForm';
+import { useLocalEditorDraft } from '../../hooks/useLocalEditorDraft';
+import {
+  isPersonEditorDraft,
+  type PersonEditorDraft,
+} from '../../utils/editorDraftStorage';
 import PersonEditorFields from './PersonEditorFields';
 import styles from './PersonEditor.module.css';
 
@@ -17,8 +23,8 @@ interface EditPersonModalProps {
   person: Person;
   isOpen: boolean;
   onClose: () => void;
-  onUpdated: () => void;
-  onDeleted: () => void;
+  onUpdated: () => void | Promise<void>;
+  onDeleted: () => void | Promise<void>;
 }
 
 const EditPersonModal = ({
@@ -42,12 +48,18 @@ const EditPersonModal = ({
     removeOptionalField,
     updateOptionalField,
     updateLabel,
+    resetOptionalFields,
   } = optionalFieldsControl;
   const {
     availableRelationships,
+    relationshipColors,
     selectedRelationships,
+    setSelectedRelationships,
     toggleRelationship,
     handleAddRelationship,
+    removeRelationship,
+    setRelationshipColor,
+    error: relationshipError,
   } = personRelationshipsControl;
   const {
     name,
@@ -63,12 +75,58 @@ const EditPersonModal = ({
     contactFrequency,
     setContactFrequency,
     error,
+    setError,
+    resetForm,
     updatePerson,
   } = usePersonForm({
     uid: uid ?? '',
     person,
     optionalFieldsControl,
     personRelationshipsControl,
+  });
+
+  const closeNestedModals = () => {
+    setShowOptionalFieldModal(false);
+    setShowRelationshipsModal(false);
+  };
+
+  const editorDraft = useLocalEditorDraft<PersonEditorDraft>({
+    scope: {
+      uid,
+      entity: 'person',
+      operation: 'edit',
+      entityId: person.id,
+    },
+    isOpen,
+    isValid: isPersonEditorDraft,
+    getSnapshot: () => ({
+      name,
+      phone,
+      email,
+      birthday,
+      favorite,
+      contactFrequency,
+      relationships: selectedRelationships,
+      optionalFields,
+      showMore,
+    }),
+    restoreSnapshot: (draft) => {
+      setName(draft.name);
+      setPhone(draft.phone);
+      setEmail(draft.email);
+      setBirthday(draft.birthday);
+      setFavorite(draft.favorite);
+      setContactFrequency(draft.contactFrequency ?? null);
+      setSelectedRelationships(draft.relationships);
+      resetOptionalFields(draft.optionalFields);
+      setShowMore(draft.showMore);
+      setError(null);
+    },
+    resetState: () => {
+      resetForm();
+      setShowMore(false);
+      closeNestedModals();
+    },
   });
 
   useEffect(() => {
@@ -84,20 +142,34 @@ const EditPersonModal = ({
     const success = await updatePerson();
     if (!success) return;
 
-    onUpdated();
+    editorDraft.consumeAfterSave();
+    await onUpdated();
     onClose();
   };
 
   const handleDelete = async () => {
     if (!uid) return;
+    if (!window.confirm(`Excluir o cadastro de ${person.name}?`)) return;
 
     try {
-      await deleteDoc(doc(db, 'users', uid, 'people-directory', person.id));
-      onDeleted();
+      await deleteDoc(doc(db, getPersonDocumentPath(uid, person.id)));
+      editorDraft.consumeAfterSave();
+      await onDeleted();
       onClose();
     } catch (error) {
       console.error('Erro ao excluir o cadastro da pessoa:', error);
+      setError('Erro ao excluir a pessoa. Verifique sua conexão.');
     }
+  };
+
+  const handleDismiss = () => {
+    editorDraft.saveOnDismiss();
+    closeNestedModals();
+    onClose();
+  };
+
+  const handleClear = () => {
+    editorDraft.clearDraft();
   };
 
   if (!isOpen || !uid) return null;
@@ -106,6 +178,9 @@ const EditPersonModal = ({
     <ProtectedRoute>
       <motion.div
         className={styles.overlay}
+        onClick={(clickEvent) => {
+          if (clickEvent.target === clickEvent.currentTarget) handleDismiss();
+        }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-person-title"
@@ -117,7 +192,7 @@ const EditPersonModal = ({
         <form className={styles.form} onSubmit={handleUpdate}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={onClose} className={styles.toolbarButton}>
+              <button type="button" onClick={handleDismiss} className={styles.toolbarButton}>
                 Cancelar
               </button>
               <h2 id="edit-person-title" className={styles.toolbarTitle}>Editar pessoa</h2>
@@ -148,14 +223,24 @@ const EditPersonModal = ({
               updateOptionalField={updateOptionalField}
               updateLabel={updateLabel}
               availableRelationships={availableRelationships}
+              relationshipColors={relationshipColors}
               selectedRelationships={selectedRelationships}
               toggleRelationship={toggleRelationship}
               handleAddRelationship={handleAddRelationship}
+              removeRelationship={removeRelationship}
+              relationshipError={relationshipError}
+              setRelationshipColor={setRelationshipColor}
               showOptionalFieldModal={showOptionalFieldModal}
               setShowOptionalFieldModal={setShowOptionalFieldModal}
               showRelationshipsModal={showRelationshipsModal}
               setShowRelationshipsModal={setShowRelationshipsModal}
             />
+
+            <div className={styles.draftActions}>
+              <button type="button" onClick={handleClear} className={styles.textAction}>
+                Limpar
+              </button>
+            </div>
 
             {error && <p className={styles.error} role="alert">{error}</p>}
 
