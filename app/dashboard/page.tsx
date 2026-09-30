@@ -6,6 +6,7 @@ import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useEventCategories } from '../hooks/useEventCategories';
 import { Event, Person, Task } from '../utils/interfaces';
+import { hydratePerson } from '../utils/personPayload';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
 import { AutomationRuleSet } from '../types/automation';
 import { evaluateAutomation } from '../utils/automation';
@@ -87,10 +88,7 @@ export default function Dashboard(): JSX.Element {
   */
   const fetchPerson = async (): Promise<void> => {
     const querySnapshot = await getDocs(collection(db, `users/${uid}/people-directory`));
-    const personData = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Person[];
+    const personData = querySnapshot.docs.map(doc => hydratePerson(doc.id, doc.data()));
     setPerson(personData);
   };
 

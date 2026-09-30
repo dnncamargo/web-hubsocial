@@ -13,7 +13,7 @@ import styles from './PersonEditor.module.css';
 interface AddPersonModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdded: () => void;
+  onAdded: () => void | Promise<void>;
 }
 
 const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
@@ -81,7 +81,7 @@ const AddPersonModal = ({ isOpen, onClose, onAdded }: AddPersonModalProps) => {
     const success = await createPerson();
     if (!success) return;
 
-    onAdded();
+    await onAdded();
     onClose();
   };
 

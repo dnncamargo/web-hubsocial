@@ -10,6 +10,7 @@ import { differenceInDays, format, isAfter, parseISO, add } from 'date-fns'
 import { X } from 'lucide-react'
 import { Person, Event, EventSuggestion } from '../../utils/interfaces'
 import { buildEventPayload } from '../../utils/eventPayload'
+import { hydratePerson } from '../../utils/personPayload'
 import SuggestionCard from './SuggestionCard'
 import styles from './SuggestionPanel.module.css'
 
@@ -36,7 +37,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
     const peopleSnap = await getDocs(collection(db, `users/${uid}/people-directory`))
     const eventsSnap = await getDocs(collection(db, `users/${uid}/events-history`))
 
-    const people = peopleSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Person[]
+    const people = peopleSnap.docs.map(doc => hydratePerson(doc.id, doc.data()))
     const events = eventsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Event[]
 
     const result = generateSuggestions(people, events)

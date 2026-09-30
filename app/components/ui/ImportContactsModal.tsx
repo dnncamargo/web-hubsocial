@@ -9,6 +9,7 @@ import { addDoc, collection } from 'firebase/firestore'
 import { motion } from 'motion/react'
 import { Timestamp } from 'firebase/firestore'
 import styles from './ImportContactsModal.module.css'
+import { buildPersonPayload } from '../../utils/personPayload'
 
 interface ImportContactsModalProps {
   isOpen: boolean;
@@ -73,15 +74,21 @@ export default function ImportContactsPage({ isOpen, onClose }: ImportContactsMo
       const selectedContacts = contacts.filter(c => selectedIds.includes(c.resourceName));
 
       const batch = selectedContacts.map(contact => {
-        return addDoc(collection(db, `users/${uid}/people-directory`), {
+        return addDoc(collection(db, `users/${uid}/people-directory`), buildPersonPayload({
           name: contact.displayName || 'Sem nome',
-          phone: contact.phoneNumbers || '',
+          phone: contact.phoneNumbers?.[0] || '',
+          email: contact.emailAddresses?.[0] || '',
+          birthday: contact.birthday || '',
           favorite: false,
-          relationship: '',
           contactFrequency: null,
-          optionalFields: contact.addresses || [],
-          createdAt: Timestamp.fromDate(new Date())
-        });
+          optionalFields: (contact.addresses || []).map((address, index) => ({
+            id: `imported-address-${index}`,
+            type: 'text' as const,
+            label: 'Endereço',
+            value: address,
+          })),
+          createdAt: Timestamp.fromDate(new Date()),
+        }));
       });
 
       await Promise.all(batch);

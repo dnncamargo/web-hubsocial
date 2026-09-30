@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { db } from '../utils/firebaseConfig';
 import { collection, getDocs } from 'firebase/firestore';
 import { Person } from '../utils/interfaces';
+import { hydratePerson } from '../utils/personPayload';
 
 interface UseAssociatePersonProps {
   uid: string;
@@ -17,10 +18,7 @@ export function useAssociatePerson({ uid }: UseAssociatePersonProps) {
     setError(''); // Limpa o erro antes de buscar
     try {
       const snapshot = await getDocs(collection(db, `users/${uid}/people-directory`));
-      const peopleData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Person, 'id'>),
-      }));
+      const peopleData = snapshot.docs.map(doc => hydratePerson(doc.id, doc.data()));
       //console.log(JSON.stringify(peopleData, null, 2));
       setPeople(peopleData);
       setError('');

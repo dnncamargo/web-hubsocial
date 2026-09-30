@@ -3,30 +3,28 @@
 import { useNavigate } from 'react-router';
 import { Person } from '../../utils/interfaces';
 import { getEntityColor, type EntityColorMap } from '../../utils/entityColors';
-import { Heart, Mail, Pencil, Phone } from 'lucide-react';
+import { Heart, Mail, Phone } from 'lucide-react';
 import styles from './PersonCard.module.css';
 
 /**
  * @interface PersonCardProps
- * @description Props para o componente `PersonCard`, que exibe informações resumidas de uma pessoa e oferece ações de edição e favoritar.
+ * @description Props para o componente `PersonCard`, que exibe informações resumidas de uma pessoa e oferece ação de favoritar.
  * @property {Person} person - O objeto da pessoa a ser exibido no cartão.
- * @property {(person: Person) => void} onEditPerson - Função chamada ao solicitar a edição da pessoa. Recebe o objeto da pessoa como argumento.
  * @property {(personId: string, currentValue: boolean) => void} onToggleFavorite - Função chamada ao solicitar a alteração do status de favorito da pessoa. Recebe o ID da pessoa e o valor atual do status como argumentos.
  */
 interface PersonCardProps {
   person: Person;
-  onEditPerson: (person: Person) => void;
   onToggleFavorite: (personId: string, currentValue: boolean) => void;
   relationshipColors?: EntityColorMap;
 }
 
 /**
  * @component
- * @description Componente para exibir um cartão resumido de uma pessoa, incluindo nome, telefone, email (opcional), ação de favoritar e botão de editar. Ao clicar no cartão, navega para a página de detalhes da pessoa.
- * @param {PersonCardProps} { person, onEditPerson, onToggleFavorite } - Props para o componente.
+ * @description Componente para exibir um cartão resumido de uma pessoa, incluindo nome, telefone, email (opcional) e ação de favoritar. Ao clicar no cartão, navega para a página de detalhes da pessoa.
+ * @param {PersonCardProps} { person, onToggleFavorite } - Props para o componente.
  * @returns {JSX.Element} Um cartão representando as informações da pessoa.
  */
-const PersonCard = ({ person, onEditPerson, onToggleFavorite, relationshipColors }: PersonCardProps) => {
+const PersonCard = ({ person, onToggleFavorite, relationshipColors }: PersonCardProps) => {
   const navigate = useNavigate();
   const relationships = person.relationships ?? [];
 
@@ -97,19 +95,6 @@ const PersonCard = ({ person, onEditPerson, onToggleFavorite, relationshipColors
       </span>
       </button>
 
-      <div className={styles.footer}>
-        <button
-          type="button"
-          className={styles.editButton}
-          onClick={(e) => {
-            e.stopPropagation();
-            onEditPerson(person);
-          }}
-        >
-          <Pencil className={styles.icon} aria-hidden="true" />
-          Editar
-        </button>
-      </div>
     </article>
   );
 };

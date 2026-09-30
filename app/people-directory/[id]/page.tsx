@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useNavigate, useParams } from 'react-router';
 import AddEventModal from '../../events-history/components/AddEventModal';
+import EditPersonModal from '../components/EditPersonModal';
 import { useAuth } from '../../components/auth/AuthProvider';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { Event, Person } from '../../utils/interfaces';
 import { OptionalField } from '../../types/optionalFields';
 import { usePersonRelationships } from '../../hooks/usePersonRelationships';
 import { db } from '../../utils/firebaseConfig';
+import { getPersonDocumentPath, hydratePerson } from '../../utils/personPayload';
 import styles from '../PersonDetails.module.css';
 
 const contactFrequencyLabels: Record<NonNullable<Person['contactFrequency']>, string> = {
@@ -26,19 +28,27 @@ const PersonDetails = () => {
   const [person, setPerson] = useState<Person | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
+  const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { relationshipColors } = usePersonRelationships();
 
   const fetchPerson = async () => {
     if (!uid || !personId) return;
 
     try {
-      const personReference = doc(db, `users/${uid}/people-directory/${personId}`);
+      setIsLoading(true);
+      const personReference = doc(db, getPersonDocumentPath(uid, personId));
       const snapshot = await getDoc(personReference);
       if (snapshot.exists()) {
-        setPerson({ id: snapshot.id, ...snapshot.data() } as Person);
+        setPerson(hydratePerson(snapshot.id, snapshot.data()));
+      } else {
+        setPerson(null);
+        setEvents([]);
       }
     } catch (error) {
       console.error('Erro ao buscar pessoa:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -67,8 +77,19 @@ const PersonDetails = () => {
     void fetchEvents();
   }, [uid, personId]);
 
-  if (!person) {
+  if (isLoading) {
     return <p className={styles.loading}>Carregando as informações da pessoa...</p>;
+  }
+
+  if (!person) {
+    return (
+      <main className={styles.page}>
+        <p className={styles.empty}>Pessoa não encontrada.</p>
+        <button type="button" onClick={() => navigate('/people-directory')} className={styles.backButton}>
+          Voltar para pessoas
+        </button>
+      </main>
+    );
   }
 
   const relationships = person.relationships ?? [];
@@ -78,12 +99,17 @@ const PersonDetails = () => {
     <ProtectedRoute>
       <main className={styles.page}>
         <header className={styles.header}>
-          <button type="button" onClick={() => navigate(-1)} className={styles.backButton}>
-            Voltar
-          </button>
           <div className={styles.heading}>
             <h1 className={styles.title}>{person.name}</h1>
             <p className={styles.subtitle}>Registro de pessoa</p>
+          </div>
+          <div className={styles.headerActions}>
+            <button type="button" onClick={() => setIsEditPersonModalOpen(true)} className={styles.editButton}>
+              Editar
+            </button>
+            <button type="button" onClick={() => navigate(-1)} className={styles.backButton}>
+              Voltar
+            </button>
           </div>
         </header>
 
@@ -223,6 +249,16 @@ const PersonDetails = () => {
             initialPersonId={personId}
           />
         )}
+
+        <EditPersonModal
+          person={person}
+          isOpen={isEditPersonModalOpen}
+          onClose={() => setIsEditPersonModalOpen(false)}
+          onUpdated={fetchPerson}
+          onDeleted={async () => {
+            navigate('/people-directory');
+          }}
+        />
       </main>
     </ProtectedRoute>
   );

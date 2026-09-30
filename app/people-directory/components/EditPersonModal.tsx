@@ -7,6 +7,7 @@ import { useAuth } from '../../components/auth/AuthProvider';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { Person } from '../../utils/interfaces';
 import { db } from '../../utils/firebaseConfig';
+import { getPersonDocumentPath } from '../../utils/personPayload';
 import { useOptionalFields } from '../../hooks/useOptionalFields';
 import { usePersonRelationships } from '../../hooks/usePersonRelationships';
 import { usePersonForm } from '../../hooks/usePersonForm';
@@ -17,8 +18,8 @@ interface EditPersonModalProps {
   person: Person;
   isOpen: boolean;
   onClose: () => void;
-  onUpdated: () => void;
-  onDeleted: () => void;
+  onUpdated: () => void | Promise<void>;
+  onDeleted: () => void | Promise<void>;
 }
 
 const EditPersonModal = ({
@@ -67,6 +68,7 @@ const EditPersonModal = ({
     contactFrequency,
     setContactFrequency,
     error,
+    setError,
     updatePerson,
   } = usePersonForm({
     uid: uid ?? '',
@@ -88,19 +90,21 @@ const EditPersonModal = ({
     const success = await updatePerson();
     if (!success) return;
 
-    onUpdated();
+    await onUpdated();
     onClose();
   };
 
   const handleDelete = async () => {
     if (!uid) return;
+    if (!window.confirm(`Excluir o cadastro de ${person.name}?`)) return;
 
     try {
-      await deleteDoc(doc(db, 'users', uid, 'people-directory', person.id));
-      onDeleted();
+      await deleteDoc(doc(db, getPersonDocumentPath(uid, person.id)));
+      await onDeleted();
       onClose();
     } catch (error) {
       console.error('Erro ao excluir o cadastro da pessoa:', error);
+      setError('Erro ao excluir a pessoa. Verifique sua conexão.');
     }
   };
 

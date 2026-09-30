@@ -8,10 +8,10 @@ import { useAuth } from '../components/auth/AuthProvider';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useSearchParams } from 'react-router';
 import { Person } from '../utils/interfaces';
+import { getPersonDocumentPath, hydratePerson } from '../utils/personPayload';
 import { usePersonRelationships } from '../hooks/usePersonRelationships';
 import PersonCard from './components/PersonCard';
 import AddPersonModal from './components/AddPersonModal';
-import EditPersonModal from './components/EditPersonModal';
 import FilterPersonModal, { PersonFilter } from './components/FilterPersonModal';
 import styles from './PeopleDirectory.module.css';
 
@@ -31,9 +31,7 @@ const PeopleDirectory = () => {
   const { uid } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [people, setPeople] = useState<Person[]>([]);
-  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
-  const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
   const [filters, setFilters] = useState<PersonFilter>(defaultFilters);
@@ -47,10 +45,9 @@ const PeopleDirectory = () => {
 
     try {
       const querySnapshot = await getDocs(collection(db, `users/${uid}/people-directory`));
-      const peopleData = querySnapshot.docs.map((personDocument) => ({
-        id: personDocument.id,
-        ...personDocument.data(),
-      })) as Person[];
+      const peopleData = querySnapshot.docs.map((personDocument) =>
+        hydratePerson(personDocument.id, personDocument.data())
+      );
 
       peopleData.sort((left, right) => {
         const favoriteDifference = Number(right.favorite) - Number(left.favorite);
@@ -116,20 +113,10 @@ const PeopleDirectory = () => {
     }));
   }, [availableRelationships]);
 
-  const openEditPersonModal = (person: Person) => {
-    setSelectedPerson(person);
-    setIsEditPersonModalOpen(true);
-  };
-
-  const handlePersonDeleted = () => {
-    setSelectedPerson(null);
-    void fetchPeople();
-  };
-
   const toggleFavorite = async (personId: string, currentValue: boolean) => {
     if (!uid) return;
 
-    const personReference = doc(db, `users/${uid}/people-directory`, personId);
+    const personReference = doc(db, getPersonDocumentPath(uid, personId));
     await updateDoc(personReference, { favorite: !currentValue });
     await fetchPeople();
   };
@@ -234,7 +221,6 @@ const PeopleDirectory = () => {
               <div key={person.id}>
                 <PersonCard
                   person={person}
-                  onEditPerson={openEditPersonModal}
                   onToggleFavorite={toggleFavorite}
                   relationshipColors={relationshipColors}
                 />
@@ -308,15 +294,6 @@ const PeopleDirectory = () => {
           />
         )}
 
-        {isEditPersonModalOpen && selectedPerson && (
-          <EditPersonModal
-            person={selectedPerson}
-            isOpen={isEditPersonModalOpen}
-            onClose={() => setIsEditPersonModalOpen(false)}
-            onUpdated={fetchPeople}
-            onDeleted={handlePersonDeleted}
-          />
-        )}
       </main>
     </ProtectedRoute>
   );

@@ -13,6 +13,7 @@
 }
 
 .backButton,
+.editButton,
 .primaryButton {
   width: fit-content;
   min-height: 2.25rem;
@@ -28,6 +29,23 @@
   border: 1px solid var(--color-border-strong);
   background: var(--color-surface);
   color: var(--color-text-secondary);
+}
+
+.editButton {
+  border: 1px solid var(--color-people);
+  background: var(--color-people);
+  color: #fff;
+}
+
+.editButton:hover {
+  border-color: var(--color-people-strong);
+  background: var(--color-people-strong);
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .backButton:hover {
@@ -169,6 +187,7 @@
 }
 
 .backButton:focus-visible,
+.editButton:focus-visible,
 .primaryButton:focus-visible,
 .link:focus-visible {
   outline: 2px solid var(--color-focus-ring);
@@ -194,8 +213,8 @@
     grid-row: 1;
   }
 
-  .backButton {
-    grid-column: 1;
+  .headerActions {
+    grid-column: 1 / -1;
     grid-row: 2;
   }
 }

@@ -12,7 +12,7 @@ export interface Person {
   birthday?: string;
   note?: string;
   favorite?: boolean;
-  relationships?: string[];
+  relationships?: string[] | null;
   contactFrequency?: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | null;
   optionalFields?: OptionalFieldType[];
   createdAt?: Date | Timestamp;

@@ -8,6 +8,7 @@ import { useAuth } from '@/app/components/auth/AuthProvider'
 import { Event, Person } from '@/app/utils/interfaces'
 import { OptionalField } from '@/app/types/optionalFields'
 import { getEventDocumentPath } from '@/app/utils/eventPayload'
+import { getPersonDocumentPath, hydratePerson } from '@/app/utils/personPayload'
 import { createGoogleCalendarEvent } from '@/app/utils/googleCalendar'
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
 import EditEventModal from '../components/EditEventModal'
@@ -56,11 +57,11 @@ const EventDetails = () => {
 
       if (eventData.personIds && eventData.personIds.length > 0) {
         const personPromises = eventData.personIds.map(async (personId) => {
-          const personRef = doc(db, `users/${uid}/people-directory`, personId)
+          const personRef = doc(db, getPersonDocumentPath(uid ?? '', personId))
           const personSnap = await getDoc(personRef)
 
           if (personSnap.exists()) {
-            return { id: personSnap.id, ...personSnap.data() } as Person
+            return hydratePerson(personSnap.id, personSnap.data())
           }
 
           return null
