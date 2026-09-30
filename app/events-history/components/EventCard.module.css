@@ -41,11 +41,23 @@
 }
 
 .date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   flex: none;
   color: var(--color-text-secondary);
   font-size: 0.6875rem;
   font-weight: 600;
+  line-height: 1.2;
   text-align: right;
+  white-space: nowrap;
+}
+
+.dateRangeIcon {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--color-text-muted);
+  stroke-width: 1.8;
 }
 
 .metaList {

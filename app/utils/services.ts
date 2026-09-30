@@ -35,7 +35,11 @@ export const searchAddress = async (zipCode: string): Promise<{
 
 import { format, parseISO, isSameMonth, isSameYear } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowRight } from 'lucide-react';
+
+export interface FormattedDateRange {
+  start: string
+  end?: string
+}
 
 /**
  * Formata a data do evento para exibição compacta e legível.
@@ -45,15 +49,15 @@ import { ArrowRight } from 'lucide-react';
  * @param startTime - Hora de início no formato 'HH:mm' (opcional)
  * @param endTime - Hora de término no formato 'HH:mm' (opcional)
  * @param allDay - Indica se o evento é o dia todo
- * @returns string formatada com datas no formato 'dd-MM', ou variações conforme intervalo
+ * @returns partes formatadas da data, com `end` apenas quando existe um intervalo
  */
-export function formatDate(
+export function formatDateRange(
   startDate: string,
   endDate: string,
   startTime?: string,
   endTime?: string,
   allDay: boolean = false
-): string {
+): FormattedDateRange {
   // Transforma as strings em objetos Date
   const start = parseISO(startDate)
   const end = parseISO(endDate)
@@ -67,33 +71,30 @@ export function formatDate(
   const formatDM = (date: Date) => format(date, 'dd-MMM', { locale: ptBR })
   const formatDMY = (date: Date) => format(date, 'dd-MM-yy', { locale: ptBR })
 
-  // Seta → para separação
-  const arrow = '➡️'
-
   // Se evento for o dia todo
   if (allDay) {
     const diffInDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
 
     // Evento de 1 dia
-    if (diffInDays <= 1) return formatDM(start)
+    if (diffInDays <= 1) return { start: formatDM(start) }
 
     // Mesmo mês e ano
     if (sameMonth && sameYear) {
-      return `${format(start, 'dd')} ${arrow} ${formatDM(end)}`
+      return { start: format(start, 'dd'), end: formatDM(end) }
     }
 
     // Meses diferentes no mesmo ano
     if (!sameMonth && sameYear) {
-      return `${formatDM(start)} ${arrow} ${formatDM(end)}`
+      return { start: formatDM(start), end: formatDM(end) }
     }
 
     // Anos diferentes
     if (yearDiff === 1) {
-      return `${formatDM(start)} ${arrow} ${formatDMY(end)}`
+      return { start: formatDM(start), end: formatDMY(end) }
     }
 
     // Anos diferentes e não consecutivos
-    return `${formatDMY(start)} ${arrow} ${formatDMY(end)}`
+    return { start: formatDMY(start), end: formatDMY(end) }
   }
 
   // Se o evento tiver horário definido
@@ -107,24 +108,24 @@ export function formatDate(
     const yearDiff = Math.abs(startFull.getFullYear() - endFull.getFullYear())
 
     if (sameDay) {
-      return formatDM(startFull)
+      return { start: formatDM(startFull) }
     }
 
     if (!sameDay && sameMonth && sameYear) {
-      return `${format(startFull, 'dd')} ${arrow} ${formatDM(endFull)}`
+      return { start: format(startFull, 'dd'), end: formatDM(endFull) }
     }
 
     if (!sameMonth && sameYear) {
-      return `${formatDM(startFull)} ${arrow} ${formatDM(endFull)}`
+      return { start: formatDM(startFull), end: formatDM(endFull) }
     }
 
     if (!sameYear && yearDiff === 1) {
-      return `${formatDM(startFull)} ${arrow} ${formatDMY(endFull)}`
+      return { start: formatDM(startFull), end: formatDMY(endFull) }
     }
 
-    return `${formatDMY(startFull)} ${arrow} ${formatDMY(endFull)}`
+    return { start: formatDMY(startFull), end: formatDMY(endFull) }
   }
 
   // Caso padrão (segurança)
-  return formatDM(start)
+  return { start: formatDM(start) }
 }

@@ -3,8 +3,8 @@
 import { JSX } from 'react';
 import { useNavigate } from 'react-router';
 import { Event } from '../../utils/interfaces';
-import { Clock, Link, MapPin, SquarePen } from 'lucide-react';
-import { formatDate } from '../../utils/services';
+import { ArrowRight, Clock, Link, MapPin, SquarePen } from 'lucide-react';
+import { formatDateRange } from '../../utils/services';
 import styles from './EventCard.module.css';
 
 /**
@@ -32,6 +32,13 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
   )
 
   const openEvent = () => navigate(`/events-history/${event.id}`)
+  const dateRange = formatDateRange(
+    event.startDate,
+    event.endDate,
+    event.startTime,
+    event.endTime,
+    event.allDay,
+  )
 
   return (
     <article
@@ -50,7 +57,13 @@ const EventCard = ({ event, onEditEvent }: EventCardProps): JSX.Element => {
       <header className={styles.header}>
         <h2 className={styles.title}>{event.title}</h2>
         <span className={styles.date}>
-          {formatDate(event.startDate, event.endDate, event.startTime, event.endTime, event.allDay)}
+          <span>{dateRange.start}</span>
+          {dateRange.end && (
+            <>
+              <ArrowRight className={styles.dateRangeIcon} aria-hidden="true" />
+              <span>{dateRange.end}</span>
+            </>
+          )}
         </span>
       </header>
 
