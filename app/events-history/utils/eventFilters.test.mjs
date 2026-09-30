@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { matchesEventFilters } from './eventFilters.ts'
+import {
+  matchesEventFilters,
+  normalizeEventFilters,
+} from './eventFilters.ts'
 
 const baseEvent = {
   id: 'event-1',
@@ -25,6 +28,8 @@ const filters = (overrides = {}) => ({
   selectedCategories: [],
   ...overrides,
 })
+
+const availableCategories = ['work', 'health', 'family']
 
 test('only start date active accepts future events regardless of optional fields', () => {
   assert.equal(matchesEventFilters(baseEvent, filters({ startDate: '2026-10-01' })), true)
@@ -96,4 +101,62 @@ test('malformed persisted false values do not become active truthy filters', () 
     hasNotes: 'false',
     hasAddressByCEP: 'false',
   }), true)
+})
+
+test('empty selected categories pass uncategorized events', () => {
+  assert.equal(matchesEventFilters(baseEvent, filters({ selectedCategories: [] }), availableCategories), true)
+})
+
+test('empty selected categories pass categorized events', () => {
+  assert.equal(matchesEventFilters({ ...baseEvent, categories: ['work'] }, filters({ selectedCategories: [] }), availableCategories), true)
+})
+
+test('all available categories pass uncategorized events', () => {
+  assert.equal(matchesEventFilters(baseEvent, filters({ selectedCategories: availableCategories }), availableCategories), true)
+})
+
+test('all available categories pass categorized events', () => {
+  assert.equal(matchesEventFilters({ ...baseEvent, categories: ['work'] }, filters({ selectedCategories: availableCategories }), availableCategories), true)
+})
+
+test('a proper category subset rejects uncategorized events', () => {
+  assert.equal(matchesEventFilters(baseEvent, filters({ selectedCategories: ['work'] }), availableCategories), false)
+})
+
+test('a proper category subset passes a matching categorized event', () => {
+  assert.equal(matchesEventFilters({ ...baseEvent, categories: ['work'] }, filters({ selectedCategories: ['work'] }), availableCategories), true)
+})
+
+test('a proper category subset rejects a non-matching categorized event', () => {
+  assert.equal(matchesEventFilters({ ...baseEvent, categories: ['family'] }, filters({ selectedCategories: ['work'] }), availableCategories), false)
+})
+
+test('legacy all-category persisted state normalizes to unrestricted', () => {
+  assert.deepEqual(
+    normalizeEventFilters(
+      { ...filters({ selectedCategories: ['work', 'health', 'family'] }) },
+      availableCategories,
+    ).selectedCategories,
+    [],
+  )
+})
+
+test('category equality is value-based rather than length-based', () => {
+  assert.deepEqual(
+    normalizeEventFilters(
+      { ...filters({ selectedCategories: ['work', 'health', 'unknown'] }) },
+      availableCategories,
+    ).selectedCategories,
+    ['work', 'health'],
+  )
+})
+
+test('start date plus legacy all-category state passes future events regardless of category', () => {
+  const legacyFilters = filters({
+    startDate: '2026-05-01',
+    selectedCategories: ['work', 'health', 'family'],
+  })
+
+  assert.equal(matchesEventFilters(baseEvent, legacyFilters, availableCategories), true)
+  assert.equal(matchesEventFilters({ ...baseEvent, categories: ['work'] }, legacyFilters, availableCategories), true)
 })

@@ -58,7 +58,41 @@ function normalizeCategories(value: unknown): string[] {
   ))
 }
 
-export function normalizeEventFilters(value: unknown): EventFilter {
+function sameCategorySet(
+  first: readonly string[],
+  second: readonly string[],
+): boolean {
+  const firstSet = new Set(first)
+  const secondSet = new Set(second)
+
+  return firstSet.size === secondSet.size
+    && [...firstSet].every(category => secondSet.has(category))
+}
+
+function normalizeSelectedCategories(
+  value: unknown,
+  availableCategories?: readonly string[],
+): string[] {
+  const selectedCategories = normalizeCategories(value)
+  if (!availableCategories || availableCategories.length === 0) {
+    return selectedCategories
+  }
+
+  const knownCategories = normalizeCategories(availableCategories)
+  const knownCategorySet = new Set(knownCategories)
+  const knownSelectedCategories = selectedCategories.filter(category =>
+    knownCategorySet.has(category),
+  )
+
+  return sameCategorySet(knownSelectedCategories, knownCategories)
+    ? []
+    : knownSelectedCategories
+}
+
+export function normalizeEventFilters(
+  value: unknown,
+  availableCategories?: readonly string[],
+): EventFilter {
   const data = isRecord(value) ? value : {}
 
   return {
@@ -73,7 +107,10 @@ export function normalizeEventFilters(value: unknown): EventFilter {
     hasAddressByCEP: typeof data.hasAddressByCEP === 'boolean'
       ? data.hasAddressByCEP
       : false,
-    selectedCategories: normalizeCategories(data.selectedCategories),
+    selectedCategories: normalizeSelectedCategories(
+      data.selectedCategories,
+      availableCategories,
+    ),
   }
 }
 
@@ -133,8 +170,9 @@ export interface EventFilterEvaluation {
 export function evaluateEventFilters(
   event: Event,
   filters: EventFilter,
+  availableCategories?: readonly string[],
 ): EventFilterEvaluation {
-  const normalized = normalizeEventFilters(filters)
+  const normalized = normalizeEventFilters(filters, availableCategories)
   const eventCategories = Array.isArray(event.categories) ? event.categories : []
   const facts = {
     date: event.startDate,
@@ -144,6 +182,10 @@ export function evaluateEventFilters(
     hasAddressByCEP: hasAddressByCEP(event),
     categories: eventCategories,
   }
+  const hasCategoryRestriction = normalized.selectedCategories.length > 0
+    && (!availableCategories
+      || availableCategories.length === 0
+      || !sameCategorySet(normalized.selectedCategories, availableCategories))
 
   const criteria = {
     date: !normalized.enabled
@@ -158,7 +200,7 @@ export function evaluateEventFilters(
       || !normalized.hasAddressByCEP
       || facts.hasAddressByCEP,
     categories: !normalized.enabled
-      || normalized.selectedCategories.length === 0
+      || !hasCategoryRestriction
       || eventCategories.some(category => normalized.selectedCategories.includes(category)),
   }
 
@@ -169,6 +211,10 @@ export function evaluateEventFilters(
   }
 }
 
-export function matchesEventFilters(event: Event, filters: EventFilter): boolean {
-  return evaluateEventFilters(event, filters).matches
+export function matchesEventFilters(
+  event: Event,
+  filters: EventFilter,
+  availableCategories?: readonly string[],
+): boolean {
+  return evaluateEventFilters(event, filters, availableCategories).matches
 }

@@ -48,6 +48,19 @@ const EventsHistory = (): JSX.Element => {
   }, [uid])
 
   useEffect(() => {
+    if (!uid || !filtersLoaded || availableCategories.length === 0) return
+
+    const normalizedFilters = normalizeEventFilters(filters, availableCategories)
+    if (normalizedFilters.selectedCategories.join('\u0000') === filters.selectedCategories.join('\u0000')) {
+      return
+    }
+
+    setFilters(normalizedFilters)
+    const eventsSettingRef = doc(db, `users/${uid}/settings`, 'userEventsFilters')
+    void setDoc(eventsSettingRef, normalizedFilters)
+  }, [availableCategories, filters, filtersLoaded, uid])
+
+  useEffect(() => {
     if (searchParams.get('create') !== 'event') return
 
     setIsAddEventModalOpen(true)
@@ -119,7 +132,8 @@ const EventsHistory = (): JSX.Element => {
 
   const filteredEvents = (!filters.enabled || !filtersLoaded)
     ? events
-    : events.filter(event => evaluateEventFilters(event, filters).matches)
+    : events.filter(event =>
+      evaluateEventFilters(event, filters, availableCategories).matches)
 
   const visibleEvents = filteredEvents.filter(event => {
     if (!isSearching || searchQuery.trim() === '') return true
@@ -135,14 +149,15 @@ const EventsHistory = (): JSX.Element => {
     }
   }
 
+  const effectiveFilters = normalizeEventFilters(filters, availableCategories)
   const hasEffectiveFilter = Boolean(
-    filters.startDate
-    || filters.endDate
-    || filters.hasRating > 0
-    || filters.hasTasks
-    || filters.hasNotes
-    || filters.hasAddressByCEP
-    || filters.selectedCategories.length > 0,
+    effectiveFilters.startDate
+    || effectiveFilters.endDate
+    || effectiveFilters.hasRating > 0
+    || effectiveFilters.hasTasks
+    || effectiveFilters.hasNotes
+    || effectiveFilters.hasAddressByCEP
+    || effectiveFilters.selectedCategories.length > 0,
   )
   const filtersAreActive = filters.enabled && hasEffectiveFilter
   const searchIsActive = isSearching && searchQuery.trim() !== ''
