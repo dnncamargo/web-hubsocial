@@ -8,13 +8,16 @@ import { useEventCategories } from '../hooks/useEventCategories';
 import { Event, Person, Task } from '../utils/interfaces';
 import { hydratePerson } from '../utils/personPayload';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
-import { AutomationRuleSet } from '../types/automation';
-import { evaluateAutomation } from '../utils/automation';
 import {
-  getCurrentBrowserWeather,
   WeatherSnapshot,
+  resolveWeatherWithinDeadline,
 } from '../utils/weather';
 import { getActionPeriodKeys } from '../utils/actionPlanning';
+import {
+  hasWeatherRules,
+  PlannedActionSource,
+  projectActionSources,
+} from '../utils/actionProjection';
 import {
   getTaskActionCandidates,
   TaskScheduleEventContext,
@@ -35,11 +38,6 @@ type GroupedEvents = {
   thisMonth: Event[],
   nextMonth: Event[],
   future: Event[]
-}
-
-type PlannedActionSource = {
-  item: Omit<ActionProjectionItem, 'automation'>
-  automation?: AutomationRuleSet
 }
 
 /**
@@ -68,15 +66,24 @@ export default function Dashboard(): JSX.Element {
     () => new Set(),
   );
   const pendingActionKeysRef = useRef(new Set<string>());
+  const actionRequestIdRef = useRef(0);
+  const isMountedRef = useRef(false);
   const [showSuggestions, setShowSuggestions] = useState(false); /** @state {boolean} showSuggestions - Controla a visibilidade do painel de sugestões de eventos. */
 
   useEffect(() => {
+    isMountedRef.current = true
+
     // Chama as funções fetchPerson e fetchAndGroupEvents quando o componente é montado.
     // Isso garante que a lista de pessoas e eventos seja carregada assim que o componente for exibido.
     if (uid) {
       fetchAndGroupEvents()
       fetchPlannedActions()
       fetchPerson();
+    }
+
+    return () => {
+      isMountedRef.current = false
+      actionRequestIdRef.current += 1
     }
   }, [uid]); // <- Executa quando user estiver pronto
 
@@ -97,6 +104,9 @@ export default function Dashboard(): JSX.Element {
   ): Promise<void> => {
     if (!uid) return
 
+    const requestId = ++actionRequestIdRef.current
+    const canCommit = () =>
+      isMountedRef.current && actionRequestIdRef.current === requestId
     const referenceDate = new Date()
     const horizons: ActionHorizon[] = ['day', 'week', 'month']
     const [eventSourcesByHorizon, taskSnapshot] = await Promise.all([
@@ -138,14 +148,7 @@ export default function Dashboard(): JSX.Element {
       ...snapshot.data(),
     }) as Task)
 
-    let currentWeather = weatherOverride
-    if (weatherOverride === undefined) {
-      try {
-        currentWeather = await getCurrentBrowserWeather()
-      } catch {
-        currentWeather = null
-      }
-    }
+    if (!canCommit()) return
 
     const referencedEventIds = new Set<string>()
     const collectEventReferences = (source: PlannedActionSource) => {
@@ -191,6 +194,8 @@ export default function Dashboard(): JSX.Element {
       )
     ).filter((event): event is TaskScheduleEventContext => event !== null)
 
+    if (!canCommit()) return
+
     const taskSourcesByHorizon: Record<ActionHorizon, PlannedActionSource[]> = {
       day: [],
       week: [],
@@ -220,45 +225,27 @@ export default function Dashboard(): JSX.Element {
     const sourcesByHorizon = eventSourcesByHorizon.map(([horizon, sources]) => (
       [horizon, [...sources, ...taskSourcesByHorizon[horizon]]] as const
     ))
-    const projectedTaskKeys = new Set<string>()
+    const projectionContext = {
+      referenceDate,
+      events: linkedEvents,
+    }
 
-    const entries = sourcesByHorizon.map(([horizon, sources]) => {
-      const visibleSources = sources.filter(source => {
-        if (source.item.sourceType !== 'task') return true
-        if (projectedTaskKeys.has(source.item.key)) return false
+    setActions(projectActionSources(sourcesByHorizon, projectionContext))
 
-        projectedTaskKeys.add(source.item.key)
-        return true
-      })
+    if (!hasWeatherRules(sourcesByHorizon)) return
 
-      const items: ActionProjectionItem[] = visibleSources
-        .map(({ item, automation }) => ({
-          ...item,
-          automation: evaluateAutomation(automation, {
-            referenceDate,
-            events: linkedEvents,
-            ...(currentWeather
-              ? { weather: { condition: currentWeather.condition } }
-              : {}),
-          }),
-        }))
-        .sort((a, b) => {
-          if (a.automation.highlighted !== b.automation.highlighted) {
-            return a.automation.highlighted ? -1 : 1
-          }
+    const currentWeather = weatherOverride === undefined
+      ? await resolveWeatherWithinDeadline()
+      : weatherOverride
 
-          if (a.inProgress !== b.inProgress) {
-            return a.inProgress ? -1 : 1
-          }
+    if (!canCommit()) return
 
-          const timeOrder = (a.time ?? '99:99').localeCompare(b.time ?? '99:99')
-          return timeOrder !== 0 ? timeOrder : a.title.localeCompare(b.title, 'pt-BR')
-        })
-
-      return [horizon, items] as const
-    })
-
-    setActions(Object.fromEntries(entries) as ActionProjection)
+    setActions(projectActionSources(sourcesByHorizon, {
+      ...projectionContext,
+      ...(currentWeather
+        ? { weatherCondition: currentWeather.condition }
+        : {}),
+    }))
   }
 
   /**
@@ -269,7 +256,6 @@ export default function Dashboard(): JSX.Element {
    */
   const fetchAndGroupEvents = async (): Promise<void> => {
     const today = new Date()
-    console.log('today', today)
     const q = query(
       collection(db, `users/${uid}/events-history`),
       where('startDate', '>=', format(today, 'yyyy-MM-dd')),

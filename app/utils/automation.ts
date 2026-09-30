@@ -1,12 +1,12 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns'
-import {
+import type {
   AutomationEvaluation,
   AutomationRule,
   AutomationRuleEvaluation,
   AutomationRuleSet,
   WeatherCondition,
   WeekdayName,
-} from '../types/automation'
+} from '../types/automation.ts'
 
 export interface AutomationEventContext {
   id: string

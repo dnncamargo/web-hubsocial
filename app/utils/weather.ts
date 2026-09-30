@@ -1,7 +1,8 @@
-import { WeatherCondition } from '../types/automation'
+import type { WeatherCondition } from '../types/automation.ts'
 
 const WEATHER_ENDPOINT = 'https://api.open-meteo.com/v1/forecast'
 const CACHE_DURATION_MS = 15 * 60 * 1000
+export const WEATHER_CONTEXT_DEADLINE_MS = 1500
 
 export const weatherConditions: Array<{
   value: WeatherCondition
@@ -176,6 +177,27 @@ export async function getCurrentBrowserWeather(): Promise<WeatherSnapshot> {
   } finally {
     if (pendingWeather === request) {
       pendingWeather = undefined
+    }
+  }
+}
+
+export async function resolveWeatherWithinDeadline(
+  loadWeather: () => Promise<WeatherSnapshot> = getCurrentBrowserWeather,
+  timeoutMs: number = WEATHER_CONTEXT_DEADLINE_MS,
+): Promise<WeatherSnapshot | null> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  try {
+    const timeout = new Promise<null>((resolve) => {
+      timeoutId = setTimeout(() => resolve(null), timeoutMs)
+    })
+
+    return await Promise.race([loadWeather(), timeout])
+  } catch {
+    return null
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId)
     }
   }
 }
