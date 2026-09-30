@@ -7,8 +7,10 @@ import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '@/app/components/auth/AuthProvider'
 import { Event, Person } from '@/app/utils/interfaces'
 import { OptionalField } from '@/app/types/optionalFields'
+import { getEventDocumentPath } from '@/app/utils/eventPayload'
 import { createGoogleCalendarEvent } from '@/app/utils/googleCalendar'
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
+import EditEventModal from '../components/EditEventModal'
 import { CheckCircle, Circle, Star } from 'lucide-react'
 import styles from './EventDetails.module.css'
 
@@ -20,6 +22,7 @@ const EventDetails = () => {
   const [event, setEvent] = useState<Event | null>(null)
   const [people, setPeople] = useState<Person[]>([])
   const [currentRating, setCurrentRating] = useState(0)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   useEffect(() => {
     if (uid && id) {
@@ -35,10 +38,14 @@ const EventDetails = () => {
 
   const fetchEvent = async (): Promise<void> => {
     try {
-      const docRef = doc(db, `users/${uid}/events-history/${id}`)
+      const docRef = doc(db, getEventDocumentPath(uid ?? '', id ?? ''))
       const docSnap = await getDoc(docRef)
 
-      if (!docSnap.exists()) return
+      if (!docSnap.exists()) {
+        setEvent(null)
+        setPeople([])
+        return
+      }
 
       const eventData = {
         id: docSnap.id,
@@ -72,8 +79,11 @@ const EventDetails = () => {
   const handleRatingChange = async (value: number) => {
     const newRating = currentRating === value ? 0 : value
     setCurrentRating(newRating)
+    setEvent(previousEvent => previousEvent
+      ? { ...previousEvent, rating: newRating }
+      : previousEvent)
 
-    await updateDoc(doc(db, `users/${uid}/events-history/${id}`), {
+    await updateDoc(doc(db, getEventDocumentPath(uid ?? '', id ?? '')), {
       rating: newRating,
     })
   }
@@ -152,13 +162,22 @@ const EventDetails = () => {
             <p className={styles.eyebrow}>Evento</p>
             <h1 className={styles.title}>{event.title}</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className={styles.backButton}
-          >
-            Voltar
-          </button>
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(true)}
+              className={styles.editButton}
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className={styles.backButton}
+            >
+              Voltar
+            </button>
+          </div>
         </header>
 
         <div className={styles.layout}>
@@ -263,6 +282,12 @@ const EventDetails = () => {
           </aside>
         </div>
       </main>
+      <EditEventModal
+        event={event}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onUpdated={fetchEvent}
+      />
     </ProtectedRoute>
   )
 }

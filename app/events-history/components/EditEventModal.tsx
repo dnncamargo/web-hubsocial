@@ -5,6 +5,7 @@ import { doc, deleteDoc } from 'firebase/firestore'
 import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
 import { Event } from '../../utils/interfaces'
+import { getEventDocumentPath } from '../../utils/eventPayload'
 import { motion } from 'motion/react'
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
@@ -28,7 +29,7 @@ interface EditEventModalProps {
   event: Event
   isOpen: boolean
   onClose: () => void
-  onUpdated: () => void
+  onUpdated: () => void | Promise<void>
 }
 
 const EditEventModal = ({
@@ -132,6 +133,7 @@ const EditEventModal = ({
     const success = await updateEvent()
 
     if (success) {
+      await onUpdated()
       onClose()
     }
   }
@@ -140,9 +142,9 @@ const EditEventModal = ({
     if (!uid) return
 
     try {
-      const eventRef = doc(db, 'users', uid, 'events-history', event.id)
+      const eventRef = doc(db, getEventDocumentPath(uid, event.id))
       await deleteDoc(eventRef)
-      onUpdated()
+      await onUpdated()
       onClose()
     } catch (deleteError) {
       console.error('Erro ao excluir o evento: ', deleteError)

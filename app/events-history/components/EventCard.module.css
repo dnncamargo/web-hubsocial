@@ -16,6 +16,7 @@
 
 .card:hover {
   border-color: var(--color-border-strong);
+  border-left-color: var(--color-events);
   background: var(--color-background);
 }
 
