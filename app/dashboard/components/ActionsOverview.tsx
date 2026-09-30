@@ -6,6 +6,7 @@ import styles from './ActionsOverview.module.css'
 interface ActionsOverviewProps {
   actions: ActionProjection
   context: ReactNode
+  onCompleteAction: (item: ActionProjectionItem) => Promise<void>
 }
 
 function getAutomationStatus(item: ActionProjectionItem) {
@@ -40,7 +41,15 @@ function getAttentionState(item: ActionProjectionItem): AttentionState {
   return 'normal'
 }
 
-function ActionRow({ item }: { item: ActionProjectionItem }) {
+function ActionRow({
+  item,
+  interactive,
+  onCompleteAction,
+}: {
+  item: ActionProjectionItem
+  interactive: boolean
+  onCompleteAction?: (item: ActionProjectionItem) => Promise<void>
+}) {
   const automationStatus = getAutomationStatus(item)
   const SourceIcon = item.sourceType === 'event' ? CalendarDays : ListChecks
   const attentionState = getAttentionState(item)
@@ -54,13 +63,28 @@ function ActionRow({ item }: { item: ActionProjectionItem }) {
     attentionState === 'highlighted' ? styles.highlightedRow : '',
     attentionState === 'inProgress' ? styles.inProgressRow : '',
   ].filter(Boolean).join(' ')
+  const markerLabel = item.completed
+    ? item.completedToday
+      ? `${item.title} concluída hoje`
+      : `${item.title} concluído`
+    : item.sourceType === 'task'
+      ? `Marcar ${item.title} como concluída hoje`
+      : `Marcar ${item.title} como concluído hoje`
+  const marker = interactive && onCompleteAction ? (
+    <button
+      type="button"
+      className={`${styles.markerButton} ${markerClassName}`}
+      aria-label={markerLabel}
+      disabled={item.completed}
+      onClick={() => void onCompleteAction(item)}
+    />
+  ) : (
+    <span className={markerClassName} aria-hidden="true" />
+  )
 
   return (
     <li className={rowClassName}>
-      <span
-        className={markerClassName}
-        aria-hidden="true"
-      />
+      {marker}
       <div className={styles.rowContent}>
         <span className={item.completed ? styles.completedTitle : styles.title}>
           {item.title}
@@ -71,7 +95,10 @@ function ActionRow({ item }: { item: ActionProjectionItem }) {
           {item.date ? ` · ${item.date}` : ''}
           {item.time ? ` · ${item.time}` : ''}
         </span>
-        {item.inProgress && (
+        {item.completedToday && (
+          <span className={styles.completedTodayLabel}>Concluída hoje</span>
+        )}
+        {item.inProgress && !item.completed && !item.completedToday && (
           <span className={styles.inProgressLabel}>Em andamento</span>
         )}
         {automationStatus && (
@@ -89,11 +116,15 @@ function ActionSection({
   items,
   primary = false,
   tertiary = false,
+  interactive = false,
+  onCompleteAction,
 }: {
   title: string
   items: ActionProjectionItem[]
   primary?: boolean
   tertiary?: boolean
+  interactive?: boolean
+  onCompleteAction?: (item: ActionProjectionItem) => Promise<void>
 }) {
   const sectionClassName = primary
     ? styles.primarySection
@@ -112,7 +143,12 @@ function ActionSection({
       {items.length > 0 ? (
         <ul className={styles.list}>
           {items.map((item) => (
-            <ActionRow item={item} key={item.key} />
+            <ActionRow
+              item={item}
+              key={item.key}
+              interactive={interactive}
+              onCompleteAction={onCompleteAction}
+            />
           ))}
         </ul>
       ) : (
@@ -122,10 +158,20 @@ function ActionSection({
   )
 }
 
-export default function ActionsOverview({ actions, context }: ActionsOverviewProps) {
+export default function ActionsOverview({
+  actions,
+  context,
+  onCompleteAction,
+}: ActionsOverviewProps) {
   return (
     <div className={styles.container}>
-      <ActionSection title="Ações do dia" items={actions.day} primary />
+      <ActionSection
+        title="Ações do dia"
+        items={actions.day}
+        primary
+        interactive
+        onCompleteAction={onCompleteAction}
+      />
 
       <div className={styles.planningGrid}>
         <div className={styles.planningColumn}>

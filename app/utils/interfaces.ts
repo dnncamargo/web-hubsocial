@@ -46,6 +46,7 @@ export interface Task {
   subtasks: Task[] | undefined
   parentTaskId?: string | null
   createdAt?: Date | Timestamp;
+  lastActionCompletedDate?: string;
   actionPlanning?: ActionPlanning;
   automation?: AutomationRuleSet;
   schedule?: TaskSchedule;

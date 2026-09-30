@@ -22,7 +22,8 @@ export interface TaskScheduleOccurrence {
 }
 
 export interface TaskActionCandidate extends TaskScheduleOccurrence {
-  source: 'manual' | 'schedule' | 'status'
+  source: 'manual' | 'schedule' | 'status' | 'dailyCompletion'
+  completedToday?: boolean
 }
 
 const weekdayByIndex: WeekdayName[] = [
@@ -118,10 +119,23 @@ export function getTaskActionCandidates(
     actionPlanning?: ActionPlanning
     schedule?: TaskSchedule
     status: 0 | 1 | 2
+    lastActionCompletedDate?: string
   },
   referenceDate: Date = new Date(),
   events: TaskScheduleEventContext[] = [],
 ): TaskActionCandidate[] {
+  if (task.status === 2) return []
+
+  const todayKey = format(referenceDate, 'yyyy-MM-dd')
+  if (task.lastActionCompletedDate === todayKey) {
+    return [{
+      date: todayKey,
+      horizon: 'day',
+      source: 'dailyCompletion',
+      completedToday: true,
+    }]
+  }
+
   const periods = getActionPeriodKeys(referenceDate)
   const candidates = new Map<ActionHorizon, TaskActionCandidate>()
 

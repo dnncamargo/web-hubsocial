@@ -202,7 +202,8 @@ export default function Dashboard(): JSX.Element {
             sourceType: 'task',
             sourceId: task.id,
             title: task.content,
-            completed: task.status === 2,
+            completed: task.status === 2 || candidate.completedToday === true,
+            completedToday: candidate.completedToday,
             inProgress: task.status === 1,
             ...(candidate.date ? { date: candidate.date } : {}),
           },
@@ -353,6 +354,25 @@ export default function Dashboard(): JSX.Element {
     }
   };
 
+  const handleCompleteAction = async (item: ActionProjectionItem): Promise<void> => {
+    if (!uid || item.completed) return
+
+    try {
+      if (item.sourceType === 'event') {
+        await handleToggleEventStatus(item.sourceId, 1)
+        return
+      }
+
+      await updateDoc(
+        doc(db, `users/${uid}/tasks-list`, item.sourceId),
+        { lastActionCompletedDate: format(new Date(), 'yyyy-MM-dd') },
+      )
+      await fetchPlannedActions()
+    } catch (error) {
+      console.error('Erro ao concluir ação do dia:', error)
+    }
+  }
+
   const totalUpcomingEvents = Object.values(events).flat().length
   const nearestEvents = Object.values(events).flat().slice(0, 3)
 
@@ -361,6 +381,7 @@ export default function Dashboard(): JSX.Element {
       <main className={styles.page}>
         <ActionsOverview
           actions={actions}
+          onCompleteAction={handleCompleteAction}
           context={(
             <section className={styles.contextPanel} aria-labelledby="context-title">
               <header className={styles.contextHeader}>

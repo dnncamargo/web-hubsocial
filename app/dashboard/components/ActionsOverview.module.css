@@ -104,6 +104,24 @@
   border-top: 0;
 }
 
+.markerButton {
+  display: block;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.markerButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.markerButton:disabled {
+  cursor: default;
+}
+
 .highlightedRow {
   border-radius: var(--radius-sm);
   background: var(--color-events-soft);
@@ -190,6 +208,13 @@
 .inProgressLabel {
   width: fit-content;
   color: var(--color-task-status-in-progress);
+  font-size: 0.6875rem;
+  font-weight: 650;
+}
+
+.completedTodayLabel {
+  width: fit-content;
+  color: var(--color-task-status-completed);
   font-size: 0.6875rem;
   font-weight: 650;
 }
