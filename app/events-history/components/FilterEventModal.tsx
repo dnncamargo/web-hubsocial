@@ -1,6 +1,6 @@
 'use client'
 
-import { Star } from 'lucide-react'
+import { Star, X } from 'lucide-react'
 import styles from './EventDialogs.module.css'
 
 export interface EventFilter {
@@ -75,26 +75,50 @@ export default function EventFilterModal({
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="event-filter-start">Data inicial</label>
-            <input
-              id="event-filter-start"
-              type="date"
-              value={filters.startDate}
-              onChange={(event) =>
-                setFilters({ ...filters, startDate: event.target.value })}
-              className={styles.input}
-            />
+            <div className={styles.dateControl}>
+              <input
+                id="event-filter-start"
+                type="date"
+                value={filters.startDate}
+                onChange={(event) =>
+                  setFilters({ ...filters, startDate: event.target.value })}
+                className={styles.input}
+              />
+              {filters.startDate && (
+                <button
+                  type="button"
+                  className={styles.clearDateButton}
+                  aria-label="Remover data inicial"
+                  onClick={() => setFilters({ ...filters, startDate: '' })}
+                >
+                  <X className={styles.clearDateIcon} aria-hidden="true" />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="event-filter-end">Data final</label>
-            <input
-              id="event-filter-end"
-              type="date"
-              value={filters.endDate}
-              onChange={(event) =>
-                setFilters({ ...filters, endDate: event.target.value })}
-              className={styles.input}
-            />
+            <div className={styles.dateControl}>
+              <input
+                id="event-filter-end"
+                type="date"
+                value={filters.endDate}
+                onChange={(event) =>
+                  setFilters({ ...filters, endDate: event.target.value })}
+                className={styles.input}
+              />
+              {filters.endDate && (
+                <button
+                  type="button"
+                  className={styles.clearDateButton}
+                  aria-label="Remover data final"
+                  onClick={() => setFilters({ ...filters, endDate: '' })}
+                >
+                  <X className={styles.clearDateIcon} aria-hidden="true" />
+                </button>
+              )}
+            </div>
             {isEndBeforeStart && (
               <p className={styles.error}>
                 A data final não pode ser anterior à inicial.

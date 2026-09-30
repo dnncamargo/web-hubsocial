@@ -69,10 +69,42 @@
   font-size: 0.875rem;
 }
 
+.dateControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.clearDateButton {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.clearDateButton:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.clearDateIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
 .input:focus-visible,
 .switch:focus-visible,
 .starButton:focus-visible,
 .choice:focus-visible,
+.clearDateButton:focus-visible,
 .textButton:focus-visible,
 .secondaryButton:focus-visible,
 .dangerButton:focus-visible,

@@ -93,17 +93,6 @@ const EventsHistory = (): JSX.Element => {
     init()
   }, [uid])
 
-  useEffect(() => {
-    if (availableCategories.length === 0) return
-
-    setFilters(previous => ({
-      ...previous,
-      selectedCategories: previous.selectedCategories.length === 0
-        ? availableCategories
-        : previous.selectedCategories,
-    }))
-  }, [availableCategories])
-
   const fetchEvents = async (): Promise<void> => {
     try {
       const eventsQuery = query(
@@ -191,7 +180,14 @@ const EventsHistory = (): JSX.Element => {
     }
   }
 
-  const filtersAreActive = filters.enabled
+  const hasEffectiveFilter = Boolean(
+    filters.startDate
+    || filters.endDate
+    || filters.hasRating > 0
+    || filters.hasNotes
+    || filters.selectedCategories.length > 0,
+  )
+  const filtersAreActive = filters.enabled && hasEffectiveFilter
   const searchIsActive = isSearching && searchQuery.trim() !== ''
 
   return (
