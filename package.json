@@ -17,7 +17,8 @@
     "test:settings": "node --test app/utils/selectableStringSetting.test.mjs",
     "test:people": "node --test app/utils/personPayload.test.mjs app/people-directory/peopleEditingContract.test.mjs",
     "test:drafts": "node --test app/utils/creationDraftLifecycle.test.mjs",
-    "test:theme": "node --test app/utils/theme.test.mjs"
+    "test:theme": "node --test app/utils/theme.test.mjs",
+    "test:task-visual": "node --test app/tasks-list/components/taskVisualContract.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
