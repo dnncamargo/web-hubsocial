@@ -49,7 +49,9 @@ const EditPersonModal = ({
     selectedRelationships,
     toggleRelationship,
     handleAddRelationship,
+    removeRelationship,
     setRelationshipColor,
+    error: relationshipError,
   } = personRelationshipsControl;
   const {
     name,
@@ -154,6 +156,8 @@ const EditPersonModal = ({
               selectedRelationships={selectedRelationships}
               toggleRelationship={toggleRelationship}
               handleAddRelationship={handleAddRelationship}
+              removeRelationship={removeRelationship}
+              relationshipError={relationshipError}
               setRelationshipColor={setRelationshipColor}
               showOptionalFieldModal={showOptionalFieldModal}
               setShowOptionalFieldModal={setShowOptionalFieldModal}

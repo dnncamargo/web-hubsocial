@@ -71,7 +71,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     selectedCategories,
     toggleCategory,
     handleAddCategory,
+    removeCategory,
     setCategoryColor,
+    error: categoryError,
   } = eventCategoriesControl
 
   const {
@@ -250,6 +252,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     selectedCategories={selectedCategories}
                     toggleCategory={toggleCategory}
                     handleAddCategory={handleAddCategory}
+                    removeCategory={removeCategory}
+                    error={categoryError}
                     categoryColors={categoryColors}
                     setCategoryColor={setCategoryColor}
                   />

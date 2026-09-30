@@ -33,7 +33,9 @@ interface PersonEditorFieldsProps {
   relationshipColors: Record<string, string>;
   selectedRelationships: string[];
   toggleRelationship: (relationship: string) => void;
-  handleAddRelationship: (relationship: string) => void | Promise<void>;
+  handleAddRelationship: (relationship: string) => Promise<boolean>;
+  removeRelationship: (relationship: string) => Promise<boolean>;
+  relationshipError: string | null;
   setRelationshipColor: (relationship: string, color: string) => Promise<void>;
   showOptionalFieldModal: boolean;
   setShowOptionalFieldModal: (value: boolean) => void;
@@ -67,6 +69,8 @@ export default function PersonEditorFields({
   selectedRelationships,
   toggleRelationship,
   handleAddRelationship,
+  removeRelationship,
+  relationshipError,
   setRelationshipColor,
   showOptionalFieldModal,
   setShowOptionalFieldModal,
@@ -188,6 +192,8 @@ export default function PersonEditorFields({
               selectedRelationships={selectedRelationships}
               toggleRelationship={toggleRelationship}
               handleAddRelationship={handleAddRelationship}
+              removeRelationship={removeRelationship}
+              error={relationshipError}
               relationshipColors={relationshipColors}
               setRelationshipColor={setRelationshipColor}
             />

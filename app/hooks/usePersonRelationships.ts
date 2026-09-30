@@ -9,11 +9,13 @@ export function usePersonRelationships() {
     toggleValue,
     clearSelectedValues,
     handleAddValue,
+    removeValue,
     setValueColor,
+    error,
   } = useSelectableStringSetting({
     documentId: 'userRelationships',
     fieldName: 'relationship',
-    errorLabel: 'novo relacionamento',
+    errorLabel: 'relacionamento',
     colorFieldName: 'relationshipColors',
   })
 
@@ -25,6 +27,8 @@ export function usePersonRelationships() {
     toggleRelationship: toggleValue,
     clearSelectedRelationships: clearSelectedValues,
     handleAddRelationship: handleAddValue,
+    removeRelationship: removeValue,
     setRelationshipColor: setValueColor,
+    error,
   }
 }

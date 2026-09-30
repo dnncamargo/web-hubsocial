@@ -9,11 +9,13 @@ export function useEventCategories() {
     toggleValue,
     clearSelectedValues,
     handleAddValue,
+    removeValue,
     setValueColor,
+    error,
   } = useSelectableStringSetting({
     documentId: 'userCategories',
     fieldName: 'category',
-    errorLabel: 'nova categoria',
+    errorLabel: 'categoria',
     colorFieldName: 'categoryColors',
   })
 
@@ -25,6 +27,8 @@ export function useEventCategories() {
     toggleCategory: toggleValue,
     clearSelectedCategories: clearSelectedValues,
     handleAddCategory: handleAddValue,
+    removeCategory: removeValue,
     setCategoryColor: setValueColor,
+    error,
   }
 }

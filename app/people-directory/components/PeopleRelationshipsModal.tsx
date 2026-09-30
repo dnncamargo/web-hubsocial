@@ -1,12 +1,15 @@
 import styles from './PersonDialogs.module.css';
 import { getEntityColor, type EntityColorMap } from '../../utils/entityColors';
+import RemoveSelectableValueButton from '../../components/ui/RemoveSelectableValueButton';
 
 type PeopleRelationshipsModalProps = {
   onClose: () => void;
   availableRelationships: string[];
   selectedRelationships: string[];
   toggleRelationship: (rel: string) => void;
-  handleAddRelationship: (relationship: string) => void;
+  handleAddRelationship: (relationship: string) => Promise<boolean>;
+  removeRelationship: (relationship: string) => Promise<boolean>;
+  error: string | null;
   relationshipColors: EntityColorMap;
   setRelationshipColor: (relationship: string, color: string) => Promise<void>;
 };
@@ -17,6 +20,8 @@ export function PeopleRelationshipsModal({
   selectedRelationships,
   toggleRelationship,
   handleAddRelationship,
+  removeRelationship,
+  error,
   relationshipColors,
   setRelationshipColor,
 }: PeopleRelationshipsModalProps) {
@@ -55,6 +60,12 @@ export function PeopleRelationshipsModal({
                 onChange={(event) => void setRelationshipColor(rel, event.target.value)}
                 aria-label={`Cor do relacionamento ${rel}`}
               />
+              <RemoveSelectableValueButton
+                value={rel}
+                entityLabel="relacionamento"
+                existingEntitiesLabel="Pessoas"
+                onRemove={() => removeRelationship(rel)}
+              />
             </div>
           ))}
           </div>
@@ -64,14 +75,15 @@ export function PeopleRelationshipsModal({
             onClick={async () => {
               const newRel = prompt('Novo relacionamento:')?.trim();
               if (newRel) {
-                await handleAddRelationship(newRel);
-                toggleRelationship(newRel);
+                const added = await handleAddRelationship(newRel);
+                if (added) toggleRelationship(newRel);
               }
             }}
             className={styles.actionLink}
           >
             + Novo relacionamento
           </button>
+          {error && <p className={styles.error} role="alert">{error}</p>}
         </div>
 
         <div className={styles.footer}>

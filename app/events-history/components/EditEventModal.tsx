@@ -75,7 +75,9 @@ const EditEventModal = ({
     selectedCategories,
     toggleCategory,
     handleAddCategory,
+    removeCategory,
     setCategoryColor,
+    error: categoryError,
   } = eventCategoriesControl
 
   const {
@@ -276,6 +278,8 @@ const EditEventModal = ({
                     selectedCategories={selectedCategories}
                     toggleCategory={toggleCategory}
                     handleAddCategory={handleAddCategory}
+                    removeCategory={removeCategory}
+                    error={categoryError}
                     categoryColors={categoryColors}
                     setCategoryColor={setCategoryColor}
                   />
