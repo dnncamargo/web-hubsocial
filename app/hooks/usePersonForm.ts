@@ -6,6 +6,7 @@ import { db } from '../utils/firebaseConfig';
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { useOptionalFields } from './useOptionalFields';
 import { usePersonRelationships } from './usePersonRelationships';
+import { validateBirthday } from '../utils/birthday';
 
 interface UsePersonFormProps {
     uid: string;
@@ -65,6 +66,8 @@ export function usePersonForm({ uid, person, optionalFieldsControl, personRelati
        */
     function validatePerson(): string | null {
         if (!validatePersonName(name)) return "Nome da Pessoa é obrigatório.";
+        const birthdayError = validateBirthday(birthday);
+        if (birthdayError) return birthdayError;
         return null;
     }
 

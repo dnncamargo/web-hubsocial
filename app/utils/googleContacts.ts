@@ -1,5 +1,7 @@
   // utils/googleContacts.ts
 
+import { serializeBirthday } from './birthday.ts';
+
 export interface Contact {
   resourceName: string;
   etag?: string;
@@ -9,7 +11,7 @@ export interface Contact {
   phoneNumbers?: string[];
   emailAddresses?: string[];
   addresses?: string[]; // Isso será texto combinado (ex: rua, cidade, estado)
-  birthday?: string; // no formato YYYY-MM-DD
+  birthday?: string; // YYYY-MM-DD ou --MM-DD
   notes?: string;
   urls?: string[];
 }
@@ -42,7 +44,7 @@ export function parseGoogleContact(entry: any): Contact {
   const name = entry.names?.[0];
   const email = entry.emailAddresses?.[0]?.value || '';
   const phone = entry.phoneNumbers?.[0]?.value || '';
-  const birthday = entry.birthdays?.[0]?.date;
+  const birthdayDate = entry.birthdays?.[0]?.date;
   const address = entry.addresses?.[0];
   const urlList = entry.urls?.map((url: any) => url.value) || [];
   const note = entry.biographies?.[0]?.value || '';
@@ -55,7 +57,13 @@ export function parseGoogleContact(entry: any): Contact {
     familyName: name?.familyName,
     phoneNumbers: entry.phoneNumbers?.map((p: any) => p.value),
     emailAddresses: entry.emailAddresses?.map((e: any) => e.value),
-    birthday: birthday ? `${birthday.year || '0000'}-${String(birthday.month).padStart(2, '0')}-${String(birthday.day).padStart(2, '0')}` : undefined,
+    birthday: birthdayDate
+      ? serializeBirthday({
+        day: Number(birthdayDate.day),
+        month: Number(birthdayDate.month),
+        ...(Number(birthdayDate.year) > 0 ? { year: Number(birthdayDate.year) } : {}),
+      }) || undefined
+      : undefined,
     addresses: address ? [`${address.streetAddress || ''}, ${address.city || ''}, ${address.region || ''}, ${address.postalCode || ''}`.trim()] : [],
     notes: note,
     urls: urlList

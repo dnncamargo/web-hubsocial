@@ -1,6 +1,7 @@
 import type { Timestamp } from 'firebase/firestore'
 import type { OptionalField } from '../types/optionalFields'
 import type { Person } from './interfaces'
+import { normalizeBirthday, validateBirthday } from './birthday.ts'
 
 export type PersonDocumentPayload = Omit<Person, 'id'> & {
   name: string
@@ -48,11 +49,17 @@ function normalizeRelationships(value: unknown): string[] | null {
 }
 
 export function buildPersonPayload(input: PersonPayloadInput): PersonDocumentPayload {
+  const birthday = normalizeBirthday(input.birthday)
+  const birthdayError = validateBirthday(input.birthday)
+  if (birthdayError || (input.birthday?.trim() && !birthday)) {
+    throw new Error(birthdayError ?? 'Invalid birthday')
+  }
+
   return {
     name: input.name.trim(),
     phone: input.phone ?? '',
     email: input.email ?? '',
-    birthday: input.birthday ?? '',
+    birthday,
     favorite: input.favorite ?? false,
     contactFrequency: input.contactFrequency ?? null,
     relationships: normalizeRelationships(input.relationships),
@@ -67,7 +74,7 @@ export function hydratePerson(id: string, data: Record<string, unknown>): Person
     name: typeof data.name === 'string' ? data.name : '',
     phone: typeof data.phone === 'string' ? data.phone : '',
     email: typeof data.email === 'string' ? data.email : '',
-    birthday: typeof data.birthday === 'string' ? data.birthday : '',
+    birthday: normalizeBirthday(typeof data.birthday === 'string' ? data.birthday : ''),
     note: typeof data.note === 'string' ? data.note : undefined,
     favorite: typeof data.favorite === 'boolean' ? data.favorite : false,
     relationships: normalizeRelationships(data.relationships),

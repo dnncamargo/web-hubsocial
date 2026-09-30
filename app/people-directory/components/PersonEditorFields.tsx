@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Person } from '../../utils/interfaces';
+import { parseBirthday } from '../../utils/birthday';
 import { OptionalField, OptionalFieldOption } from '../../types/optionalFields';
 import { OptionalFieldRenderer } from '../../components/optional-fields/OptionalFieldRenderer';
 import { OptionalFieldModal } from '../../components/optional-fields/OptionalFieldModal';
@@ -136,13 +138,7 @@ export default function PersonEditorFields({
 
       {showMore && (
         <div className={styles.moreContent}>
-          <input
-            type="date"
-            aria-label="Data de nascimento"
-            value={birthday}
-            onChange={(event) => setBirthday(event.target.value)}
-            className={styles.dateInput}
-          />
+          <BirthdayFields value={birthday} onChange={setBirthday} />
 
           <div className={styles.preferenceRow}>
             <label htmlFor="person-contact-frequency">Frequência de contato</label>
@@ -218,5 +214,128 @@ export default function PersonEditorFields({
         </div>
       )}
     </>
+  );
+}
+
+interface BirthdayFieldsProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const months = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+];
+
+function BirthdayFields({ value, onChange }: BirthdayFieldsProps) {
+  const parsedBirthday = parseBirthday(value);
+  const [day, setDay] = useState(parsedBirthday ? String(parsedBirthday.day) : '');
+  const [month, setMonth] = useState(parsedBirthday ? String(parsedBirthday.month) : '');
+  const [year, setYear] = useState(parsedBirthday?.year ? String(parsedBirthday.year) : '');
+
+  useEffect(() => {
+    const parsed = parseBirthday(value);
+    if (parsed) {
+      setDay(String(parsed.day));
+      setMonth(String(parsed.month));
+      setYear(parsed.year === undefined ? '' : String(parsed.year));
+    } else if (!value) {
+      setDay('');
+      setMonth('');
+      setYear('');
+    }
+  }, [value]);
+
+  const updateBirthday = (next: { day?: string; month?: string; year?: string }) => {
+    const nextDay = next.day ?? day;
+    const nextMonth = next.month ?? month;
+    const nextYear = next.year ?? year;
+    const dayPart = nextDay.padStart(2, '0');
+    const monthPart = nextMonth.padStart(2, '0');
+    const hasCompleteDayAndMonth = /^\d{1,2}$/.test(nextDay) && /^\d{1,2}$/.test(nextMonth);
+    const hasCompleteYear = /^\d{4}$/.test(nextYear);
+
+    if (hasCompleteDayAndMonth && (!nextYear || hasCompleteYear)) {
+      onChange(nextYear ? `${nextYear}-${monthPart}-${dayPart}` : `--${monthPart}-${dayPart}`);
+      return;
+    }
+
+    if (!nextDay && !nextMonth && !nextYear) {
+      onChange('');
+      return;
+    }
+
+    onChange(`${nextYear || '----'}-${nextMonth || '--'}-${nextDay || '--'}`);
+  };
+
+  return (
+    <fieldset className={styles.birthdayFields}>
+      <legend className={styles.fieldLegend}>Aniversário</legend>
+      <div className={styles.birthdayGrid}>
+        <label className={styles.birthdayControl}>
+          <span>Dia</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            max="31"
+            maxLength={2}
+            aria-label="Dia do aniversário"
+            value={day}
+            onChange={(event) => {
+              setDay(event.target.value);
+              updateBirthday({ day: event.target.value });
+            }}
+            className={styles.birthdayInput}
+          />
+        </label>
+        <label className={styles.birthdayControl}>
+          <span>Mês</span>
+          <select
+            aria-label="Mês do aniversário"
+            value={month}
+            onChange={(event) => {
+              setMonth(event.target.value);
+              updateBirthday({ month: event.target.value });
+            }}
+            className={styles.birthdayInput}
+          >
+            <option value="">Selecione</option>
+            {months.map((monthName, index) => (
+              <option key={monthName} value={index + 1}>{monthName}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.birthdayControl}>
+          <span>Ano (opcional)</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1000"
+            max={new Date().getFullYear()}
+            maxLength={4}
+            aria-label="Ano do aniversário, opcional"
+            placeholder="AAAA"
+            value={year}
+            onChange={(event) => {
+              setYear(event.target.value);
+              updateBirthday({ year: event.target.value });
+            }}
+            className={styles.birthdayInput}
+          />
+        </label>
+      </div>
+      <p className={styles.fieldHint}>Informe dia e mês. O ano é opcional.</p>
+    </fieldset>
   );
 }

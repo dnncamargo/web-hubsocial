@@ -11,6 +11,7 @@ import { X } from 'lucide-react'
 import { Person, Event, EventSuggestion } from '../../utils/interfaces'
 import { buildEventPayload } from '../../utils/eventPayload'
 import { hydratePerson } from '../../utils/personPayload'
+import { birthdayDateForYear, birthdayMonthDay } from '../../utils/birthday'
 import SuggestionCard from './SuggestionCard'
 import styles from './SuggestionPanel.module.css'
 
@@ -64,7 +65,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
     const nextSuggestions: EventSuggestion[] = []
 
     for (const person of people) {
-      const birthday = person.birthday ? parseISO(person.birthday) : null
+      const birthday = birthdayDateForYear(person.birthday, now.getFullYear())
       const lastEvent = events
         .filter(event => event.personIds?.includes(person.id))
         .sort((a, b) => parseISO(b.startDate).getTime() - parseISO(a.startDate).getTime())[0]
@@ -82,7 +83,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
         }
       }
 
-      if (person.favorite && !person.birthday) {
+      if (person.favorite && !birthdayMonthDay(person.birthday)) {
         nextSuggestions.push({
           reason: 'favoriteMissingBirthday',
           person,

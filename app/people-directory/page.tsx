@@ -8,6 +8,7 @@ import { useAuth } from '../components/auth/AuthProvider';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useSearchParams } from 'react-router';
 import { Person } from '../utils/interfaces';
+import { parseBirthday } from '../utils/birthday';
 import { getPersonDocumentPath, hydratePerson } from '../utils/personPayload';
 import { usePersonRelationships } from '../hooks/usePersonRelationships';
 import PersonCard from './components/PersonCard';
@@ -153,7 +154,7 @@ const PeopleDirectory = () => {
     : people.filter((person) => {
       const matchesPhone = !filters.hasPhone || !!person.phone;
       const matchesEmail = !filters.hasEmail || !!person.email;
-      const matchesBirthday = !filters.hasBirthday || !!person.birthday;
+      const matchesBirthday = !filters.hasBirthday || !!parseBirthday(person.birthday);
       const matchesFavorite = !filters.isFavorite || !!person.favorite;
       const matchesFrequency = !filters.hasContactFrequency || !!person.contactFrequency;
       const matchesRelationship =

@@ -11,6 +11,7 @@ import { Event, Person } from '../../utils/interfaces';
 import { OptionalField } from '../../types/optionalFields';
 import { usePersonRelationships } from '../../hooks/usePersonRelationships';
 import { db } from '../../utils/firebaseConfig';
+import { formatBirthday } from '../../utils/birthday';
 import { getPersonDocumentPath, hydratePerson } from '../../utils/personPayload';
 import detailStyles from '../../events-history/[id]/EventDetails.module.css';
 import styles from '../PersonDetails.module.css';
@@ -118,6 +119,7 @@ const PersonDetails = () => {
 
   const relationships = person.relationships ?? [];
   const optionalFields = Array.isArray(person.optionalFields) ? person.optionalFields : [];
+  const formattedBirthday = formatBirthday(person.birthday);
 
   return (
     <ProtectedRoute>
@@ -180,10 +182,10 @@ const PersonDetails = () => {
                 <h2 id="person-context-title" className={detailStyles.sectionTitle}>Contexto</h2>
               </header>
               <dl className={detailStyles.definitionList}>
-                {person.birthday && (
+                {formattedBirthday && (
                   <div className={detailStyles.definitionRow}>
                     <dt className={detailStyles.term}>Aniversário</dt>
-                    <dd className={detailStyles.value}>{person.birthday}</dd>
+                    <dd className={detailStyles.value}>{formattedBirthday}</dd>
                   </div>
                 )}
                 {person.note && (
