@@ -164,9 +164,6 @@ const EventDetails = () => {
   const dateRange = formatDateRange(
     event.startDate,
     event.endDate,
-    event.startTime,
-    event.endTime,
-    event.allDay,
   )
   const timeRange = event.allDay
     ? 'Dia inteiro'

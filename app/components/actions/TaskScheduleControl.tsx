@@ -7,7 +7,7 @@ import { db } from '../../utils/firebaseConfig'
 import type { Event } from '../../utils/interfaces'
 import type { WeekdayName } from '../../types/automation'
 import type { TaskSchedule } from '../../types/tasks'
-import { formatSpecificDate } from '../../utils/datePresentation'
+import { formatDate } from '../../utils/datePresentation'
 import styles from './TaskScheduleControl.module.css'
 
 interface TaskScheduleControlProps {
@@ -200,7 +200,7 @@ export default function TaskScheduleControl({
               ) : (
                 events.map(event => (
                   <option key={event.id} value={event.id}>
-                    {event.title} · {formatSpecificDate(event.startDate)}
+                    {event.title} · {formatDate(event.startDate)}
                   </option>
                 ))
               )}

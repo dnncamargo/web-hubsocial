@@ -38,9 +38,6 @@ const EventCard = ({ event, onEditEvent, categoryColors }: EventCardProps): JSX.
   const dateRange = formatDateRange(
     event.startDate,
     event.endDate,
-    event.startTime,
-    event.endTime,
-    event.allDay,
   )
   const timeRange = formatTimeRange(event.startTime, event.endTime)
 

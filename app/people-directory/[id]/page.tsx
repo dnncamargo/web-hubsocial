@@ -261,22 +261,21 @@ const PersonDetails = () => {
               </header>
               {events.length > 0 ? (
                 <div className={detailStyles.optionalList}>
-                  {events.map((event) => (
-                    <div key={event.id} className={detailStyles.optionalItem}>
-                      <p className={styles.eventTitle}>{event.title}</p>
-                      <p className={styles.eventMeta}>
-                        {formatDateRange(
-                          event.startDate,
-                          event.endDate,
-                          event.startTime,
-                          event.endTime,
-                          event.allDay,
-                        ).start}
-                        {formatTimeRange(event.startTime, event.endTime)
-                          && ` · ${formatTimeRange(event.startTime, event.endTime)}`}
-                      </p>
-                    </div>
-                  ))}
+                  {events.map((event) => {
+                    const dateRange = formatDateRange(event.startDate, event.endDate)
+                    const timeRange = formatTimeRange(event.startTime, event.endTime)
+
+                    return (
+                      <div key={event.id} className={detailStyles.optionalItem}>
+                        <p className={styles.eventTitle}>{event.title}</p>
+                        <p className={styles.eventMeta}>
+                          {dateRange.start}
+                          {dateRange.end && ` → ${dateRange.end}`}
+                          {timeRange && ` · ${timeRange}`}
+                        </p>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className={styles.panelEmpty}>Nenhum evento associado.</p>

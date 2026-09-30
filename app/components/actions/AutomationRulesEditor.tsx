@@ -12,7 +12,7 @@ import {
   WeatherCondition,
   WeekdayName,
 } from '../../types/automation'
-import { formatSpecificDate } from '../../utils/datePresentation'
+import { formatDate } from '../../utils/datePresentation'
 import styles from './AutomationRulesEditor.module.css'
 
 interface AutomationRulesEditorProps {
@@ -330,7 +330,7 @@ export default function AutomationRulesEditor({
                 )}
                 {events.map((event) => (
                   <option key={event.id} value={event.id}>
-                    {event.title} · {formatSpecificDate(event.startDate)}
+                    {event.title} · {formatDate(event.startDate)}
                   </option>
                 ))}
               </select>

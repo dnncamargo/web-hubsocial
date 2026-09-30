@@ -5,7 +5,7 @@ import { Link, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { useTheme } from '../../hooks/useTheme'
 import { getTodayISO } from '../../utils/dateHelpers'
-import { formatSpecificDate } from '../../utils/datePresentation'
+import { formatDate } from '../../utils/datePresentation'
 import LogoutButton from './LogoutButton'
 import ImportContactsModal from './ImportContactsModal'
 import CurrentWeather from './CurrentWeather'
@@ -43,7 +43,7 @@ export default function MainMenu(): JSX.Element {
       : pathname === path || pathname.startsWith(`${path}/`)
 
   const avatarInitial = user?.name.trim().charAt(0).toUpperCase() || 'U'
-  const formattedDate = formatSpecificDate(getTodayISO())
+  const formattedDate = formatDate(getTodayISO())
 
   const renderNavLink = ({ path, label, icon: Icon }: (typeof navItems)[number]) => (
     <Link

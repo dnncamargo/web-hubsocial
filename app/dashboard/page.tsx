@@ -27,7 +27,7 @@ import { ArrowUpRight, CalendarDays, Check, MapPin, Star, UserRound } from 'luci
 import { Link } from 'react-router';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { formatSpecificDateTime } from '../utils/datePresentation'
+import { formatDateTime } from '../utils/datePresentation'
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
 import styles from './Dashboard.module.css'
@@ -434,7 +434,7 @@ export default function Dashboard(): JSX.Element {
                           <div className={styles.contextEventBody}>
                             <span className={styles.contextEventDate}>
                               <CalendarDays className={styles.contextEventIcon} aria-hidden="true" />
-                              {formatSpecificDateTime(event.startDate, event.startTime)}
+                              {formatDateTime(event.startDate, event.startTime)}
                             </span>
                             <h4 className={styles.contextEventTitle}>{event.title}</h4>
                             {(associatedPerson || event.location) && (

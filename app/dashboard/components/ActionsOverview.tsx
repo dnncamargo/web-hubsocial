@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { CalendarDays, ListChecks } from 'lucide-react'
 import { ActionProjection, ActionProjectionItem } from '../../types/actions'
 import { getEntityColor, type EntityColorMap } from '../../utils/entityColors'
-import { formatSpecificDate } from '../../utils/datePresentation'
+import { formatDate } from '../../utils/datePresentation'
 import styles from './ActionsOverview.module.css'
 
 interface ActionsOverviewProps {
@@ -59,7 +59,7 @@ function ActionRow({
   categoryColors?: EntityColorMap
 }) {
   const automationStatus = getAutomationStatus(item)
-  const formattedDate = item.date ? formatSpecificDate(item.date) : ''
+  const formattedDate = item.date ? formatDate(item.date) : ''
   const SourceIcon = item.sourceType === 'event' ? CalendarDays : ListChecks
   const attentionState = getAttentionState(item)
   const markerClassName = item.completed

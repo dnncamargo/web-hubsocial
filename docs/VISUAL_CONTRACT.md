@@ -260,13 +260,14 @@ The product should feel information-dense, not editorial.
 Use the shared Brazilian Portuguese date presentation contracts:
 
 ```text
-Specific: quinta, 1 out
-Direct: 16 / nov / 1993
-Compact: 25/abr
-Range: 9/set → 12/out
+Date: 21 out
+Full date: 16 nov 1993
+Birthday: 25 abr
+Same-month range: 1 → 15 out
+Cross-month range: 29 set → 1 out
 ```
 
-Specific dates omit the year only when it matches the reference civil year.
+Dates omit the year only when it matches the reference civil year.
 Civil dates must not be converted through UTC for presentation.
 Event cards keep the date separate from time and location. When both are
 available, time and location share the metadata line.

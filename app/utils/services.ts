@@ -33,6 +33,6 @@ export const searchAddress = async (zipCode: string): Promise<{
 };
 
 export {
-  formatSpecificDateRange as formatDateRange,
+  formatDateRange,
   type FormattedDateRange,
 } from './datePresentation'

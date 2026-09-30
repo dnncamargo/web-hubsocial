@@ -1,5 +1,4 @@
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const
-const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'] as const
 
 export interface CivilDateParts {
   year: number
@@ -44,27 +43,25 @@ export function parseCivilDate(value: unknown): CivilDateParts | null {
   return { year, month, day, date }
 }
 
-export function formatSpecificDate(
+export function formatDate(
   value: string | null | undefined,
   options: DatePresentationOptions = {},
 ): string {
   const parts = parseCivilDate(value)
   if (!parts) return ''
 
-  const referenceYear = options.referenceYear
-    ?? options.referenceDate?.getFullYear()
-    ?? new Date().getFullYear()
+  const referenceYear = getReferenceYear(options)
   const yearSuffix = parts.year === referenceYear ? '' : ` ${parts.year}`
 
-  return `${WEEKDAYS[parts.date.getDay()]}, ${parts.day} ${MONTHS[parts.month - 1]}${yearSuffix}`
+  return `${parts.day} ${MONTHS[parts.month - 1]}${yearSuffix}`
 }
 
-export function formatSpecificDateTime(
+export function formatDateTime(
   value: string | null | undefined,
   time?: string | null,
   options: DatePresentationOptions = {},
 ): string {
-  const date = formatSpecificDate(value, options)
+  const date = formatDate(value, options)
   const normalizedTime = normalizeTime(time)
 
   if (!date || !normalizedTime) return date
@@ -76,44 +73,47 @@ export function formatDirectDate(value: string | null | undefined): string {
   if (!parts) return formatCompactDate(value)
   if (!parts.year) return formatCompactDate(value)
 
-  return `${String(parts.day).padStart(2, '0')} / ${MONTHS[parts.month - 1]} / ${parts.year}`
+  return `${parts.day} ${MONTHS[parts.month - 1]} ${parts.year}`
 }
 
 export function formatCompactDate(value: string | null | undefined): string {
   const parts = parseCivilDate(value) ?? parseCivilMonthDay(value)
   if (!parts) return ''
 
-  return `${parts.day}/${MONTHS[parts.month - 1]}`
+  return `${parts.day} ${MONTHS[parts.month - 1]}`
 }
 
 export function formatMonthYear(date: Date): string {
   return `${MONTHS[date.getMonth()]} ${date.getFullYear()}`
 }
 
-export function formatSpecificDateRange(
+export function formatDateRange(
   startDate: string,
   endDate: string,
-  _startTime?: string,
-  _endTime?: string,
-  _allDay = false,
   options: DatePresentationOptions = {},
 ): FormattedDateRange {
-  const start = formatSpecificDate(startDate, options)
-  const end = formatSpecificDate(endDate, options)
-  if (!start) return { start: '' }
-
-  const sameDay = Boolean(end) && startDate.trim() === endDate.trim()
-  if (sameDay || !end) {
-    return { start }
-  }
-
   const startParts = parseCivilDate(startDate)
   const endParts = parseCivilDate(endDate)
-  const crossesYear = Boolean(startParts && endParts && startParts.year !== endParts.year)
+  if (!startParts) return { start: '' }
+  if (!endParts) return { start: formatDate(startDate, options) }
+
+  const sameDay = isSameCivilDate(startParts, endParts)
+  if (sameDay) return { start: formatDate(startDate, options) }
+
+  const sameYear = startParts.year === endParts.year
+  const sameMonth = sameYear && startParts.month === endParts.month
+  const referenceYear = getReferenceYear(options)
+
+  if (!sameYear) {
+    return {
+      start: formatDayMonthYear(startParts),
+      end: formatDayMonthYear(endParts),
+    }
+  }
 
   return {
-    start: formatCompactDateWithYear(startDate, crossesYear),
-    end: formatCompactDateWithYear(endDate, crossesYear),
+    start: sameMonth ? String(startParts.day) : formatDayMonth(startParts),
+    end: `${formatDayMonth(endParts)}${startParts.year === referenceYear ? '' : ` ${startParts.year}`}`,
   }
 }
 
@@ -127,12 +127,22 @@ export function formatTimeRange(startTime?: string | null, endTime?: string | nu
     : normalizedStartTime
 }
 
-function formatCompactDateWithYear(value: string, includeYear: boolean): string {
-  const compact = formatCompactDate(value)
-  if (!includeYear) return compact
+function getReferenceYear(options: DatePresentationOptions): number {
+  return options.referenceYear
+    ?? options.referenceDate?.getFullYear()
+    ?? new Date().getFullYear()
+}
 
-  const parts = parseCivilDate(value)
-  return parts ? `${compact} ${parts.year}` : compact
+function isSameCivilDate(left: CivilDateParts, right: CivilDateParts): boolean {
+  return left.year === right.year && left.month === right.month && left.day === right.day
+}
+
+function formatDayMonth(parts: Pick<CivilDateParts, 'month' | 'day'>): string {
+  return `${parts.day} ${MONTHS[parts.month - 1]}`
+}
+
+function formatDayMonthYear(parts: Pick<CivilDateParts, 'year' | 'month' | 'day'>): string {
+  return `${formatDayMonth(parts)} ${parts.year}`
 }
 
 function normalizeTime(value?: string | null): string {
