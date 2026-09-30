@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, JSX } from 'react';
-import { getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
+import { useState, useEffect, useRef, JSX } from 'react';
+import { deleteField, getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
 import { Event, Person, Task } from '../utils/interfaces';
@@ -61,6 +61,10 @@ export default function Dashboard(): JSX.Element {
     week: [],
     month: [],
   });
+  const [pendingActionKeys, setPendingActionKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const pendingActionKeysRef = useRef(new Set<string>());
   const [showSuggestions, setShowSuggestions] = useState(false); /** @state {boolean} showSuggestions - Controla a visibilidade do painel de sugestões de eventos. */
 
   useEffect(() => {
@@ -355,7 +359,15 @@ export default function Dashboard(): JSX.Element {
   };
 
   const handleCompleteAction = async (item: ActionProjectionItem): Promise<void> => {
-    if (!uid || item.completed) return
+    if (!uid || (item.completed && !item.completedToday)) return
+    if (pendingActionKeysRef.current.has(item.key)) return
+
+    pendingActionKeysRef.current.add(item.key)
+    setPendingActionKeys(previous => {
+      const next = new Set(previous)
+      next.add(item.key)
+      return next
+    })
 
     try {
       if (item.sourceType === 'event') {
@@ -365,11 +377,20 @@ export default function Dashboard(): JSX.Element {
 
       await updateDoc(
         doc(db, `users/${uid}/tasks-list`, item.sourceId),
-        { lastActionCompletedDate: format(new Date(), 'yyyy-MM-dd') },
+        item.completedToday
+          ? { lastActionCompletedDate: deleteField() }
+          : { lastActionCompletedDate: format(new Date(), 'yyyy-MM-dd') },
       )
       await fetchPlannedActions()
     } catch (error) {
       console.error('Erro ao concluir ação do dia:', error)
+    } finally {
+      pendingActionKeysRef.current.delete(item.key)
+      setPendingActionKeys(previous => {
+        const next = new Set(previous)
+        next.delete(item.key)
+        return next
+      })
     }
   }
 
@@ -382,6 +403,7 @@ export default function Dashboard(): JSX.Element {
         <ActionsOverview
           actions={actions}
           onCompleteAction={handleCompleteAction}
+          pendingActionKeys={pendingActionKeys}
           context={(
             <section className={styles.contextPanel} aria-labelledby="context-title">
               <header className={styles.contextHeader}>

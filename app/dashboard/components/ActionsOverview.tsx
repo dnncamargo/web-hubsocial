@@ -7,6 +7,7 @@ interface ActionsOverviewProps {
   actions: ActionProjection
   context: ReactNode
   onCompleteAction: (item: ActionProjectionItem) => Promise<void>
+  pendingActionKeys: ReadonlySet<string>
 }
 
 function getAutomationStatus(item: ActionProjectionItem) {
@@ -45,10 +46,12 @@ function ActionRow({
   item,
   interactive,
   onCompleteAction,
+  isPending,
 }: {
   item: ActionProjectionItem
   interactive: boolean
   onCompleteAction?: (item: ActionProjectionItem) => Promise<void>
+  isPending: boolean
 }) {
   const automationStatus = getAutomationStatus(item)
   const SourceIcon = item.sourceType === 'event' ? CalendarDays : ListChecks
@@ -63,19 +66,21 @@ function ActionRow({
     attentionState === 'highlighted' ? styles.highlightedRow : '',
     attentionState === 'inProgress' ? styles.inProgressRow : '',
   ].filter(Boolean).join(' ')
-  const markerLabel = item.completed
-    ? item.completedToday
-      ? `${item.title} concluída hoje`
-      : `${item.title} concluído`
-    : item.sourceType === 'task'
-      ? `Marcar ${item.title} como concluída hoje`
-      : `Marcar ${item.title} como concluído hoje`
+  const markerLabel = item.completedToday
+    ? `Desmarcar conclusão de hoje de ${item.title}`
+    : item.completed
+      ? `${item.title} concluído`
+      : item.sourceType === 'task'
+        ? `Marcar ${item.title} como concluída hoje`
+        : `Marcar ${item.title} como concluído hoje`
   const marker = interactive && onCompleteAction ? (
     <button
       type="button"
       className={`${styles.markerButton} ${markerClassName}`}
       aria-label={markerLabel}
-      disabled={item.completed}
+      aria-pressed={item.completedToday ?? false}
+      aria-busy={isPending}
+      disabled={isPending || (item.completed && !item.completedToday)}
       onClick={() => void onCompleteAction(item)}
     />
   ) : (
@@ -118,6 +123,7 @@ function ActionSection({
   tertiary = false,
   interactive = false,
   onCompleteAction,
+  pendingActionKeys,
 }: {
   title: string
   items: ActionProjectionItem[]
@@ -125,6 +131,7 @@ function ActionSection({
   tertiary?: boolean
   interactive?: boolean
   onCompleteAction?: (item: ActionProjectionItem) => Promise<void>
+  pendingActionKeys: ReadonlySet<string>
 }) {
   const sectionClassName = primary
     ? styles.primarySection
@@ -148,6 +155,7 @@ function ActionSection({
               key={item.key}
               interactive={interactive}
               onCompleteAction={onCompleteAction}
+              isPending={pendingActionKeys.has(item.key)}
             />
           ))}
         </ul>
@@ -162,6 +170,7 @@ export default function ActionsOverview({
   actions,
   context,
   onCompleteAction,
+  pendingActionKeys,
 }: ActionsOverviewProps) {
   return (
     <div className={styles.container}>
@@ -171,12 +180,22 @@ export default function ActionsOverview({
         primary
         interactive
         onCompleteAction={onCompleteAction}
+        pendingActionKeys={pendingActionKeys}
       />
 
       <div className={styles.planningGrid}>
         <div className={styles.planningColumn}>
-          <ActionSection title="Esta semana" items={actions.week} />
-          <ActionSection title="Este mês" items={actions.month} tertiary />
+          <ActionSection
+            title="Esta semana"
+            items={actions.week}
+            pendingActionKeys={pendingActionKeys}
+          />
+          <ActionSection
+            title="Este mês"
+            items={actions.month}
+            tertiary
+            pendingActionKeys={pendingActionKeys}
+          />
         </div>
         <div className={styles.contextSlot}>{context}</div>
       </div>
