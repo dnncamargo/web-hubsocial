@@ -8,8 +8,21 @@ const componentsRoot = fileURLToPath(new URL('./', import.meta.url))
 const readComponentFile = (name) => readFileSync(join(componentsRoot, name), 'utf8')
 const taskCardCss = readComponentFile('TaskCard.module.css')
 const taskCard = readComponentFile('TaskCard.tsx')
+const taskSectionCss = readComponentFile('TaskSection.module.css')
 const taskSection = readComponentFile('TaskSection.tsx')
 const tokens = readFileSync(join(componentsRoot, '../../styles/tokens.css'), 'utf8')
+
+test('section headers expose independent semantic status accents', () => {
+  assert.match(taskSectionCss, /\.header\s*\{[\s\S]*?position:\s*relative/)
+  assert.match(taskSectionCss, /\.header::before\s*\{[\s\S]*?inset-block:\s*0[\s\S]*?width:\s*2px/)
+  assert.match(taskSectionCss, /\.notStarted \.header::before\s*\{[\s\S]*?background:\s+var\(--color-task-status-not-started\)/)
+  assert.match(taskSectionCss, /\.inProgress \.header::before\s*\{[\s\S]*?background:\s+var\(--color-task-status-in-progress\)/)
+  assert.match(taskSectionCss, /\.completed \.header::before\s*\{[\s\S]*?background:\s+var\(--color-task-status-completed\)/)
+  assert.match(taskSection, /const sectionClass = status === 0/)
+  assert.match(taskSection, /<header className=\{styles\.header\}>/)
+  assert.match(taskSection, /tasks\.length === 0/)
+  assert.doesNotMatch(taskSectionCss, /#[0-9a-f]{3,8}\b|rgba?\(/i)
+})
 
 test('Task rows expose a narrow semantic status accent beside the status icon', () => {
   assert.match(taskCardCss, /\.row\s*\{[\s\S]*?border-left:\s*2px\s+solid\s+transparent/)
