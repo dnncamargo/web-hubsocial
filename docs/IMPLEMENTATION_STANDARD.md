@@ -164,25 +164,28 @@ Views may project domain data but must not persist parallel copies solely for pr
 
 Tasks and Events remain canonical entities.
 
-"Actions of the Day", "Actions of the Week", and "Actions of the Month" are projections of those entities, not separate persisted copies.
+"Ações do dia", "Esta semana", and "Este mês" are projections of the
+canonical entities, not separate persisted copies. Task placement is derived
+from lifecycle status, daily execution, recurrence, and explicit planning
+metadata; it is not a second manual Task model. In particular, an in-progress
+Task has priority for the day projection without mutating its schedule or
+planning metadata, and a canonical Task must not appear twice across the
+visible action sections.
 
-Automation rules affect relevance and highlighting. They do not silently remove an action that the user manually included.
+Daily execution is distinct from Task lifecycle completion. Completing an
+action for today must not change the Task's lifecycle status, and a completed
+Task remains persistent and reopenable even when it is suppressed from active
+action projections.
 
-Example:
+Automation rules evaluate favorable conditions and affect relevance or
+highlighting. They do not create occurrences, change lifecycle status, or
+silently remove an otherwise relevant/manual action when a condition is not
+matched. The effective visual state must respect lifecycle precedence before
+favorable-condition highlighting.
 
-```text
-Task: wash clothes
-Manual horizon: day
-Rule: sunny weather
-
-Sunny:
-→ action remains visible and is highlighted
-
-Not sunny:
-→ action remains visible and loses the automation highlight
-```
-
-Automation evaluation must be deterministic and explainable to the UI.
+For the complete Task contract, including recurrence, Event association,
+daily execution, and Task/Supertask/Subtask structure, see
+[`TASK_MODEL.md`](TASK_MODEL.md).
 
 ## 8. Reuse policy
 
