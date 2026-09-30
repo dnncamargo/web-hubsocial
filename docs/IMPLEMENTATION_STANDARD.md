@@ -6,11 +6,8 @@ This document defines the canonical engineering rules for the project. Existing 
 
 ## 1. Core rule
 
-Every implementation follows:
-
-```text
-AUDIT → EVIDENCE → DECISION → REUSE → GENERALIZE → IMPLEMENT → VALIDATE
-```
+Every implementation follows the complete canonical workflow defined in
+section 17.
 
 Before adding a component, hook, helper, style, dependency, persistence shape, or abstraction:
 
@@ -21,6 +18,41 @@ Before adding a component, hook, helper, style, dependency, persistence shape, o
 5. create something new only when reuse/generalization would make the code harder to understand.
 
 The preferred outcome is the smallest implementation that remains explicit, readable, and reusable.
+
+### 1.1. Normative startup and session protocol
+
+The canonical repository is:
+
+```text
+dnncamargo/web-hubsocial
+```
+
+Every new implementation chat or session must begin by:
+
+1. locating the actual local repository and worktree;
+2. reading this document completely;
+3. reading the normative domain documents relevant to the work area;
+4. inspecting the current Git state: branch, `HEAD`, `origin/main`,
+   ahead/behind relation, and worktree status;
+5. recovering and understanding existing local work before creating a branch
+   or modifying anything;
+6. reading the relevant project architecture and implementation;
+7. comparing implementation against normative product decisions;
+8. identifying reuse opportunities and migration debt; and
+9. deciding the smallest coherent next checkpoint only after that audit.
+
+The local repository and worktree are the source of truth for implementation
+state. A handoff is orientation, not authority over the actual Git state, and
+must be verified locally before it is relied upon.
+
+Normative product and engineering decisions live under `docs/` in documents
+explicitly marked `Status: **normative**`. Legacy code that conflicts with a
+normative document is migration debt unless a new explicit decision changes
+the contract.
+
+A new session must not start implementation until it can explain the current
+implementation, applicable normative decisions, contract gaps, reusable
+infrastructure, and the smallest coherent next checkpoint.
 
 ## 2. Engineering priorities
 
@@ -152,7 +184,8 @@ Event
 Task
 Person
 OptionalField
-Action planning
+Task recurrence
+Daily execution
 Automation rules
 ```
 
@@ -166,11 +199,14 @@ Tasks and Events remain canonical entities.
 
 "Ações do dia", "Esta semana", and "Este mês" are projections of the
 canonical entities, not separate persisted copies. Task placement is derived
-from lifecycle status, daily execution, recurrence, and explicit planning
-metadata; it is not a second manual Task model. In particular, an in-progress
-Task has priority for the day projection without mutating its schedule or
-planning metadata, and a canonical Task must not appear twice across the
-visible action sections.
+from Task nature, lifecycle status, recurrence/date, daily execution, Event
+association, and favorable conditions. The old generic manual `Hoje` /
+`Esta semana` / `Este mês` planning model is legacy compatibility where it
+conflicts with the Task model; it is not a second canonical Task model.
+
+An in-focus Task has priority for the day projection without mutating its
+recurrence or legacy planning metadata, and a canonical Task must not appear
+twice across the visible action sections.
 
 Daily execution is distinct from Task lifecycle completion. Completing an
 action for today must not change the Task's lifecycle status, and a completed
@@ -183,8 +219,8 @@ silently remove an otherwise relevant/manual action when a condition is not
 matched. The effective visual state must respect lifecycle precedence before
 favorable-condition highlighting.
 
-For the complete Task contract, including recurrence, Event association,
-daily execution, and Task/Supertask/Subtask structure, see
+For the complete Task contract, including nature, recurrence, Event
+association, daily execution, and Task/Supertask/Subtask structure, see
 [`TASK_MODEL.md`](TASK_MODEL.md).
 
 ## 8. Reuse policy
@@ -340,6 +376,21 @@ Every checkpoint should be independently reviewable and reversible.
 
 ## 17. Repository and deployment discipline
 
+The canonical workflow is:
+
+```text
+AUDIT → EVIDENCE → DECISION → REUSE → GENERALIZE only when justified
+→ IMPLEMENT → VALIDATE → REVIEW DIFF → COMMIT → PUSH → PR → MERGE → SYNC MAIN
+```
+
+The local-first rule applies throughout this workflow. The coordinating
+ChatGPT session must not directly write to GitHub through an API, MCP,
+connector, or equivalent remote-write tool. Repository modifications happen
+through the local coding-agent worktree.
+
+Push only coherent, locally validated work. Do not push exploratory
+checkpoints merely to preserve progress.
+
 Repository writes are agent-owned. The coordinating ChatGPT session must not
 directly mutate the GitHub repository through a GitHub API, MCP, connector, or
 equivalent remote-write tooling. This prohibition includes:
@@ -366,14 +417,6 @@ For each checkpoint, use this local-first sequence:
 6. review the complete diff;
 7. run `git diff --check`; and
 8. commit locally.
-
-Do not push partial exploratory work merely to preserve progress. The complete
-canonical execution flow is:
-
-```text
-AUDIT → EVIDENCE → DECISION → REUSE → GENERALIZE → IMPLEMENT → VALIDATE
-→ REVIEW DIFF → COMMIT → PUSH → PR → MERGE → SYNC MAIN
-```
 
 `IMPLEMENT` through local validation and diff review happen before the first
 normal remote push.
@@ -405,21 +448,24 @@ For visual work, validate mobile from the beginning.
 
 ## 19. Git closure
 
-A checkpoint is complete only after:
+An implementation is not finished merely because code exists, tests pass, a local commit
+exists, the feature branch is pushed, or a pull request exists.
 
-1. the implementation is coherent;
-2. relevant local validation passes;
-3. `git diff --check` passes;
-4. the final diff audit passes;
-5. commits are complete;
-6. the branch is pushed;
-7. the pull request is opened and reviewed;
-8. the pull request is merged;
-9. remote `main` is verified;
-10. the local repository returns to `main`;
-11. `git pull --ff-only` is applied;
-12. local `main == origin/main`; and
-13. the worktree is clean.
+The complete cycle is finished only after:
+
+1. coherent implementation;
+2. relevant tests;
+3. typecheck;
+4. build;
+5. `git diff --check`;
+6. final diff audit;
+7. push;
+8. pull request;
+9. merge;
+10. `git fetch --prune`;
+11. switch to `main`;
+12. `git pull --ff-only`; and
+13. verify `branch == main`, `HEAD == origin/main`, and a clean worktree.
 
 After merge, do not leave the repository on the feature branch.
 

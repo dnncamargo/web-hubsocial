@@ -2,20 +2,19 @@
 
 Status: **normative**
 
-This document defines the canonical product semantics for Tasks, their
-recurrence, lifecycle, projections, daily execution, favorable conditions,
-Event association, and subtask structure.
+This document defines the canonical product semantics for Tasks, their nature,
+lifecycle, recurrence, projections, daily execution, favorable conditions,
+Event association, and Task hierarchy.
 
 Existing implementation that conflicts with this document is migration debt,
-not product precedent.
+not product precedent. This document freezes product semantics; it does not
+freeze the future TypeScript or Firestore representation of every concept.
 
 ## 1. Core model
 
-A Task is a persistent object.
-
-A Task is removed only when explicitly deleted. Changing its status does not
-delete or archive it. A completed Task remains available in the Tasks
-workspace and can be reopened.
+A Task is a persistent object. A Task is removed only when explicitly deleted.
+Changing its status does not delete or archive it. A completed Task remains
+persisted, remains visible in the Tasks workspace, and may be reopened.
 
 The model separates independent concerns:
 
@@ -30,208 +29,266 @@ Task
 └── Estrutura Task / Supertask / Subtask
 ```
 
-These concerns must not be represented by copies of the Task or by one field
-silently changing the meaning of another field.
+One concern must not be represented by silently changing the meaning of
+another concern. In particular, recurrence is not lifecycle status, daily
+execution is not lifecycle completion, and Event association is not
+automatically recurrence.
 
-## 2. Identity and persistence
+## 2. Task nature
 
-The stable Task identity is the persisted Task identifier. A projection may
-have a view-specific key, but deduplication and updates must use the stable
-Task identifier rather than the title, date, or projected horizon.
+Every Task is one of these product natures:
 
-Tasks, recurring occurrences, daily execution state, and action projections
-have different responsibilities:
+- **Pontual** — a one-off Task;
+- **Recorrente** — a Task whose plan produces eligible occurrences over time.
 
-| Concept | Canonical meaning |
-| --- | --- |
-| Task | The persistent product object. |
-| `status` | Lifecycle state of the Task. |
-| `schedule` | Recurrence or Event-relative occurrence rule. |
-| `actionPlanning` | Explicit planning metadata retained on the Task; it is not a separate Action entity. |
-| Daily execution | Whether the Task's projected action was completed on a particular civil day. |
-| Action projection | A derived display of canonical Tasks and Events. |
+There is no separate `Contínua` or `Flexível` nature. “Without a specified
+weekday” and “without a specified day” describe flexible recurrence rules
+inside a recurring Task; they do not create another nature.
 
-No occurrence document or parallel persisted Action object is created merely
-to render a Task in an action horizon.
+The current action horizon does not determine nature. A punctual Task shown in
+`Ações do dia` does not become daily, and a recurring Task shown in `Esta
+semana` does not become weekly.
 
-## 3. Natureza
+The exact persisted representation of nature is intentionally deferred to a
+future schema decision and migration audit.
 
-Natureza describes what the object is in the product's domain. A Task remains
-a Task regardless of whether it is one-off, recurring, Event-relative,
-standalone, or structurally attached to another Task.
+## 3. Lifecycle status
 
-Natureza must not be inferred from the current action horizon. A Task shown in
-`Ações do dia` is not thereby converted into a daily Task, and a Task shown in
-`Esta semana` is not thereby converted into a weekly Task.
+The canonical user-facing Task statuses are:
 
-## 4. Lifecycle status
-
-Task status is a lifecycle concern with these canonical values:
-
-| Value | Label | Meaning |
+| Persisted value | User-facing status | Meaning |
 | ---: | --- | --- |
 | `0` | Não iniciada | The Task has not started. |
-| `1` | Em andamento | The Task is active and in progress. |
+| `1` | Em foco | This plan/Task is active. |
 | `2` | Concluída | The Task lifecycle is complete. |
 
-Status changes do not delete, archive, or recreate the Task. A completed Task
-can be reopened by changing its status.
+The persisted numeric values remain `0`, `1`, and `2` for this documentation
+checkpoint. The later implementation migration may change labels and behavior
+without renaming those existing numeric values in stored data.
 
-`Concluída` Tasks are suppressed from action projections under the frozen
-completion semantics. This suppression is a projection rule; it does not
-remove the Task from the Tasks workspace or from persistence.
+`Concluída` is not deleted or archived. A completed Task may be reopened to
+`Não iniciada` or `Em foco`. Only explicit deletion removes it.
 
-Status is also independent from favorable-condition evaluation. In-progress
-attention and favorable-condition attention are different meanings, and a
-completed Task must never be visually promoted by an automation match.
+## 4. Recurring Task forms
 
-## 5. Recorrência and schedule
+A recurring Task remains one canonical Task. Its occurrences are derived from
+its recurrence rule; they are not separate persisted Tasks or Calendar Events.
 
-The optional `schedule` is the canonical occurrence rule. Current supported
-schedule forms are:
+### 4.1. Diária
 
-- `daily`: an occurrence on the current civil day;
-- `weekly`: selected weekdays, or a flexible weekly occurrence when no
-  weekdays are selected;
-- `monthly`: a civil day of the month, clamped to the final day of shorter
-  months; and
-- `eventRelative`: an occurrence relative to a persisted Event, using the
-  Event identifier and a non-negative lead time in days.
+The Task occurs every day.
 
-Recurrence derives occurrences from the canonical Task. It does not create
-separate recurring Task records or occurrence documents.
+### 4.2. Semanal
 
-Schedule evaluation is date-based and uses civil date keys (`YYYY-MM-DD`),
-Monday-based week keys, and `YYYY-MM` month keys where a planning period is
-needed. A schedule remains unchanged when the resulting occurrence is shown
-in a different visible section.
+A weekly Task can be expressed in either of these ways:
 
-`actionPlanning` may remain on existing Tasks as explicit planning metadata
-and migration-compatible user intent. It is not the Task's recurrence model,
-does not replace `schedule`, and is never rewritten only because a projection
-was promoted to `Ações do dia`.
+1. **Selected weekdays** — exact weekdays are selected, such as:
+   - Robótica: Monday and Wednesday;
+   - Pedagogia: Tuesday and Friday;
+   - trash: Tuesday, Thursday, and Saturday;
+   - cleaning: Saturday.
+2. **Within the week without a specified weekday** — the Task should happen
+   during that week, but no exact weekday is required.
 
-## 6. Daily execution
+The second form is a flexible weekly recurrence rule, not a third Task nature.
 
-Daily execution answers a different question from lifecycle status:
+### 4.3. Mensal
 
-> Was this projected action completed for the current civil day?
+A monthly Task can be expressed in either of these ways:
 
-Daily completion is not equivalent to `Task.status = 2`.
+1. **Civil day of month** — for example, a credit card bill on day 15;
+2. **Calendar position** — for example, the last Thursday of the month; or
+3. **Within the month without a specified day** — for example, skin care once
+   during the month.
 
-Completing an action for today must not silently complete the Task lifecycle.
-Likewise, changing the lifecycle status must not be used as a substitute for
-the daily execution record. The daily state is date-scoped and must expire or
-be reset when the relevant civil day changes.
+Calendar position is a real calendar rule. It must not be approximated as a
+fixed day such as 27, 28, or 29. The third form is simply monthly recurrence
+without a fixed day and must not be called `Contínua`.
 
-The projection may expose this state as `completedToday` and may present a
-`Concluída hoje` indication. That indication describes execution of today's
-projection; it does not claim that the canonical Task is lifecycle-complete.
+The exact persisted representation of these recurrence forms is intentionally
+deferred. Current legacy schedule fields are migration inputs, not a complete
+canonical schema.
 
-## 7. Action projections and precedence
+## 5. Punctual Task behavior
 
-`Ações do dia`, `Esta semana`, and `Este mês` are derived views over canonical
-Tasks and Events. They are not independent lists and must not be persisted as
-copies of Tasks.
+A punctual Task does not use the generic persisted manual planning choices
+`Hoje`, `Esta semana`, and `Este mês` as its canonical planning model.
 
-For an eligible, non-completed Task, visible placement follows this canonical
-precedence:
+A punctual Task normally starts as `Não iniciada`. When the user brings it into
+current attention, it becomes `Em foco` and belongs in `Ações do dia`.
+
+At the end of the civil day, a punctual Task in focus follows this rule:
 
 ```text
-1. status = Em andamento → Ações do dia
-2. otherwise eligible for Hoje → Ações do dia
-3. otherwise eligible for Esta semana → Esta semana
-4. otherwise eligible for Este mês → Este mês
+Em foco + NOT feita hoje → Não iniciada
+Em foco + feita hoje     → Concluída
 ```
 
-`status = 1` is a presentation priority. It promotes a Task into `Ações do
-dia` even when its manual or scheduled planning horizon is weekly or monthly.
-The original `actionPlanning` and `schedule` remain intact; promotion must not
-mutate either one.
+This rollover applies to punctual Tasks only. It does not turn the daily
+execution of a recurring Task into global lifecycle completion.
 
-A canonical Task appears at most once across the visible action sections.
-Deduplication uses the stable Task identifier. For example:
+## 6. Recurring Task daily execution
+
+“Feita hoje” is a daily execution state, separate from lifecycle status.
+
+For a recurring Task, completing today's occurrence satisfies today's work but
+does not globally complete the Task. For example:
 
 ```text
-Weekly Task + Em andamento
-→ Ações do dia only
+Robótica
+Status: Em foco
+Recurrence: Monday + Wednesday
 
-Monthly Task + Em andamento
-→ Ações do dia only
-
-Weekly Task + Não iniciada
-→ its eligible weekly/day occurrence
+Monday completed → today's occurrence is satisfied
+Wednesday         → the Task appears again
 ```
 
-An in-progress Task retains a subtle `Em andamento` indication in its action
-row so the reason for the day promotion is understandable. This status
-indication is separate from automation or favorable-condition highlighting.
+The recurring Task remains `Em foco` unless the user explicitly changes its
+lifecycle status. At the end of the day, the daily execution state clears or
+expires for the next occurrence; it must not complete the recurring Task.
 
-Completed Tasks follow the frozen completion semantics: they remain persistent
-and reopenable, but are not emitted as active action projections.
+The exact persisted representation of daily execution is intentionally
+deferred. The product meaning must remain date-scoped and must not be replaced
+by a lifecycle status mutation.
 
-## 8. Condições favoráveis and automation
+## 7. Actions are projections
 
-Favorable conditions are contextual evaluation, not recurrence and not
-lifecycle. Current rule families include weekday, weather, and upcoming Event
-conditions, with deterministic `all` / `any` matching and an explicit
-matched, not-matched, or unresolved result.
+`Ações do dia`, `Esta semana`, and `Este mês` are derived projections of
+canonical Tasks and Events. They are not a second independent persisted
+planning model and must not create occurrence documents.
 
-An automation match can explain or highlight an already relevant Task. It
-does not create a Task occurrence, change its status, move its schedule, or
-silently remove a manually planned Task when the condition is not met.
+Projection derives coherently from:
 
-The UI must keep these meanings distinct:
+- Task nature;
+- Task status;
+- recurrence and civil date;
+- daily execution;
+- Event association; and
+- favorable conditions.
+
+The old generic manual `Hoje` / `Esta semana` / `Este mês` planning model is
+legacy or migration debt wherever it conflicts with this contract. Existing
+planning metadata may be read for compatibility during migration, but it does
+not define the canonical nature or recurrence of a Task.
+
+For visible placement, lifecycle priority comes first:
 
 ```text
-Task status       = lifecycle identity
-Daily completion  = today's execution state
-Automation        = contextual relevance / attention
+1. completed Task → suppressed from active action projections
+2. Em foco → Ações do dia
+3. otherwise eligible recurring occurrence → its applicable day/week/month view
 ```
 
-For visual attention, lifecycle precedence is completed, in progress,
-favorable condition, then normal. Factual automation evaluation must not be
-corrupted merely to implement that visual precedence.
+An `Em foco` Task is promoted to `Ações do dia` even when legacy planning or
+legacy schedule data points to a wider horizon. This is a presentation rule.
+It must not mutate the original recurrence or legacy planning metadata.
 
-## 9. Associação a Event
+A canonical Task appears at most once across the visible sections. Projection
+deduplication uses stable Task identity, never the title, date, or horizon.
+The action row should retain a subtle `Em foco` indication so the reason for
+the day projection is understandable.
 
-An Event is a separate canonical persistent object. A Task may refer to an
-Event without copying the Event into the Task.
+## 8. Favorable conditions
 
-The Event-relative schedule uses `schedule.eventId` and `leadDays` to derive a
-Task occurrence before the Event. Upcoming-Event favorable conditions may also
-refer to an Event identifier. In both cases, the referenced Event remains the
-source of its own dates and data.
+Favorable conditions answer:
 
-Missing or deleted referenced Events do not justify inventing a replacement
-Task occurrence or duplicating Event data. The relationship must remain
-explainable to the projection layer.
+> When is it a favorable moment to do this?
 
-## 10. Estrutura Task / Supertask / Subtask
+They are independent from recurrence and lifecycle. Examples include:
 
-A Supertask is not a second domain entity. It is a Task acting as a parent for
-one or more Subtasks.
+```text
+Lavar roupa
+→ recurring within the week
+→ favorable condition: sunny
 
-A Subtask is a Task-shaped child with a stable identifier and a parent
-relationship. The parent relationship must be explicit and preserved when a
-Task is made into or removed from a group. Reordering a Task or changing its
-group is a structural operation, not creation of a new logical Task.
+Colocar plantas na chuva
+→ recurring according to its plan
+→ favorable condition: rain
+```
 
-The following rules apply:
+A favorable condition changes attention or highlighting. It does not create a
+new Task occurrence, redefine recurrence, change lifecycle status, or place a
+Task in Calendar. A manually relevant Task is not silently removed because a
+condition is not currently satisfied.
 
-- parent and child status are independently meaningful unless the user
-  explicitly chooses a group-wide status operation;
-- a parent may expose its Subtasks without turning them into separate action
-  copies;
-- promoting a Subtask to a standalone Task preserves its stable identity and
-  canonical fields;
-- deleting a parent or grouped structure is an explicit destructive action and
-  must not be inferred from a status change; and
-- action projection deduplication still uses each canonical Task identifier.
+## 9. Event association
 
-## 11. Migration rule
+Event association is an independent Task dimension. For example:
 
-When existing implementation behavior conflicts with this document, the
-behavior is migration debt. New work must follow this model and must not use
-legacy manual horizon behavior, duplicated occurrence records, or lifecycle
-mutation as precedent for new features.
+```text
+Alugar terno
+Nature: Pontual
+Associated Event: Casamento do Raphael
+Lead time: 14 days
+```
+
+The Task remains a Task. The associated Event provides context and may
+determine when the Task becomes relevant or highlighted. This relationship is
+not itself Task recurrence and does not automatically put the Task into
+Calendar.
+
+Only the explicit Task → Event conversion creates an Event. The exact
+persisted representation of an association and its lead time is deferred to a
+future schema decision; legacy Event-relative schedule data must be treated as
+migration input rather than as the final product model.
+
+## 10. Task structure
+
+The existing hierarchy is:
+
+- normal Task;
+- Supertask; and
+- Subtask.
+
+A Task with one or more subtasks is called a Supertask. A Task may attach to
+the Task above and become a Subtask. Unlinking or promoting a Subtask makes it
+a normal standalone Task while preserving its logical Task identity.
+
+Deleting a Supertask deletes its Subtasks. Converting a Supertask to an Event
+carries its Subtasks into the Event as a Task List in OptionalFields.
+
+This document does not change current status-propagation rules for parents and
+children. Any future redesign of group-wide status behavior is a separate
+decision and implementation checkpoint.
+
+## 11. Tasks and Calendar
+
+A recurring Task does not become a Calendar Event. These remain Tasks and are
+projected in Actions according to recurrence:
+
+- Robótica on Monday and Wednesday;
+- a bill on day 15; and
+- a report on the last Thursday of the month.
+
+Only explicit Task → Event conversion creates an Event and makes the result
+eligible for the Event/Calendar surfaces.
+
+## 12. Deletion and reopening
+
+```text
+Concluída ≠ deleted
+```
+
+A completed Task remains persisted and visible in the Tasks workspace. It may
+be reopened to `Não iniciada` or `Em foco`. Only explicit deletion removes a
+Task.
+
+## 13. Migration rule
+
+This checkpoint freezes product semantics, not persistence shape. Do not yet
+invent or freeze exact TypeScript or Firestore representations for:
+
+- Task nature;
+- monthly calendar-position recurrence;
+- no-fixed-day weekly recurrence;
+- no-fixed-day monthly recurrence;
+- independent Event association; or
+- migration fields and backfill markers.
+
+Those representations require a separate `AUDIT → EVIDENCE → DECISION`
+checkpoint covering historical documents and compatibility.
+
+When existing implementation behavior conflicts with this document, it is
+migration debt. New work must follow this model and must not use legacy
+manual-horizon behavior, recurring completion as global completion, or Event
+association encoded as recurrence as precedent for new features.
