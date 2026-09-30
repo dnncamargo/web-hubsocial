@@ -250,8 +250,8 @@
 }
 
 .automationPending {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-automation-pending);
+  color: var(--color-automation-pending-text);
 }
 
 .automationNotMatched {

@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgb(22 26 29 / 0.42);
+  background: var(--color-overlay);
 }
 
 .dialog {
@@ -63,7 +63,7 @@
 .primaryButton {
   background: var(--color-accent);
   border-color: var(--color-accent);
-  color: var(--color-surface-elevated);
+  color: var(--color-on-accent);
 }
 
 .closeButton:hover,
@@ -75,7 +75,7 @@
 
 .actionButton:hover,
 .primaryButton:hover {
-  background: color-mix(in srgb, var(--color-accent) 88%, black);
+  background: var(--color-accent-hover);
 }
 
 .closeButton:focus-visible,

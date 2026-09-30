@@ -12,7 +12,7 @@
   justify-content: space-between;
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--color-border);
-  background: rgb(255 255 255 / 0.94);
+  background: var(--color-chrome);
   backdrop-filter: blur(10px);
 }
 
@@ -58,7 +58,7 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 4.25rem;
   border-top: 1px solid var(--color-border);
-  background: rgb(255 255 255 / 0.97);
+  background: var(--color-chrome);
   backdrop-filter: blur(10px);
 }
 
@@ -206,6 +206,49 @@
 .accountAction:hover {
   background: var(--color-surface-muted);
   color: var(--color-text-primary);
+}
+
+.themeControl {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.themeLabel {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.themeOptions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.themeOption {
+  min-height: 2rem;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.themeOption:hover,
+.themeOptionActive {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+}
+
+.themeOption:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .logoutButton {

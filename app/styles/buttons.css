@@ -17,7 +17,7 @@
 .btn-primary {
   border: 1px solid transparent;
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .btn-primary:hover {
@@ -27,7 +27,7 @@
 .btn-secondary {
   border: 1px solid var(--color-border-strong);
   background: var(--color-surface);
-  color: #374151;
+  color: var(--color-text-secondary);
 }
 
 .btn-secondary:hover {
@@ -36,7 +36,7 @@
 
 .btn-tertiary {
   border: 1px solid var(--color-border-strong);
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--color-danger) 14%, var(--color-surface));
   color: var(--color-danger);
 }
 
@@ -52,7 +52,7 @@
 }
 
 .btn-tertiary:focus-visible {
-  outline-color: #fca5a5;
+  outline-color: var(--color-danger);
 }
 
 /* Estilos para ícones em botões (se usar) */

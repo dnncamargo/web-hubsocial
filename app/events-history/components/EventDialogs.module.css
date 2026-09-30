@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgb(24 28 31 / 0.28);
+  background: var(--color-overlay);
 }
 
 .dialog {
@@ -157,7 +157,7 @@
   width: 0.95rem;
   height: 0.95rem;
   border-radius: 50%;
-  background: #fff;
+  background: var(--color-control-thumb);
   box-shadow: var(--shadow-sm);
   transform: translateX(0);
   transition: transform var(--duration-fast) ease;

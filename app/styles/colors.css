@@ -32,7 +32,7 @@
 }
 
 .color-eh-button-bg {
-  background: #3b82f6;
+  background: var(--color-events);
 }
 
 .color-eh-button-bg:hover {

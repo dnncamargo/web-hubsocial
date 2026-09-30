@@ -9,6 +9,24 @@
       name="description"
       content="Aplicação web"
     />
+    <script>
+      (() => {
+        let savedTheme = null
+        try {
+          savedTheme = localStorage.getItem('themePreference')
+        } catch {
+          savedTheme = null
+        }
+
+        const systemPrefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches === true
+        const theme = savedTheme === 'dark' || savedTheme === 'light'
+          ? savedTheme
+          : systemPrefersDark ? 'dark' : 'light'
+
+        document.documentElement.dataset.theme = theme
+        document.documentElement.style.colorScheme = theme
+      })()
+    </script>
   </head>
 
   <body>

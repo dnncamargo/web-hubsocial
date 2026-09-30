@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../auth/AuthProvider'
+import { useTheme } from '../../hooks/useTheme'
 import LogoutButton from './LogoutButton'
 import ImportContactsModal from './ImportContactsModal'
 import CurrentWeather from './CurrentWeather'
@@ -21,6 +22,7 @@ const navItems = [
 
 export default function MainMenu(): JSX.Element {
   const { uid, user, loading } = useAuth()
+  const { theme, selectTheme } = useTheme()
   const isAuthenticated = !loading && !!uid
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [isAccountOpen, setIsAccountOpen] = useState(false)
@@ -148,6 +150,32 @@ export default function MainMenu(): JSX.Element {
             >
               Repositório
             </a>
+
+            <div className={styles.themeControl} role="group" aria-label="Tema da aplicação">
+              <span className={styles.themeLabel}>Tema</span>
+              <div className={styles.themeOptions}>
+                <button
+                  type="button"
+                  className={theme === 'light'
+                    ? `${styles.themeOption} ${styles.themeOptionActive}`
+                    : styles.themeOption}
+                  aria-pressed={theme === 'light'}
+                  onClick={() => selectTheme('light')}
+                >
+                  Claro
+                </button>
+                <button
+                  type="button"
+                  className={theme === 'dark'
+                    ? `${styles.themeOption} ${styles.themeOptionActive}`
+                    : styles.themeOption}
+                  aria-pressed={theme === 'dark'}
+                  onClick={() => selectTheme('dark')}
+                >
+                  Escuro
+                </button>
+              </div>
+            </div>
 
             <div className={styles.logoutRow}>
               <LogoutButton />

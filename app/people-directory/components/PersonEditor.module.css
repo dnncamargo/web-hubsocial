@@ -4,7 +4,7 @@
   z-index: 70;
   overflow-y: auto;
   padding: var(--space-4);
-  background: rgb(32 36 40 / 0.16);
+  background: var(--color-overlay);
 }
 
 .form {
@@ -31,7 +31,7 @@
   margin-inline: calc(var(--space-4) * -1);
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--color-border);
-  background: rgb(251 251 250 / 0.97);
+  background: var(--color-chrome);
   backdrop-filter: blur(8px);
 }
 
@@ -144,7 +144,7 @@
   width: 0.95rem;
   height: 0.95rem;
   border-radius: 50%;
-  background: #fff;
+  background: var(--color-control-thumb);
   box-shadow: var(--shadow-sm);
   transform: translateX(0);
   transition: transform var(--duration-fast) ease;

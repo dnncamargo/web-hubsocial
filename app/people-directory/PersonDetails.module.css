@@ -34,7 +34,7 @@
 .editButton {
   border: 1px solid var(--color-people);
   background: var(--color-people);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 
 .editButton:hover {
@@ -178,7 +178,7 @@
 .primaryButton {
   border: 1px solid var(--color-people);
   background: var(--color-people);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 
 .primaryButton:hover {
