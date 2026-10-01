@@ -4,6 +4,7 @@ import type { ActionPlanning } from '../types/actions'
 import type { AutomationRuleSet } from '../types/automation'
 import type { OptionalField } from '../types/optionalFields'
 import type { Event } from './interfaces'
+import { normalizeAutomationRuleSet } from './automation.ts'
 
 export type EventPayload = Omit<
   Event,
@@ -49,7 +50,7 @@ export function buildEventPayload(input: EventPayloadInput): EventPayload {
     categories: input.categories ?? [],
     optionalFields: input.optionalFields ?? [],
     actionPlanning: input.actionPlanning ?? {},
-    automation: input.automation ?? { match: 'all', rules: [] },
+    automation: normalizeAutomationRuleSet(input.automation) ?? { match: 'all', rules: [] },
     createdAt: input.createdAt ?? new Date(),
     ...(input.location !== undefined ? { location: input.location } : {}),
     ...(!input.allDay && input.startTime !== undefined ? { startTime: input.startTime } : {}),

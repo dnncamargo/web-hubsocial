@@ -314,8 +314,8 @@ Calendar.
 
 The current persisted wire keeps the technical `automation` field for legacy
 compatibility; it is the condition configuration boundary, not a second
-scheduling engine. Supported rules remain weekday, current weather, and
-upcoming Event, with `all` / `any` matching and explicit in-memory evaluation
+scheduling engine. Supported rules remain weekday, current weather, day period,
+and upcoming Event, with `all` / `any` matching and explicit in-memory evaluation
 states:
 
 - `noConditions`;
@@ -326,6 +326,37 @@ states:
 An absent, failed, or timed-out weather result therefore leaves the root
 Action visible with `notEvaluable`. Evaluation happens only after canonical
 root projection and is never persisted.
+
+The day-period condition uses the local hour of the evaluation
+`referenceDate`: `morning` is 06:00–11:59, `afternoon` is 12:00–17:59, and
+`night` is 18:00–23:59 or 00:00–05:59. It only highlights an Action; it does
+not create or remove an Action, change scheduling, or alter planning. It
+participates in `all` / `any` matching like the other favorable conditions.
+
+### 8.1. Task authoring Event condition
+
+In root Task authoring, Event configuration has one user-facing surface inside
+`Condições favoráveis`:
+
+```text
+Evento próximo
+  Evento
+  Destacar até X dias antes do evento
+```
+
+There is at most one Event and one visible day value. `eventAssociation` is the
+canonical root relationship, while `automation.rules[type=upcomingEvent]` is
+the authoring value and carries `withinDays`. The authoring boundary keeps
+these Event ids synchronized and, for a punctual root Task, materializes
+`schedule[type=eventRelative]` with the same `leadDays` when that schedule is
+needed for temporal projection. Recurring Tasks retain their daily, weekly, or
+monthly recurrence and never receive `eventRelative` as a replacement.
+
+When legacy root data contains both Event-dependent windows, authoring displays
+`withinDays` first and falls back to `eventRelative.leadDays` only when the
+upcoming-Event rule is absent. A root save normalizes all Event-dependent
+consumers to the single selected Event and day value; reading does not perform
+a bulk migration. An incomplete Event condition is not persisted.
 
 ## 9. Event association and planning
 
@@ -347,14 +378,12 @@ eventAssociation?: {
 }
 ```
 
-The legacy `eventRelative` schedule remains a separate punctual temporal rule
+The legacy `eventRelative` schedule remains an internal punctual temporal rule
 whose `eventId` and `leadDays` determine its effective civil date. When it is
-materialized on a root Task, its Event id is synchronized with the canonical
-association. Likewise, a root Task's `upcomingEvent` favorable condition uses
-the same canonical Event id while retaining its independent `withinDays`
-window. Changing the root association synchronizes these materialized Event
-consumers; removing the association removes or deactivates only the
-Event-dependent root capabilities and preserves unrelated conditions.
+materialized on a root Task, its Event id and day value are synchronized with
+the canonical association and the authoring `upcomingEvent.withinDays` value.
+Changing or removing the Task's single Event condition synchronizes or removes
+these Event-dependent consumers while preserving unrelated conditions.
 
 No migration in bulk is performed. Legacy data is read defensively. Rich
 legacy Subtasks retain their own `eventAssociation`, `eventRelative`, and

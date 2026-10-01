@@ -9,6 +9,7 @@ import { weatherConditions } from '../../utils/weather'
 import {
   AutomationRule,
   AutomationRuleSet,
+  DayPeriod,
   WeatherCondition,
   WeekdayName,
 } from '../../types/automation'
@@ -20,8 +21,8 @@ interface AutomationRulesEditorProps {
   value: AutomationRuleSet
   onChange: (value: AutomationRuleSet) => void
   excludeEventId?: string
-  /** Pass null or an id from Task authoring to reuse the canonical Task Event. */
-  associatedEventId?: string | null
+  mode?: 'event' | 'task'
+  onTaskEventChange?: (eventId: string | undefined) => void
 }
 
 const weekdays: Array<{ value: WeekdayName; label: string }> = [
@@ -32,6 +33,12 @@ const weekdays: Array<{ value: WeekdayName; label: string }> = [
   { value: 'friday', label: 'Sex' },
   { value: 'saturday', label: 'Sáb' },
   { value: 'sunday', label: 'Dom' },
+]
+
+const dayPeriods: Array<{ value: DayPeriod; label: string }> = [
+  { value: 'morning', label: 'Manhã' },
+  { value: 'afternoon', label: 'Tarde' },
+  { value: 'night', label: 'Noite' },
 ]
 
 const weekdayByDateIndex: WeekdayName[] = [
@@ -61,17 +68,15 @@ export default function AutomationRulesEditor({
   value,
   onChange,
   excludeEventId,
-  associatedEventId,
+  mode = 'event',
+  onTaskEventChange,
 }: AutomationRulesEditorProps) {
   const [events, setEvents] = useState<Event[]>([])
-  const usesAssociatedTaskEvent = associatedEventId !== undefined
+  const notifyTaskEventChange = (eventId: string | undefined) => {
+    if (mode === 'task') onTaskEventChange?.(eventId)
+  }
 
   useEffect(() => {
-    if (usesAssociatedTaskEvent) {
-      setEvents([])
-      return
-    }
-
     if (!uid) return
 
     let active = true
@@ -102,7 +107,7 @@ export default function AutomationRulesEditor({
     return () => {
       active = false
     }
-  }, [uid, excludeEventId, usesAssociatedTaskEvent])
+  }, [uid, excludeEventId])
 
   const weekdayRule = useMemo(
     () => value.rules.find((rule) => rule.type === 'weekday'),
@@ -111,6 +116,11 @@ export default function AutomationRulesEditor({
 
   const weatherRule = useMemo(
     () => value.rules.find((rule) => rule.type === 'weather'),
+    [value.rules],
+  )
+
+  const dayPeriodRule = useMemo(
+    () => value.rules.find((rule) => rule.type === 'dayPeriod'),
     [value.rules],
   )
 
@@ -177,14 +187,43 @@ export default function AutomationRulesEditor({
     )
   }
 
+  const toggleDayPeriodRule = (enabled: boolean) => {
+    onChange(
+      replaceRuleByType(value, 'dayPeriod', enabled
+        ? {
+            id: crypto.randomUUID(),
+            type: 'dayPeriod',
+            periods: ['morning'],
+          }
+        : null),
+    )
+  }
+
+  const toggleDayPeriod = (period: DayPeriod, selected: boolean) => {
+    if (!dayPeriodRule || dayPeriodRule.type !== 'dayPeriod') return
+
+    const periods = selected
+      ? Array.from(new Set([...dayPeriodRule.periods, period]))
+      : dayPeriodRule.periods.filter((candidate) => candidate !== period)
+
+    if (periods.length === 0) return
+
+    onChange(
+      replaceRuleByType(value, 'dayPeriod', {
+        ...dayPeriodRule,
+        periods,
+      }),
+    )
+  }
+
   const toggleUpcomingEventRule = (enabled: boolean) => {
     if (!enabled) {
+      notifyTaskEventChange(undefined)
       onChange(replaceRuleByType(value, 'upcomingEvent', null))
       return
     }
 
-    const eventId = usesAssociatedTaskEvent ? associatedEventId : events[0]?.id
-    if (!eventId) return
+    const eventId = mode === 'event' ? events[0]?.id ?? '' : ''
 
     onChange(
       replaceRuleByType(value, 'upcomingEvent', {
@@ -194,12 +233,13 @@ export default function AutomationRulesEditor({
         withinDays: 3,
       }),
     )
+    notifyTaskEventChange(undefined)
   }
 
   const updateUpcomingEvent = (eventId: string) => {
-    if (usesAssociatedTaskEvent) return
     if (!upcomingEventRule || upcomingEventRule.type !== 'upcomingEvent') return
 
+    notifyTaskEventChange(eventId || undefined)
     onChange(
       replaceRuleByType(value, 'upcomingEvent', {
         ...upcomingEventRule,
@@ -246,6 +286,34 @@ export default function AutomationRulesEditor({
           <option value="any">Qualquer uma pode corresponder</option>
         </select>
       </label>
+
+      <div className={styles.rule}>
+        <label className={styles.ruleToggle}>
+          <input
+            type="checkbox"
+            checked={Boolean(dayPeriodRule)}
+            onChange={(event) => toggleDayPeriodRule(event.currentTarget.checked)}
+          />
+          <span>Período do dia</span>
+        </label>
+
+        {dayPeriodRule?.type === 'dayPeriod' && (
+          <div className={styles.weekdays}>
+            {dayPeriods.map((option) => (
+              <label className={styles.weekday} key={option.value}>
+                <input
+                  type="checkbox"
+                  checked={dayPeriodRule.periods.includes(option.value)}
+                  onChange={(event) =>
+                    toggleDayPeriod(option.value, event.currentTarget.checked)
+                  }
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className={styles.rule}>
         <label className={styles.ruleToggle}>
@@ -312,46 +380,40 @@ export default function AutomationRulesEditor({
           <input
             type="checkbox"
             checked={Boolean(upcomingEventRule)}
-            disabled={!upcomingEventRule
-              && (usesAssociatedTaskEvent ? !associatedEventId : events.length === 0)}
+            disabled={!upcomingEventRule && events.length === 0}
             onChange={(event) =>
               toggleUpcomingEventRule(event.currentTarget.checked)
             }
           />
-          <span>{usesAssociatedTaskEvent
-            ? 'Proximidade do Event associado'
-            : 'Evento próximo'}</span>
+          <span>Evento próximo</span>
         </label>
 
-        {!upcomingEventRule && (usesAssociatedTaskEvent ? !associatedEventId : events.length === 0) && (
-          <p className={styles.hint}>{usesAssociatedTaskEvent
-            ? 'Associe um Event primeiro para usar esta condição.'
-            : 'Nenhum evento futuro disponível.'}</p>
+        {!upcomingEventRule && events.length === 0 && (
+          <p className={styles.hint}>Nenhum evento futuro disponível.</p>
         )}
 
         {upcomingEventRule?.type === 'upcomingEvent' && (
           <div className={styles.eventRule}>
-            {!usesAssociatedTaskEvent && (
-              <label className={styles.field}>
-                <span>Evento</span>
-                <select
-                  className={styles.select}
-                  value={upcomingEventRule.eventId}
-                  onChange={(event) => updateUpcomingEvent(event.currentTarget.value)}
-                >
-                  {!selectedEventExists && (
-                    <option value={upcomingEventRule.eventId}>
-                      Evento indisponível
-                    </option>
-                  )}
-                  {events.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.title} · {formatDate(event.startDate)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+            <label className={styles.field}>
+              <span>Evento</span>
+              <select
+                className={styles.select}
+                value={upcomingEventRule.eventId}
+                onChange={(event) => updateUpcomingEvent(event.currentTarget.value)}
+              >
+                <option value="">Selecione um evento</option>
+                {!selectedEventExists && upcomingEventRule.eventId && (
+                  <option value={upcomingEventRule.eventId}>
+                    Evento indisponível
+                  </option>
+                )}
+                {events.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.title} · {formatDate(event.startDate)}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <label className={styles.field}>
               <span>Destacar até</span>

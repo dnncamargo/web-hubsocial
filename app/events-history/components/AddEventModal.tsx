@@ -230,17 +230,26 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
-                Cancelar
-              </button>
+              <div className={styles.toolbarStart}>
+                <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
+                  Cancelar
+                </button>
+                {editorDraft.canClearDraft && (
+                  <button type="button" onClick={handleClear} className={styles.toolbarButton}>
+                    Limpar
+                  </button>
+                )}
+              </div>
               <h3 id="add-event-title" className={styles.toolbarTitle}>Novo evento</h3>
-              <button
-                type="submit"
-                disabled={!!error}
-                className={styles.toolbarButton}
-              >
-                Salvar
-              </button>
+              <div className={styles.toolbarEnd}>
+                <button
+                  type="submit"
+                  disabled={!!error}
+                  className={styles.toolbarButton}
+                >
+                  Salvar
+                </button>
+              </div>
             </div>
 
             <div className={styles.fieldGroup}>
@@ -387,12 +396,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 </div>
               </div>
             )}
-
-            <div className={styles.draftActions}>
-              <button type="button" onClick={handleClear} className={styles.textAction}>
-                Limpar
-              </button>
-            </div>
 
             {error && <p className={styles.error}>{error}</p>}
           </div>

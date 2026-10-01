@@ -30,19 +30,16 @@ test('Add and Edit share the guided task authoring order and canonical actions',
     assert.ok(planningIndex < contextIndex || source.includes('nature === \'recurring\''))
     assert.ok(contextIndex < conditionsIndex)
     assert.match(source, /Cancelar/)
-    assert.match(source, /Salvar/)
+    assert.match(source, /Salvar|Adicionar/)
     assert.match(source, /Limpar/)
     assert.doesNotMatch(source, /onNatureChange=/)
   }
 })
 
-test('recurring schedule controls expose frequency details and one canonical Event context', () => {
+test('schedule controls expose recurrence only and no Event authoring surface', () => {
   assert.match(scheduleControl, /Com que frequência ela se repete\?/)
-  assert.match(scheduleControl, /<legend[^>]*>Contexto<\/legend>/)
-  assert.match(scheduleControl, /Antes do Event associado/)
-  assert.match(scheduleControl, /synchronizeEventRelativeSchedule/)
-  assert.doesNotMatch(scheduleControl, /Evento da regra temporal/)
-  assert.doesNotMatch(scheduleControl, /selectRelativeEvent/)
+  assert.doesNotMatch(scheduleControl, /Contexto|Event associado|Antecedência|eventRelative/)
+  assert.match(scheduleControl, /if \(nature !== 'recurring'\) return null/)
   assert.match(scheduleControl, /Flexível/)
   assert.match(scheduleControl, /Em dias específicos/)
   assert.match(scheduleControl, /Diariamente/)
@@ -55,7 +52,19 @@ test('Subtask authoring uses the simple editor and canonical transient surface',
   assert.match(subtaskModal, /useOutsideDismiss/)
   assert.match(subtaskModal, /Cancelar/)
   assert.match(subtaskModal, /Salvar/)
-  assert.match(subtaskModal, /Limpar/)
+  assert.doesNotMatch(subtaskModal, /Limpar|draftActions|handleClear/)
   assert.doesNotMatch(subtaskModal, /TaskNatureControl|TaskScheduleControl|ActionPlanningControl|AutomationRulesEditor|Event association/i)
   assert.match(tasksListPage, /SubtaskModal/)
+})
+
+test('Edit Task keeps conversion after favorable conditions and exposes toolbar draft actions', () => {
+  const conditionsIndex = editTaskModal.indexOf('<AutomationRulesEditor')
+  const conversionIndex = editTaskModal.indexOf('Agendar como evento')
+  const toolbarIndex = editTaskModal.indexOf('className={styles.toolbar}')
+  const clearIndex = editTaskModal.indexOf('Limpar')
+
+  assert.ok(conditionsIndex >= 0)
+  assert.ok(conversionIndex > conditionsIndex)
+  assert.ok(clearIndex > toolbarIndex && clearIndex < editTaskModal.indexOf('<TaskNatureControl'))
+  assert.doesNotMatch(editTaskModal, /draftActions/)
 })

@@ -174,13 +174,22 @@ const AddPersonModal = ({ isOpen, onDismiss, onCancel, onSaved, onAdded }: AddPe
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
-                Cancelar
-              </button>
+              <div className={styles.toolbarStart}>
+                <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
+                  Cancelar
+                </button>
+                {editorDraft.canClearDraft && (
+                  <button type="button" onClick={handleClear} className={styles.toolbarButton}>
+                    Limpar
+                  </button>
+                )}
+              </div>
               <h2 id="add-person-title" className={styles.toolbarTitle}>Nova pessoa</h2>
-              <button type="submit" className={styles.toolbarButton}>
-                Salvar
-              </button>
+              <div className={styles.toolbarEnd}>
+                <button type="submit" className={styles.toolbarButton}>
+                  Salvar
+                </button>
+              </div>
             </div>
 
             <PersonEditorFields
@@ -217,12 +226,6 @@ const AddPersonModal = ({ isOpen, onDismiss, onCancel, onSaved, onAdded }: AddPe
               showRelationshipsModal={showRelationshipsModal}
               setShowRelationshipsModal={setShowRelationshipsModal}
             />
-
-            <div className={styles.draftActions}>
-              <button type="button" onClick={handleClear} className={styles.textAction}>
-                Limpar
-              </button>
-            </div>
 
             {error && <p className={styles.error} role="alert">{error}</p>}
           </div>

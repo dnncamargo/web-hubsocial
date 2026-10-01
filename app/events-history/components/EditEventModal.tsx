@@ -244,17 +244,26 @@ const EditEventModal = ({
         <form onSubmit={handleUpdate} className={styles.form}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={handleDismiss} className={styles.toolbarButton}>
-                Cancelar
-              </button>
+              <div className={styles.toolbarStart}>
+                <button type="button" onClick={handleDismiss} className={styles.toolbarButton}>
+                  Cancelar
+                </button>
+                {editorDraft.canClearDraft && (
+                  <button type="button" onClick={handleClear} className={styles.toolbarButton}>
+                    Limpar
+                  </button>
+                )}
+              </div>
               <h3 id="edit-event-title" className={styles.toolbarTitle}>Editar evento</h3>
-              <button
-                type="submit"
-                disabled={!!error}
-                className={styles.toolbarButton}
-              >
-                Salvar
-              </button>
+              <div className={styles.toolbarEnd}>
+                <button
+                  type="submit"
+                  disabled={!!error}
+                  className={styles.toolbarButton}
+                >
+                  Salvar
+                </button>
+              </div>
             </div>
 
             <div className={styles.fieldGroup}>
@@ -402,12 +411,6 @@ const EditEventModal = ({
                 </div>
               </div>
             )}
-
-            <div className={styles.draftActions}>
-              <button type="button" onClick={handleClear} className={styles.textAction}>
-                Limpar
-              </button>
-            </div>
 
             <div className={styles.destructiveRow}>
               <button

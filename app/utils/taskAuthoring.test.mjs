@@ -4,11 +4,22 @@ import {
   changeTaskFrequency,
   changeTaskNature,
   changeWeeklyMode,
+  isTaskAuthoringDirty,
   sortTaskWeekdays,
   synchronizeEventRelativeSchedule,
   synchronizeUpcomingEventRule,
   toggleTaskWeekday,
 } from './taskAuthoring.ts'
+
+const emptyState = () => ({
+  content: 'Tarefa',
+  nature: 'punctual',
+  actionPlanning: {},
+  schedule: undefined,
+  eventAssociation: undefined,
+  automation: { match: 'all', rules: [] },
+  addingDate: false,
+})
 
 test('punctual authoring removes recurring schedule but preserves event-relative rule', () => {
   assert.deepEqual(changeTaskNature({ type: 'daily' }, 'punctual'), undefined)
@@ -99,4 +110,44 @@ test('weekly weekday toggles preserve normalized order', () => {
     toggleTaskWeekday({ type: 'weekly', weekdays: ['friday'] }, 'monday', true),
     { type: 'weekly', weekdays: ['monday', 'friday'] },
   )
+})
+
+test('task authoring dirty state is semantic and reversible', () => {
+  const baseline = emptyState()
+  assert.equal(isTaskAuthoringDirty(baseline, baseline), false)
+  assert.equal(isTaskAuthoringDirty({ ...baseline, content: 'Alterada' }, baseline), true)
+  assert.equal(isTaskAuthoringDirty({ ...baseline, content: 'Tarefa' }, baseline), false)
+
+  const withCondition = {
+    ...baseline,
+    automation: {
+      match: 'all',
+      rules: [{ id: 'period', type: 'dayPeriod', periods: ['morning'] }],
+    },
+  }
+  assert.equal(isTaskAuthoringDirty(withCondition, baseline), true)
+  assert.equal(isTaskAuthoringDirty(baseline, withCondition), true)
+  assert.equal(isTaskAuthoringDirty({ ...withCondition, automation: baseline.automation }, baseline), false)
+})
+
+test('event conversion and disclosure-only state follow the local draft contract', () => {
+  const baseline = emptyState()
+  assert.equal(isTaskAuthoringDirty({ ...baseline, addingDate: true }, baseline), true)
+  assert.equal(isTaskAuthoringDirty(baseline, baseline), false)
+})
+
+test('legacy event materialization does not create a false dirty state', () => {
+  const baseline = {
+    ...emptyState(),
+    schedule: { type: 'eventRelative', eventId: 'event-1', leadDays: 3 },
+  }
+  const hydratedAuthoring = {
+    ...baseline,
+    eventAssociation: { eventId: 'event-1' },
+    automation: {
+      match: 'all',
+      rules: [{ id: 'legacy', type: 'upcomingEvent', eventId: 'event-1', withinDays: 3 }],
+    },
+  }
+  assert.equal(isTaskAuthoringDirty(hydratedAuthoring, baseline), false)
 })

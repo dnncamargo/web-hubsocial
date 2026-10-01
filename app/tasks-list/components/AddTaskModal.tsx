@@ -15,7 +15,8 @@ import TaskNatureControl from '../../components/actions/TaskNatureControl'
 import TaskScheduleControl from '../../components/actions/TaskScheduleControl'
 import {
   changeTaskNature,
-  synchronizeUpcomingEventRule,
+  isTaskAuthoringDirty,
+  type TaskAuthoringState,
 } from '../../utils/taskAuthoring'
 import styles from './TaskEditor.module.css'
 
@@ -41,7 +42,6 @@ export default function AddTaskModal({
     match: 'all',
     rules: [],
   })
-  const [showConditions, setShowConditions] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -88,7 +88,6 @@ export default function AddTaskModal({
       setSchedule(undefined)
       setEventAssociation(undefined)
       setAutomation({ match: 'all', rules: [] })
-      setShowConditions(false)
       onClose()
     } catch (error) {
       console.error('Erro ao adicionar tarefa:', error)
@@ -105,7 +104,6 @@ export default function AddTaskModal({
     setSchedule(undefined)
     setEventAssociation(undefined)
     setAutomation({ match: 'all', rules: [] })
-    setShowConditions(false)
     onClose()
   }
 
@@ -116,7 +114,6 @@ export default function AddTaskModal({
     setSchedule(undefined)
     setEventAssociation(undefined)
     setAutomation({ match: 'all', rules: [] })
-    setShowConditions(false)
   }
 
   const handleNatureChange = (nextNature: TaskNature) => {
@@ -124,10 +121,29 @@ export default function AddTaskModal({
     setSchedule(changeTaskNature(schedule, nextNature))
   }
 
-  const handleEventAssociationChange = (nextAssociation: TaskEventAssociation | undefined) => {
-    setEventAssociation(nextAssociation)
-    setAutomation(current => synchronizeUpcomingEventRule(current, nextAssociation?.eventId))
+  const handleTaskEventChange = (eventId: string | undefined) => {
+    setEventAssociation(eventId ? { eventId } : undefined)
+    setSchedule(current => current?.type === 'eventRelative' ? undefined : current)
   }
+
+  const currentAuthoring: TaskAuthoringState = {
+    content,
+    nature,
+    actionPlanning,
+    schedule,
+    eventAssociation,
+    automation,
+    addingDate: false,
+  }
+  const isDraftDirty = isTaskAuthoringDirty(currentAuthoring, {
+    content: '',
+    nature: 'punctual',
+    actionPlanning: {},
+    schedule: undefined,
+    eventAssociation: undefined,
+    automation: { match: 'all', rules: [] },
+    addingDate: false,
+  })
 
   return (
     <motion.div
@@ -151,13 +167,22 @@ export default function AddTaskModal({
       >
         <div className={styles.content}>
           <div className={styles.toolbar}>
-            <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
-              Cancelar
-            </button>
+            <div className={styles.toolbarStart}>
+              <button type="button" onClick={handleCancel} className={styles.toolbarButton}>
+                Cancelar
+              </button>
+              {isDraftDirty && (
+                <button type="button" onClick={handleClear} className={styles.toolbarButton}>
+                  Limpar
+                </button>
+              )}
+            </div>
             <h2 id="add-task-title" className={styles.toolbarTitle}>Nova tarefa</h2>
-            <button type="submit" disabled={adding} className={styles.toolbarButton}>
-              {adding ? 'Salvando...' : 'Salvar'}
-            </button>
+            <div className={styles.toolbarEnd}>
+              <button type="submit" disabled={adding} className={styles.toolbarButton}>
+                {adding ? 'Salvando...' : 'Adicionar'}
+              </button>
+            </div>
           </div>
 
           <TaskNatureControl value={nature} onChange={handleNatureChange} />
@@ -183,39 +208,19 @@ export default function AddTaskModal({
           )}
 
           <TaskScheduleControl
-            uid={uid}
             nature={nature}
             value={schedule}
             onChange={setSchedule}
-            eventAssociation={eventAssociation}
-            onEventAssociationChange={handleEventAssociationChange}
           />
 
-          <div className={styles.disclosure}>
-            <button
-              type="button"
-              className={styles.disclosureButton}
-              aria-expanded={showConditions}
-              onClick={() => setShowConditions(value => !value)}
-            >
-              <span>Condições favoráveis</span>
-              <span>{showConditions ? 'Ocultar' : 'Adicionar'}</span>
-            </button>
-            {showConditions && (
-              <AutomationRulesEditor
-                uid={uid}
-                value={automation}
-                onChange={setAutomation}
-                associatedEventId={eventAssociation?.eventId ?? null}
-              />
-            )}
-          </div>
+          <AutomationRulesEditor
+            uid={uid}
+            value={automation}
+            onChange={setAutomation}
+            mode="task"
+            onTaskEventChange={handleTaskEventChange}
+          />
 
-          <div className={styles.draftActions}>
-            <button type="button" onClick={handleClear} className={styles.textAction}>
-              Limpar
-            </button>
-          </div>
         </div>
       </form>
     </motion.div>
