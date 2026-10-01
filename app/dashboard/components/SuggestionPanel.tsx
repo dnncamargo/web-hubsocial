@@ -1,7 +1,7 @@
 // components/SuggestionPanel.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { addDoc, getDocs, collection } from 'firebase/firestore'
 import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
@@ -14,6 +14,7 @@ import { hydratePerson } from '../../utils/personPayload'
 import { birthdayDateForYear, birthdayMonthDay } from '../../utils/birthday'
 import SuggestionCard from './SuggestionCard'
 import styles from './SuggestionPanel.module.css'
+import { useOutsideDismiss } from '../../hooks/useOutsideDismiss'
 
 interface SuggestionPanelProps {
   onClose: () => void
@@ -23,6 +24,13 @@ interface SuggestionPanelProps {
 export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionPanelProps) {
   const { uid } = useAuth()
   const [suggestions, setSuggestions] = useState<EventSuggestion[]>([])
+  const panelRef = useRef<HTMLElement>(null)
+
+  useOutsideDismiss({
+    open: true,
+    insideRefs: [panelRef],
+    onDismiss: onClose,
+  })
 
   useEffect(() => {
     if (uid) {
@@ -153,6 +161,7 @@ export default function SuggestionPanel({ onClose, onEventCreated }: SuggestionP
       initial={{ x: '100%' }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      ref={panelRef}
       className={styles.panel}
       role="dialog"
       aria-modal="true"

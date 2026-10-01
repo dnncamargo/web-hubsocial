@@ -1,4 +1,4 @@
-import { JSX, useEffect, useState } from 'react'
+import { JSX, useEffect, useRef, useState, type RefObject } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { CalendarDays, House, ListTodo, Users } from 'lucide-react'
 import { Link, useLocation } from 'react-router'
@@ -10,6 +10,7 @@ import LogoutButton from './LogoutButton'
 import ImportContactsModal from './ImportContactsModal'
 import CurrentWeather from './CurrentWeather'
 import QuickCreateMenu from './QuickCreateMenu'
+import { useOutsideDismiss } from '../../hooks/useOutsideDismiss'
 import { instance } from '../../config/instance'
 import styles from './MainMenu.module.css'
 
@@ -27,6 +28,9 @@ export default function MainMenu(): JSX.Element {
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [showImportContacts, setShowImportContacts] = useState(false)
+  const accountMenuRef = useRef<HTMLDivElement>(null)
+  const desktopAccountButtonRef = useRef<HTMLButtonElement>(null)
+  const mobileAccountButtonRef = useRef<HTMLButtonElement>(null)
   const { pathname } = useLocation()
 
   useEffect(() => {
@@ -36,6 +40,16 @@ export default function MainMenu(): JSX.Element {
   useEffect(() => {
     setIsAccountOpen(false)
   }, [pathname])
+
+  useOutsideDismiss({
+    open: isAccountOpen,
+    insideRefs: [
+      accountMenuRef,
+      desktopAccountButtonRef,
+      mobileAccountButtonRef,
+    ],
+    onDismiss: () => setIsAccountOpen(false),
+  })
 
   const isActive = (path: string) =>
     path === '/dashboard'
@@ -58,9 +72,13 @@ export default function MainMenu(): JSX.Element {
     </Link>
   )
 
-  const accountButton = (className: string) => (
+  const accountButton = (
+    className: string,
+    buttonRef: RefObject<HTMLButtonElement | null>,
+  ) => (
     <button
       type="button"
+      ref={buttonRef}
       className={className}
       onClick={() => setIsAccountOpen((open) => !open)}
       aria-expanded={isAccountOpen}
@@ -99,7 +117,7 @@ export default function MainMenu(): JSX.Element {
         </nav>
 
         <div className={styles.sidebarAccount}>
-          {accountButton(styles.accountButton)}
+          {accountButton(styles.accountButton, desktopAccountButtonRef)}
         </div>
       </aside>
 
@@ -110,7 +128,7 @@ export default function MainMenu(): JSX.Element {
         </Link>
         <div className={styles.mobileActions}>
           <CurrentWeather />
-          {accountButton(styles.mobileAccountButton)}
+          {accountButton(styles.mobileAccountButton, mobileAccountButtonRef)}
         </div>
       </header>
 
@@ -124,6 +142,7 @@ export default function MainMenu(): JSX.Element {
         {isAccountOpen && (
           <motion.div
             id="account-menu"
+            ref={accountMenuRef}
             className={styles.accountMenu}
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}

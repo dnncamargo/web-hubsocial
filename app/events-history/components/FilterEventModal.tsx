@@ -33,7 +33,12 @@ export default function EventFilterModal({
     && filters.endDate < filters.startDate
 
   return (
-    <div className={styles.overlay}>
+    <div
+      className={styles.overlay}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
       <section
         className={styles.dialog}
         role="dialog"

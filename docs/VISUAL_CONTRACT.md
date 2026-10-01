@@ -522,6 +522,15 @@ Interactive controls require:
 
 Do not use color alone for automation status, completion, errors, or domain identity.
 
+## 23.1. Transient surfaces
+
+Modals, menus, filters, search overlays, dropdowns, and popovers dismiss when
+the user clicks outside their interactive region. Dismissal does not imply a
+state reset; each surface preserves its own save, draft, and reset semantics.
+
+New transient surfaces must support outside-click dismissal by default. An
+exception must be intentional and documented.
+
 ## 24. Empty, loading, error, and disabled states
 
 Every major surface should deliberately support:
