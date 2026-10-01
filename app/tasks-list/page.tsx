@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { collection, getDocs, orderBy, query } from 'firebase/firestore'
+import { collection, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore'
 import { db } from '../utils/firebaseConfig'
 import { useAuth } from '../components/auth/AuthProvider'
 import { useSearchParams } from 'react-router'
@@ -9,13 +9,20 @@ import { Task } from '../utils/interfaces'
 import { Plus } from 'lucide-react'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import { usePageTitle } from '../hooks/usePageTitle'
+import useCivilDate from '../hooks/useCivilDate'
 import AddTaskModal from './components/AddTaskModal'
 import TaskSection from './components/TaskSection'
 import EditTaskModal from './components/EditTaskModal'
+import {
+  buildTaskFocusReconciliationUpdate,
+  hydrateTask,
+} from '../utils/taskPayload'
+import { reconcileTaskFocusTree } from '../utils/taskFocus'
 import styles from './TasksList.module.css'
 
 export default function TasksList() {
   const { uid } = useAuth()
+  const civilDate = useCivilDate()
   usePageTitle('Tarefas')
   const [searchParams, setSearchParams] = useSearchParams()
   const [tasks, setTasks] = useState<Task[]>([])
@@ -28,7 +35,7 @@ export default function TasksList() {
     if (uid) {
       fetchTasks()
     }
-  }, [uid])
+  }, [uid, civilDate])
 
   useEffect(() => {
     if (searchParams.get('create') !== 'task') return
@@ -48,12 +55,25 @@ export default function TasksList() {
     )
 
     const querySnapshot = await getDocs(tasksQuery)
-    const fetchedTasks = querySnapshot.docs.map(snapshot => ({
-      id: snapshot.id,
-      ...snapshot.data(),
-    })) as Task[]
+    const fetchedTasks = querySnapshot.docs.map(snapshot =>
+      hydrateTask(snapshot.id, snapshot.data()),
+    )
+    const reconciledTasks = reconcileTaskFocusTree(fetchedTasks, civilDate)
 
-    setTasks(fetchedTasks)
+    // A reconciliação é pura para que a UI já reflita a virada de dia; o
+    // write idempotente de cada documento alterado acontece em segundo plano.
+    setTasks(reconciledTasks)
+    void Promise.all(
+      reconciledTasks.flatMap((task, index) => {
+        if (task === fetchedTasks[index]) return []
+        const update = buildTaskFocusReconciliationUpdate(fetchedTasks[index], task)
+        return update
+          ? [updateDoc(doc(db, `users/${uid}/tasks-list`, task.id), update)]
+          : []
+      }),
+    ).catch(error => {
+      console.error('Não foi possível persistir a virada de foco das tarefas:', error)
+    })
   }
 
   const handleUpdateSectionTasks = (
@@ -74,7 +94,7 @@ export default function TasksList() {
 
   const sections = [
     { label: 'Não iniciadas', status: 0 as const },
-    { label: 'Em andamento', status: 1 as const },
+    { label: 'Em foco', status: 1 as const },
     { label: 'Concluídas', status: 2 as const },
   ]
 

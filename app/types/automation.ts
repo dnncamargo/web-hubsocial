@@ -36,12 +36,23 @@ export interface AutomationRuleSet {
 
 export type AutomationRuleStatus = 'matched' | 'notMatched' | 'unresolved'
 
+/**
+ * Evaluation status for the favorable-condition layer. The technical
+ * `automation` wire remains for backwards compatibility with stored Tasks.
+ */
+export type AutomationEvaluationStatus =
+  | 'matched'
+  | 'notMatched'
+  | 'notEvaluable'
+  | 'noConditions'
+
 export interface AutomationRuleEvaluation {
   ruleId: string
   status: AutomationRuleStatus
 }
 
 export interface AutomationEvaluation {
+  status: AutomationEvaluationStatus
   highlighted: boolean
   rules: AutomationRuleEvaluation[]
 }

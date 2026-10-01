@@ -7,6 +7,8 @@ import styles from './ActionPlanningControl.module.css'
 interface ActionPlanningControlProps {
   planning: ActionPlanning
   onChange: (planning: ActionPlanning) => void
+  legend?: string
+  description?: string
 }
 
 const options: Array<{ horizon: ActionHorizon; label: string }> = [
@@ -18,13 +20,13 @@ const options: Array<{ horizon: ActionHorizon; label: string }> = [
 export default function ActionPlanningControl({
   planning,
   onChange,
+  legend = 'Planejamento manual',
+  description = 'Inclua manualmente este item em um ou mais horizontes de ação.',
 }: ActionPlanningControlProps) {
   return (
     <fieldset className={styles.fieldset}>
-      <legend className={styles.legend}>Planejamento manual</legend>
-      <p className={styles.description}>
-        Inclua manualmente este item em um ou mais horizontes de ação.
-      </p>
+      <legend className={styles.legend}>{legend}</legend>
+      <p className={styles.description}>{description}</p>
 
       <div className={styles.options}>
         {options.map(({ horizon, label }) => (

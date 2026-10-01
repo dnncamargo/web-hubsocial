@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, JSX } from 'react';
-import { deleteField, getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
+import { getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useEventCategories } from '../hooks/useEventCategories';
-import { Event, Person, Task } from '../utils/interfaces';
+import { Event, Person } from '../utils/interfaces';
 import { hydratePerson } from '../utils/personPayload';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
 import {
@@ -16,10 +16,10 @@ import { getActionPeriodKeys } from '../utils/actionPlanning';
 import {
   hasWeatherRules,
   PlannedActionSource,
+  projectActionsForDate,
   projectActionSources,
 } from '../utils/actionProjection';
 import {
-  getTaskActionCandidates,
   TaskScheduleEventContext,
 } from '../utils/taskSchedule';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
@@ -27,7 +27,18 @@ import { ArrowUpRight, CalendarDays, Check, MapPin, Star, UserRound } from 'luci
 import { Link } from 'react-router';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import { usePageTitle } from '../hooks/usePageTitle'
+import useCivilDate from '../hooks/useCivilDate'
 import { formatDateTime } from '../utils/datePresentation'
+import {
+  buildTaskDailyCompletionUpdate,
+  buildNestedTaskDailyCompletionUpdate,
+  buildNestedTaskStatusUpdate,
+  buildTaskFocusReconciliationUpdate,
+  buildTaskStatusUpdate,
+  hydrateTask,
+} from '../utils/taskPayload'
+import { reconcileTaskFocusTree } from '../utils/taskFocus'
+import { getDirectTaskEntries } from '../utils/taskHierarchy'
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
 import styles from './Dashboard.module.css'
@@ -49,6 +60,7 @@ type GroupedEvents = {
 export default function Dashboard(): JSX.Element {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
   usePageTitle('Hoje')
+  const civilDate = useCivilDate()
   const { categoryColors } = useEventCategories();
   const [person, setPerson] = useState<Person[]>([]); /** @state {Person[]} person - Array de pessoas buscadas do Firestore. */
   const [events, setEvents] = useState<GroupedEvents>({
@@ -79,7 +91,7 @@ export default function Dashboard(): JSX.Element {
     // Isso garante que a lista de pessoas e eventos seja carregada assim que o componente for exibido.
     if (uid) {
       fetchAndGroupEvents()
-      fetchPlannedActions()
+      fetchPlannedActions(undefined, civilDate)
       fetchPerson();
     }
 
@@ -87,7 +99,7 @@ export default function Dashboard(): JSX.Element {
       isMountedRef.current = false
       actionRequestIdRef.current += 1
     }
-  }, [uid]); // <- Executa quando user estiver pronto
+  }, [uid, civilDate]); // <- Executa quando user estiver pronto ou o dia civil mudar
 
   /**
   * @async
@@ -103,6 +115,7 @@ export default function Dashboard(): JSX.Element {
 
   const fetchPlannedActions = async (
     weatherOverride?: WeatherSnapshot | null,
+    currentCivilDate: string = format(new Date(), 'yyyy-MM-dd'),
   ): Promise<void> => {
     if (!uid) return
 
@@ -145,12 +158,24 @@ export default function Dashboard(): JSX.Element {
       getDocs(collection(db, `users/${uid}/tasks-list`)),
     ])
 
-    const tasks = taskSnapshot.docs.map(snapshot => ({
-      id: snapshot.id,
-      ...snapshot.data(),
-    }) as Task)
+    const fetchedTasks = taskSnapshot.docs.map(snapshot =>
+      hydrateTask(snapshot.id, snapshot.data()),
+    )
+    const tasks = reconcileTaskFocusTree(fetchedTasks, currentCivilDate)
 
     if (!canCommit()) return
+
+    void Promise.all(
+      tasks.flatMap((task, index) => {
+        if (task === fetchedTasks[index]) return []
+        const update = buildTaskFocusReconciliationUpdate(fetchedTasks[index], task)
+        return update
+          ? [updateDoc(doc(db, `users/${uid}/tasks-list`, task.id), update)]
+          : []
+      }),
+    ).catch(error => {
+      console.error('Não foi possível persistir a virada de foco das tarefas:', error)
+    })
 
     const referencedEventIds = new Set<string>()
     const collectEventReferences = (source: PlannedActionSource) => {
@@ -165,7 +190,7 @@ export default function Dashboard(): JSX.Element {
       sources.forEach(collectEventReferences)
     }
 
-    for (const task of tasks) {
+    for (const { task } of getDirectTaskEntries(tasks)) {
       if (task.schedule?.type === 'eventRelative' && task.schedule.eventId) {
         referencedEventIds.add(task.schedule.eventId)
       }
@@ -204,24 +229,40 @@ export default function Dashboard(): JSX.Element {
       month: [],
     }
 
-    for (const task of tasks) {
-      const candidates = getTaskActionCandidates(task, referenceDate, linkedEvents)
+    const projectedTaskActions = projectActionsForDate(
+      tasks,
+      currentCivilDate,
+      { events: linkedEvents },
+    )
 
-      for (const candidate of candidates) {
-        taskSourcesByHorizon[candidate.horizon].push({
-          item: {
-            key: `task:${task.id}`,
-            sourceType: 'task',
-            sourceId: task.id,
-            title: task.content,
-            completed: task.status === 2 || candidate.completedToday === true,
-            completedToday: candidate.completedToday,
-            inProgress: task.status === 1,
-            ...(candidate.date ? { date: candidate.date } : {}),
-          },
-          automation: task.automation,
-        })
-      }
+    for (const action of projectedTaskActions) {
+      const parentTask = action.parentTaskId
+        ? tasks.find(candidate => candidate.id === action.parentTaskId)
+        : undefined
+      const task = action.parentTaskId
+        ? parentTask?.subtasks?.find(candidate => candidate.id === action.taskId)
+        : tasks.find(candidate => candidate.id === action.taskId)
+      if (!task) continue
+
+      const actionKey = action.parentTaskId
+        ? `task:${action.parentTaskId}:subtask:${task.id}`
+        : `task:${task.id}`
+
+      taskSourcesByHorizon[action.horizon].push({
+        item: {
+          key: actionKey,
+          sourceType: 'task',
+          sourceId: task.id,
+          title: task.content,
+          completed: false,
+          source: action.source,
+          completionMode: action.completionMode,
+          ...(action.parentTaskId ? { parentTaskId: action.parentTaskId } : {}),
+          inProgress: task.status === 1,
+          ...(action.effectiveDate ? { date: action.effectiveDate } : {}),
+        },
+        automation: task.automation,
+      })
     }
 
     const sourcesByHorizon = eventSourcesByHorizon.map(([horizon, sources]) => (
@@ -364,12 +405,32 @@ export default function Dashboard(): JSX.Element {
         return
       }
 
-      await updateDoc(
-        doc(db, `users/${uid}/tasks-list`, item.sourceId),
-        item.completedToday
-          ? { lastActionCompletedDate: deleteField() }
-          : { lastActionCompletedDate: format(new Date(), 'yyyy-MM-dd') },
-      )
+      if (item.parentTaskId) {
+        const parentReference = doc(db, `users/${uid}/tasks-list`, item.parentTaskId)
+        const parentSnapshot = await getDoc(parentReference)
+        if (!parentSnapshot.exists()) return
+
+        const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
+        const taskUpdate = item.completionMode === 'daily'
+          ? buildNestedTaskDailyCompletionUpdate(
+            parentTask,
+            item.sourceId,
+            item.date ?? format(new Date(), 'yyyy-MM-dd'),
+          )
+          : buildNestedTaskStatusUpdate(parentTask, item.sourceId, 2)
+
+        if (!taskUpdate) return
+        await updateDoc(parentReference, taskUpdate)
+      } else {
+        const taskUpdate = item.completionMode === 'daily'
+          ? buildTaskDailyCompletionUpdate(item.date ?? format(new Date(), 'yyyy-MM-dd'))
+          : buildTaskStatusUpdate(2)
+
+        await updateDoc(
+          doc(db, `users/${uid}/tasks-list`, item.sourceId),
+          taskUpdate,
+        )
+      }
       await fetchPlannedActions()
     } catch (error) {
       console.error('Erro ao concluir ação do dia:', error)

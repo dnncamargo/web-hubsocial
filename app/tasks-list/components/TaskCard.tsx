@@ -38,7 +38,7 @@ const statusMeta = {
     rowClassName: styles.rowStatusPending,
   },
   1: {
-    label: 'Em andamento',
+    label: 'Em foco',
     icon: CirclePlay,
     iconClassName: styles.statusProgress,
     rowClassName: styles.rowStatusProgress,

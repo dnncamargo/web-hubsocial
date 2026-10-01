@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import {
   collection,
-  deleteField,
   doc,
   runTransaction,
   updateDoc,
@@ -14,10 +13,17 @@ import { useAuth } from '../../components/auth/AuthProvider'
 import { Task } from '../../utils/interfaces'
 import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
-import { TaskSchedule } from '../../types/tasks'
+import { TaskEventAssociation, TaskNature, TaskSchedule } from '../../types/tasks'
+import {
+  buildTaskUpdate,
+  hydrateTask,
+  serializeTaskSubtask,
+} from '../../utils/taskPayload'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
+import TaskNatureControl from '../../components/actions/TaskNatureControl'
 import TaskScheduleControl from '../../components/actions/TaskScheduleControl'
+import { changeTaskNature } from '../../utils/taskAuthoring'
 import { OptionalField } from '../../types/optionalFields'
 import { buildEventPayload } from '../../utils/eventPayload'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
@@ -63,13 +69,20 @@ export default function EditTaskModal({
   const [actionPlanning, setActionPlanning] = useState<ActionPlanning>(
     task.actionPlanning ?? {},
   )
+  const [nature, setNature] = useState<TaskNature>(task.nature)
   const [schedule, setSchedule] = useState<TaskSchedule | undefined>(task.schedule)
+  const [eventAssociation, setEventAssociation] = useState<TaskEventAssociation | undefined>(
+    task.eventAssociation,
+  )
   const [automation, setAutomation] = useState<AutomationRuleSet>(
     task.automation ?? { match: 'all', rules: [] },
   )
   const [showAssociatePersonModal, setShowAssociatePersonModal] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [showConditions, setShowConditions] = useState(
+    (task.automation?.rules.length ?? 0) > 0,
+  )
   const dateControl = useEventDate()
   const {
     allDay,
@@ -93,13 +106,16 @@ export default function EditTaskModal({
   useEffect(() => {
     setContent(task.content)
     setActionPlanning(task.actionPlanning ?? {})
+    setNature(task.nature)
     setSchedule(task.schedule)
+    setEventAssociation(task.eventAssociation)
     setAutomation(task.automation ?? { match: 'all', rules: [] })
+    setShowConditions((task.automation?.rules.length ?? 0) > 0)
     setAddingDate(false)
     setSaveError('')
     setShowAssociatePersonModal(false)
     resetAssociatedPeople()
-  }, [task.id, parentTaskId])
+  }, [task.id, parentTaskId, isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -115,6 +131,11 @@ export default function EditTaskModal({
   const handleOpenAssociatePerson = async () => {
     await fetchPeople()
     setShowAssociatePersonModal(true)
+  }
+
+  const handleNatureChange = (nextNature: TaskNature) => {
+    setNature(nextNature)
+    setSchedule(changeTaskNature(schedule, nextNature))
   }
 
   const validateEventSchedule = () => {
@@ -155,10 +176,7 @@ export default function EditTaskModal({
         throw new Error('A tarefa não existe mais.')
       }
 
-      const currentTask = {
-        id: taskSnapshot.id,
-        ...taskSnapshot.data(),
-      } as Task
+      const currentTask = hydrateTask(taskSnapshot.id, taskSnapshot.data())
       const eventReference = doc(collection(db, `users/${uid}/events-history`))
 
       transaction.set(eventReference, buildEventFromTask(currentTask))
@@ -176,10 +194,7 @@ export default function EditTaskModal({
         throw new Error('A tarefa pai não existe mais.')
       }
 
-      const parentTask = {
-        id: parentSnapshot.id,
-        ...parentSnapshot.data(),
-      } as Task
+      const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
       const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
       const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
       if (subtaskIndex === -1) {
@@ -198,12 +213,10 @@ export default function EditTaskModal({
   const updateTopLevelTask = async () => {
     if (!uid) return
 
-    await updateDoc(doc(db, `users/${uid}/tasks-list`, task.id), {
-      content: content.trim(),
-      actionPlanning,
-      automation,
-      schedule: schedule ?? deleteField(),
-    })
+    await updateDoc(
+      doc(db, `users/${uid}/tasks-list`, task.id),
+      buildTaskUpdate({ content, actionPlanning, automation, schedule, eventAssociation }),
+    )
   }
 
   const updateEmbeddedSubtask = async () => {
@@ -216,10 +229,7 @@ export default function EditTaskModal({
         throw new Error('A tarefa pai não existe mais.')
       }
 
-      const parentTask = {
-        id: parentSnapshot.id,
-        ...parentSnapshot.data(),
-      } as Task
+      const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
       const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
       const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
       if (subtaskIndex === -1) {
@@ -229,31 +239,32 @@ export default function EditTaskModal({
       const currentSubtask = subtasks[subtaskIndex]
       const updatedSubtasks = subtasks.map((subtask, index) => (
         index === subtaskIndex
-          ? schedule
-            ? {
-              ...currentSubtask,
+          ? (() => {
+            const {
+              schedule: _schedule,
+              eventAssociation: _eventAssociation,
+              ...withoutScheduleAndAssociation
+            } = currentSubtask
+            return {
+              ...withoutScheduleAndAssociation,
               content: content.trim(),
               actionPlanning,
               automation,
-              schedule,
+              ...(schedule ? { schedule } : {}),
+              ...(eventAssociation ? { eventAssociation } : {}),
             }
-            : (() => {
-              const { schedule: _schedule, ...withoutSchedule } = currentSubtask
-              return {
-                ...withoutSchedule,
-                content: content.trim(),
-                actionPlanning,
-                automation,
-              }
-            })()
+          })()
           : subtask
       ))
 
-      transaction.update(parentReference, { subtasks: updatedSubtasks })
+      transaction.update(parentReference, {
+        subtasks: updatedSubtasks.map(serializeTaskSubtask),
+      })
     })
   }
 
-  const handleUpdate = async () => {
+  const handleUpdate = async (submitEvent?: React.FormEvent<HTMLFormElement>) => {
+    submitEvent?.preventDefault()
     if (isSaving) return
 
     const trimmedContent = content.trim()
@@ -301,33 +312,82 @@ export default function EditTaskModal({
     }
   }
 
+  const handleClear = () => {
+    setContent(task.content)
+    setActionPlanning(task.actionPlanning ?? {})
+    setNature(task.nature)
+    setSchedule(task.schedule)
+    setEventAssociation(task.eventAssociation)
+    setAutomation(task.automation ?? { match: 'all', rules: [] })
+    setAddingDate(false)
+    setShowConditions((task.automation?.rules.length ?? 0) > 0)
+    setSaveError('')
+  }
+
   if (!isOpen || !uid) return null
 
   return (
     <motion.div
       className={styles.overlay}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !isSaving) onClose()
+      }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <section
-        className={styles.dialog}
+      <form
+        className={styles.form}
+        onSubmit={(event) => void handleUpdate(event)}
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-task-title"
       >
-        <header className={styles.header}>
-          <h2 id="edit-task-title" className={styles.title}>Editar tarefa</h2>
-        </header>
+        <div className={styles.content}>
+          <div className={styles.toolbar}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSaving}
+              className={styles.toolbarButton}
+            >
+              Cancelar
+            </button>
+            <h2 id="edit-task-title" className={styles.toolbarTitle}>Editar tarefa</h2>
+            <button type="submit" disabled={isSaving} className={styles.toolbarButton}>
+              {isSaving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
 
-        <div className={styles.body}>
-          <input
-            type="text"
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            placeholder="Descrição da tarefa"
-            aria-label="Descrição da tarefa"
-            className={styles.input}
+          <TaskNatureControl value={nature} onChange={handleNatureChange} />
+
+          <div className={styles.fieldGroup}>
+            <input
+              type="text"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              placeholder="O que precisa ser feito?"
+              aria-label="O que precisa ser feito?"
+              className={styles.input}
+            />
+          </div>
+
+          {nature === 'punctual' && (
+            <ActionPlanningControl
+              legend="Quando você pretende fazer?"
+              description="Escolha uma janela de ação ou deixe sem planejamento."
+              planning={actionPlanning}
+              onChange={setActionPlanning}
+            />
+          )}
+
+          <TaskScheduleControl
+            uid={uid}
+            nature={nature}
+            value={schedule}
+            onChange={setSchedule}
+            eventAssociation={eventAssociation}
+            onEventAssociationChange={setEventAssociation}
           />
 
           <div className={styles.conversionPanel}>
@@ -385,45 +445,34 @@ export default function EditTaskModal({
             )}
           </div>
 
-          <ActionPlanningControl
-            planning={actionPlanning}
-            onChange={setActionPlanning}
-          />
+          <div className={styles.disclosure}>
+            <button
+              type="button"
+              className={styles.disclosureButton}
+              aria-expanded={showConditions}
+              onClick={() => setShowConditions(value => !value)}
+            >
+              <span>Condições favoráveis</span>
+              <span>{showConditions ? 'Ocultar' : 'Adicionar'}</span>
+            </button>
+            {showConditions && (
+              <AutomationRulesEditor
+                uid={uid}
+                value={automation}
+                onChange={setAutomation}
+              />
+            )}
+          </div>
 
-          <TaskScheduleControl
-            uid={uid}
-            value={schedule}
-            onChange={setSchedule}
-          />
-
-          <AutomationRulesEditor
-            uid={uid}
-            value={automation}
-            onChange={setAutomation}
-          />
+          <div className={styles.draftActions}>
+            <button type="button" onClick={handleClear} className={styles.textAction}>
+              Limpar
+            </button>
+          </div>
 
           {saveError && <p className={styles.error} role="alert">{saveError}</p>}
         </div>
-
-        <footer className={styles.footer}>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSaving}
-            className={styles.secondaryButton}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleUpdate}
-            disabled={isSaving}
-            className={styles.primaryButton}
-          >
-            {isSaving ? 'Salvando...' : addingDate ? 'Criar evento' : 'Salvar tarefa'}
-          </button>
-        </footer>
-      </section>
+      </form>
     </motion.div>
   )
 }

@@ -14,16 +14,16 @@ interface ActionsOverviewProps {
 }
 
 function getAutomationStatus(item: ActionProjectionItem) {
-  if (item.automation.rules.length === 0) return null
+  if (item.automation.status === 'noConditions') return null
 
-  if (item.automation.highlighted) {
+  if (item.automation.status === 'matched') {
     return {
       label: 'Condição atendida',
       className: styles.automationMatched,
     }
   }
 
-  if (item.automation.rules.some((rule) => rule.status === 'unresolved')) {
+  if (item.automation.status === 'notEvaluable') {
     return {
       label: 'Contexto pendente',
       className: styles.automationPending,
@@ -125,7 +125,7 @@ function ActionRow({
           <span className={styles.completedTodayLabel}>Concluída hoje</span>
         )}
         {item.inProgress && !item.completed && !item.completedToday && (
-          <span className={styles.inProgressLabel}>Em andamento</span>
+          <span className={styles.inProgressLabel}>Em foco</span>
         )}
         {automationStatus && (
           <span className={automationStatus.className}>

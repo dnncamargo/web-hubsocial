@@ -1,5 +1,5 @@
 import { format, startOfWeek } from 'date-fns'
-import { ActionHorizon, ActionPlanning } from '../types/actions'
+import type { ActionHorizon, ActionPlanning } from '../types/actions'
 
 export interface ActionPeriodKeys {
   day: string
