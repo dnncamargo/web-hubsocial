@@ -18,6 +18,10 @@
   box-shadow: var(--shadow-md);
 }
 
+.filterDialog {
+  width: min(100%, 28.6rem);
+}
+
 .header {
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-border);
@@ -93,6 +97,14 @@
 .clearDateButton:hover {
   border-color: var(--color-danger);
   color: var(--color-danger);
+}
+
+.clearDateButton:disabled,
+.clearDateButton:disabled:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
 }
 
 .clearDateIcon {
@@ -236,14 +248,39 @@
   gap: 0.25rem;
 }
 
+.editableChoices {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.editableChoices .choiceWithColor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.5rem 2.5rem;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.editableChoices .choice {
+  width: 100%;
+}
+
 .colorInput {
-  width: 1.15rem;
-  height: 1.15rem;
-  padding: 0;
+  width: 2.5rem;
+  height: 1.9rem;
+  padding: 0.1rem;
   border: 1px solid var(--color-border);
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: transparent;
   cursor: pointer;
+}
+
+.colorInput::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.colorInput::-webkit-color-swatch,
+.colorInput::-moz-color-swatch {
+  border: 0;
 }
 
 .colorInput:focus-visible {

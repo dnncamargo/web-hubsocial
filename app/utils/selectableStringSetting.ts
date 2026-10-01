@@ -15,6 +15,35 @@ export function normalizeSelectableValues(value: unknown): string[] {
   ))
 }
 
+function sameSelectableValueSet(
+  first: readonly string[],
+  second: readonly string[],
+): boolean {
+  const firstSet = new Set(first)
+  const secondSet = new Set(second)
+
+  return firstSet.size === secondSet.size
+    && [...firstSet].every(value => secondSet.has(value))
+}
+
+export function normalizeSelectableSelection(
+  value: unknown,
+  availableValues?: readonly string[],
+): string[] {
+  const selectedValues = normalizeSelectableValues(value)
+  if (!availableValues || availableValues.length === 0) {
+    return selectedValues
+  }
+
+  const knownValues = normalizeSelectableValues(availableValues)
+  const knownValueSet = new Set(knownValues)
+  const knownSelectedValues = selectedValues.filter(value => knownValueSet.has(value))
+
+  return sameSelectableValueSet(knownSelectedValues, knownValues)
+    ? []
+    : knownSelectedValues
+}
+
 export function appendSelectableValue(
   values: readonly string[],
   value: unknown,

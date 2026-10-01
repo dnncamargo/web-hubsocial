@@ -45,7 +45,7 @@ export function EventCategoriesModal({
         </header>
 
         <div className={styles.body}>
-          <div className={styles.choices}>
+          <div className={`${styles.choices} ${styles.editableChoices}`}>
             {availableCategories.map((category) => {
               const selected = selectedCategories.includes(category)
               return (

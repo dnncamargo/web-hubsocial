@@ -40,7 +40,7 @@ export default function EventFilterModal({
       }}
     >
       <section
-        className={styles.dialog}
+        className={`${styles.dialog} ${styles.filterDialog}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="event-filter-title"
@@ -81,16 +81,15 @@ export default function EventFilterModal({
                   setFilters({ ...filters, startDate: event.target.value })}
                 className={styles.input}
               />
-              {filters.startDate && (
-                <button
-                  type="button"
-                  className={styles.clearDateButton}
-                  aria-label="Remover data inicial"
-                  onClick={() => setFilters({ ...filters, startDate: '' })}
-                >
-                  <X className={styles.clearDateIcon} aria-hidden="true" />
-                </button>
-              )}
+              <button
+                type="button"
+                className={styles.clearDateButton}
+                aria-label="Remover data inicial"
+                disabled={!filters.startDate}
+                onClick={() => setFilters({ ...filters, startDate: '' })}
+              >
+                <X className={styles.clearDateIcon} aria-hidden="true" />
+              </button>
             </div>
           </div>
 
@@ -105,16 +104,15 @@ export default function EventFilterModal({
                   setFilters({ ...filters, endDate: event.target.value })}
                 className={styles.input}
               />
-              {filters.endDate && (
-                <button
-                  type="button"
-                  className={styles.clearDateButton}
-                  aria-label="Remover data final"
-                  onClick={() => setFilters({ ...filters, endDate: '' })}
-                >
-                  <X className={styles.clearDateIcon} aria-hidden="true" />
-                </button>
-              )}
+              <button
+                type="button"
+                className={styles.clearDateButton}
+                aria-label="Remover data final"
+                disabled={!filters.endDate}
+                onClick={() => setFilters({ ...filters, endDate: '' })}
+              >
+                <X className={styles.clearDateIcon} aria-hidden="true" />
+              </button>
             </div>
             {isEndBeforeStart && (
               <p className={styles.error}>

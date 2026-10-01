@@ -10,6 +10,7 @@ const readAppFile = (...parts) => readFileSync(join(appRoot, ...parts), 'utf8')
 const editorFields = readAppFile('people-directory', 'components', 'PersonEditorFields.tsx')
 const personDetails = readAppFile('people-directory', '[id]', 'page.tsx')
 const peopleDirectory = readAppFile('people-directory', 'page.tsx')
+const personFilters = readAppFile('people-directory', 'utils', 'personFilters.ts')
 const suggestionPanel = readAppFile('dashboard', 'components', 'SuggestionPanel.tsx')
 const googleContacts = readAppFile('utils', 'googleContacts.ts')
 
@@ -25,7 +26,8 @@ test('Person Details formats the canonical birthday instead of leaking the wire 
 })
 
 test('People filters and Dashboard use the birthday helper', () => {
-  assert.match(peopleDirectory, /parseBirthday\(person\.birthday\)/)
+  assert.match(personFilters, /parseBirthday\(person\.birthday\)/)
+  assert.match(peopleDirectory, /evaluatePersonFilters\(person, filters, availableRelationships\)/)
   assert.match(suggestionPanel, /birthdayDateForYear\(person\.birthday, now\.getFullYear\(\)\)/)
   assert.doesNotMatch(suggestionPanel, /parseISO\(person\.birthday\)/)
 })

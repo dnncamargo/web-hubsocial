@@ -1,5 +1,6 @@
 import type { Event } from '../../utils/interfaces'
 import type { OptionalField } from '../../types/optionalFields'
+import { normalizeSelectableSelection } from '../../utils/selectableStringSetting.ts'
 
 export interface EventFilter {
   enabled: boolean
@@ -48,47 +49,6 @@ function normalizeRating(value: unknown): number {
     : 0
 }
 
-function normalizeCategories(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
-
-  return Array.from(new Set(
-    value.filter((category): category is string => typeof category === 'string')
-      .map(category => category.trim())
-      .filter(Boolean),
-  ))
-}
-
-function sameCategorySet(
-  first: readonly string[],
-  second: readonly string[],
-): boolean {
-  const firstSet = new Set(first)
-  const secondSet = new Set(second)
-
-  return firstSet.size === secondSet.size
-    && [...firstSet].every(category => secondSet.has(category))
-}
-
-function normalizeSelectedCategories(
-  value: unknown,
-  availableCategories?: readonly string[],
-): string[] {
-  const selectedCategories = normalizeCategories(value)
-  if (!availableCategories || availableCategories.length === 0) {
-    return selectedCategories
-  }
-
-  const knownCategories = normalizeCategories(availableCategories)
-  const knownCategorySet = new Set(knownCategories)
-  const knownSelectedCategories = selectedCategories.filter(category =>
-    knownCategorySet.has(category),
-  )
-
-  return sameCategorySet(knownSelectedCategories, knownCategories)
-    ? []
-    : knownSelectedCategories
-}
-
 export function normalizeEventFilters(
   value: unknown,
   availableCategories?: readonly string[],
@@ -107,7 +67,7 @@ export function normalizeEventFilters(
     hasAddressByCEP: typeof data.hasAddressByCEP === 'boolean'
       ? data.hasAddressByCEP
       : false,
-    selectedCategories: normalizeSelectedCategories(
+    selectedCategories: normalizeSelectableSelection(
       data.selectedCategories,
       availableCategories,
     ),
@@ -183,9 +143,6 @@ export function evaluateEventFilters(
     categories: eventCategories,
   }
   const hasCategoryRestriction = normalized.selectedCategories.length > 0
-    && (!availableCategories
-      || availableCategories.length === 0
-      || !sameCategorySet(normalized.selectedCategories, availableCategories))
 
   const criteria = {
     date: !normalized.enabled

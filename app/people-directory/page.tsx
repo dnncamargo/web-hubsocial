@@ -8,31 +8,24 @@ import { useAuth } from '../components/auth/AuthProvider';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useSearchParams } from 'react-router';
 import { Person } from '../utils/interfaces';
-import { parseBirthday } from '../utils/birthday';
 import { getPersonDocumentPath, hydratePerson } from '../utils/personPayload';
 import { usePersonRelationships } from '../hooks/usePersonRelationships';
 import { usePageTitle } from '../hooks/usePageTitle';
 import PersonCard from './components/PersonCard';
 import AddPersonModal from './components/AddPersonModal';
 import EditPersonModal from './components/EditPersonModal';
-import FilterPersonModal, { PersonFilter } from './components/FilterPersonModal';
+import FilterPersonModal from './components/FilterPersonModal';
+import {
+  defaultPersonFilters,
+  evaluatePersonFilters,
+  normalizePersonFilters,
+  type PersonFilter,
+} from './utils/personFilters';
 import styles from './PeopleDirectory.module.css';
 import {
   initialCreationDraftLifecycleState,
   reduceCreationDraftLifecycle,
 } from '../utils/creationDraftLifecycle';
-
-const defaultFilters: PersonFilter = {
-  enabled: true,
-  hasPhone: false,
-  hasEmail: false,
-  hasBirthday: false,
-  hasAddressByCep: false,
-  hasNote: false,
-  isFavorite: false,
-  hasContactFrequency: false,
-  selectedRelationships: [],
-};
 
 const PeopleDirectory = () => {
   const { uid } = useAuth();
@@ -47,7 +40,7 @@ const PeopleDirectory = () => {
   const [isEditPersonModalOpen, setIsEditPersonModalOpen] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
-  const [filters, setFilters] = useState<PersonFilter>(defaultFilters);
+  const [filters, setFilters] = useState<PersonFilter>(defaultPersonFilters);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -109,13 +102,7 @@ const PeopleDirectory = () => {
 
         if (snapshot.exists()) {
           const data = snapshot.data();
-          setFilters({
-            ...defaultFilters,
-            ...data,
-            selectedRelationships: Array.isArray(data?.selectedRelationships)
-              ? data.selectedRelationships
-              : [],
-          });
+          setFilters(normalizePersonFilters(data));
         }
       } catch (error) {
         console.error('Erro ao carregar filtros:', error);
@@ -128,15 +115,22 @@ const PeopleDirectory = () => {
   }, [uid]);
 
   useEffect(() => {
-    if (availableRelationships.length === 0) return;
+    if (!filtersLoaded || availableRelationships.length === 0) return;
 
-    setFilters((previousFilters) => ({
-      ...previousFilters,
-      selectedRelationships: previousFilters.selectedRelationships.length === 0
-        ? availableRelationships
-        : previousFilters.selectedRelationships,
-    }));
-  }, [availableRelationships]);
+    const normalizedFilters = normalizePersonFilters(filters, availableRelationships);
+    if (
+      normalizedFilters.selectedRelationships.join('\u0000')
+      === filters.selectedRelationships.join('\u0000')
+    ) {
+      return;
+    }
+
+    setFilters(normalizedFilters);
+    if (!uid) return;
+
+    const settingsReference = doc(db, `users/${uid}/settings`, 'userPeopleFilters');
+    void setDoc(settingsReference, normalizedFilters);
+  }, [availableRelationships, filters, filtersLoaded, uid]);
 
   const toggleFavorite = async (personId: string, currentValue: boolean) => {
     if (!uid) return;
@@ -153,26 +147,8 @@ const PeopleDirectory = () => {
 
   const filteredPeople = (!filters.enabled || !filtersLoaded)
     ? people
-    : people.filter((person) => {
-      const matchesPhone = !filters.hasPhone || !!person.phone;
-      const matchesEmail = !filters.hasEmail || !!person.email;
-      const matchesBirthday = !filters.hasBirthday || !!parseBirthday(person.birthday);
-      const matchesFavorite = !filters.isFavorite || !!person.favorite;
-      const matchesFrequency = !filters.hasContactFrequency || !!person.contactFrequency;
-      const matchesRelationship =
-        (filters.selectedRelationships?.length ?? 0) === 0 ||
-        (Array.isArray(person.relationships) ? person.relationships : [])
-          .some((relationship) => filters.selectedRelationships.includes(relationship));
-
-      return (
-        matchesPhone &&
-        matchesEmail &&
-        matchesBirthday &&
-        matchesFavorite &&
-        matchesFrequency &&
-        matchesRelationship
-      );
-    });
+    : people.filter((person) =>
+      evaluatePersonFilters(person, filters, availableRelationships).matches);
 
   const visiblePeople = filteredPeople.filter((person) => {
     if (!isSearching || searchQuery.trim() === '') return true;
