@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, JSX } from 'react';
-import { deleteField, getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
+import { getDoc, getDocs, doc, query, where, orderBy, collection, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useEventCategories } from '../hooks/useEventCategories';
-import { Event, Person, Task } from '../utils/interfaces';
+import { Event, Person } from '../utils/interfaces';
 import { hydratePerson } from '../utils/personPayload';
 import { ActionHorizon, ActionProjection, ActionProjectionItem } from '../types/actions';
 import {
@@ -28,6 +28,7 @@ import { Link } from 'react-router';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatDateTime } from '../utils/datePresentation'
+import { buildTaskDailyCompletionUpdate, hydrateTask } from '../utils/taskPayload'
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
 import styles from './Dashboard.module.css'
@@ -145,10 +146,9 @@ export default function Dashboard(): JSX.Element {
       getDocs(collection(db, `users/${uid}/tasks-list`)),
     ])
 
-    const tasks = taskSnapshot.docs.map(snapshot => ({
-      id: snapshot.id,
-      ...snapshot.data(),
-    }) as Task)
+    const tasks = taskSnapshot.docs.map(snapshot =>
+      hydrateTask(snapshot.id, snapshot.data()),
+    )
 
     if (!canCommit()) return
 
@@ -366,9 +366,9 @@ export default function Dashboard(): JSX.Element {
 
       await updateDoc(
         doc(db, `users/${uid}/tasks-list`, item.sourceId),
-        item.completedToday
-          ? { lastActionCompletedDate: deleteField() }
-          : { lastActionCompletedDate: format(new Date(), 'yyyy-MM-dd') },
+        buildTaskDailyCompletionUpdate(
+          item.completedToday ? null : format(new Date(), 'yyyy-MM-dd'),
+        ),
       )
       await fetchPlannedActions()
     } catch (error) {

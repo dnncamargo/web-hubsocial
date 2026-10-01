@@ -8,6 +8,7 @@ import { useAuth } from '../../components/auth/AuthProvider'
 import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
 import { TaskSchedule } from '../../types/tasks'
+import { buildTaskPayload } from '../../utils/taskPayload'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
 import TaskScheduleControl from '../../components/actions/TaskScheduleControl'
@@ -62,15 +63,15 @@ export default function AddTaskModal({
       )
       const snapshot = await getDocs(tasksQuery)
 
-      await addDoc(collection(db, `users/${uid}/tasks-list`), {
+      await addDoc(collection(db, `users/${uid}/tasks-list`), buildTaskPayload({
         content: content.trim(),
         status: 0,
         order: snapshot.size,
         createdAt: new Date(),
         actionPlanning,
         automation,
-        ...(schedule ? { schedule } : {}),
-      })
+        schedule,
+      }))
 
       onAdded()
       setActionPlanning({})

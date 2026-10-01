@@ -12,6 +12,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import AddTaskModal from './components/AddTaskModal'
 import TaskSection from './components/TaskSection'
 import EditTaskModal from './components/EditTaskModal'
+import { hydrateTask } from '../utils/taskPayload'
 import styles from './TasksList.module.css'
 
 export default function TasksList() {
@@ -48,10 +49,9 @@ export default function TasksList() {
     )
 
     const querySnapshot = await getDocs(tasksQuery)
-    const fetchedTasks = querySnapshot.docs.map(snapshot => ({
-      id: snapshot.id,
-      ...snapshot.data(),
-    })) as Task[]
+    const fetchedTasks = querySnapshot.docs.map(snapshot =>
+      hydrateTask(snapshot.id, snapshot.data()),
+    )
 
     setTasks(fetchedTasks)
   }
@@ -74,7 +74,7 @@ export default function TasksList() {
 
   const sections = [
     { label: 'Não iniciadas', status: 0 as const },
-    { label: 'Em andamento', status: 1 as const },
+    { label: 'Em foco', status: 1 as const },
     { label: 'Concluídas', status: 2 as const },
   ]
 

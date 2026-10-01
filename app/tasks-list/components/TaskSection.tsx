@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { Task } from '../../utils/interfaces'
+import { hydrateTask, serializeTask } from '../../utils/taskPayload'
 import TaskCard from './TaskCard'
 import styles from './TaskSection.module.css'
 
@@ -62,10 +63,7 @@ export default function TaskSection({
 
     if (!parentSnap.exists()) return
 
-    const parentTask = {
-      id: parentSnap.id,
-      ...parentSnap.data(),
-    } as Task
+    const parentTask = hydrateTask(parentSnap.id, parentSnap.data())
     const updatedParent: Task = {
       ...parentTask,
       subtasks: (parentTask.subtasks || []).filter(item => item.id !== subtask.id),
@@ -78,8 +76,8 @@ export default function TaskSection({
     }
 
     await Promise.all([
-      setDoc(doc(db, `users/${uid}/tasks-list`, updatedParent.id), updatedParent),
-      setDoc(doc(db, `users/${uid}/tasks-list`, promotedTask.id), promotedTask),
+      setDoc(doc(db, `users/${uid}/tasks-list`, updatedParent.id), serializeTask(updatedParent)),
+      setDoc(doc(db, `users/${uid}/tasks-list`, promotedTask.id), serializeTask(promotedTask)),
     ])
   }
 
@@ -103,7 +101,7 @@ export default function TaskSection({
     }
 
     await Promise.all([
-      setDoc(doc(db, `users/${uid}/tasks-list`, updatedAboveTask.id), updatedAboveTask),
+      setDoc(doc(db, `users/${uid}/tasks-list`, updatedAboveTask.id), serializeTask(updatedAboveTask)),
       deleteDoc(doc(db, `users/${uid}/tasks-list`, currentTask.id)),
     ])
 
@@ -119,7 +117,7 @@ export default function TaskSection({
     if (!isParent && !isSubtask) {
       await setDoc(
         doc(db, `users/${uid}/tasks-list`, task.id),
-        resetDailyCompletion(task, newStatus),
+        serializeTask(resetDailyCompletion(task, newStatus)),
       )
       refreshTasks()
       return
@@ -138,7 +136,7 @@ export default function TaskSection({
         })),
       }
 
-      await setDoc(doc(db, `users/${uid}/tasks-list`, task.id), updatedTask)
+      await setDoc(doc(db, `users/${uid}/tasks-list`, task.id), serializeTask(updatedTask))
       refreshTasks()
       return
     }
@@ -163,7 +161,7 @@ export default function TaskSection({
 
         await setDoc(
           doc(db, `users/${uid}/tasks-list`, updatedParent.id),
-          updatedParent,
+          serializeTask(updatedParent),
         )
       } else {
         await handlePromoteSubtask(

@@ -275,6 +275,28 @@ Task.
 
 ## 13. Migration rule
 
+## 13.1. Current foundation boundary
+
+The current persistence foundation keeps the existing `tasks-list` wire
+collection and its decided fields: `content`, numeric `status`, `order`,
+`createdAt`, hierarchy, legacy planning, automation, daily execution, and
+legacy `schedule` data. Readers hydrate the Firestore document id separately
+from document data, and writers use an explicit whitelist, so the top-level
+runtime `id` is never written as a document field.
+
+`nature` is currently a domain-only value derived in memory: daily, weekly,
+and monthly schedules are `recurring`; no schedule and legacy
+event-relative schedules are `punctual`. Legacy event-relative data also
+hydrates to an independent event association for consumers that need that
+meaning. It is serialized back in its existing legacy form until the future
+schema decision described below.
+
+Nested subtask ids remain part of the existing decided hierarchy wire format;
+they are not the top-level Firestore document id.
+
+Malformed or unknown lifecycle status values hydrate defensively as `0`, and
+invalid legacy schedules are ignored rather than exposed as executable rules.
+
 This checkpoint freezes product semantics, not persistence shape. Do not yet
 invent or freeze exact TypeScript or Firestore representations for:
 

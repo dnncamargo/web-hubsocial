@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import {
   collection,
-  deleteField,
   doc,
   runTransaction,
   updateDoc,
@@ -15,6 +14,11 @@ import { Task } from '../../utils/interfaces'
 import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
 import { TaskSchedule } from '../../types/tasks'
+import {
+  buildTaskUpdate,
+  hydrateTask,
+  serializeTaskSubtask,
+} from '../../utils/taskPayload'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
 import TaskScheduleControl from '../../components/actions/TaskScheduleControl'
@@ -155,10 +159,7 @@ export default function EditTaskModal({
         throw new Error('A tarefa não existe mais.')
       }
 
-      const currentTask = {
-        id: taskSnapshot.id,
-        ...taskSnapshot.data(),
-      } as Task
+      const currentTask = hydrateTask(taskSnapshot.id, taskSnapshot.data())
       const eventReference = doc(collection(db, `users/${uid}/events-history`))
 
       transaction.set(eventReference, buildEventFromTask(currentTask))
@@ -176,10 +177,7 @@ export default function EditTaskModal({
         throw new Error('A tarefa pai não existe mais.')
       }
 
-      const parentTask = {
-        id: parentSnapshot.id,
-        ...parentSnapshot.data(),
-      } as Task
+      const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
       const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
       const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
       if (subtaskIndex === -1) {
@@ -198,12 +196,10 @@ export default function EditTaskModal({
   const updateTopLevelTask = async () => {
     if (!uid) return
 
-    await updateDoc(doc(db, `users/${uid}/tasks-list`, task.id), {
-      content: content.trim(),
-      actionPlanning,
-      automation,
-      schedule: schedule ?? deleteField(),
-    })
+    await updateDoc(
+      doc(db, `users/${uid}/tasks-list`, task.id),
+      buildTaskUpdate({ content, actionPlanning, automation, schedule }),
+    )
   }
 
   const updateEmbeddedSubtask = async () => {
@@ -216,10 +212,7 @@ export default function EditTaskModal({
         throw new Error('A tarefa pai não existe mais.')
       }
 
-      const parentTask = {
-        id: parentSnapshot.id,
-        ...parentSnapshot.data(),
-      } as Task
+      const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
       const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
       const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
       if (subtaskIndex === -1) {
@@ -249,7 +242,9 @@ export default function EditTaskModal({
           : subtask
       ))
 
-      transaction.update(parentReference, { subtasks: updatedSubtasks })
+      transaction.update(parentReference, {
+        subtasks: updatedSubtasks.map(serializeTaskSubtask),
+      })
     })
   }
 

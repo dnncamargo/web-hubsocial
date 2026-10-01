@@ -2,7 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 import { OptionalField as OptionalFieldType } from '../types/optionalFields';
 import { ActionPlanning } from '../types/actions';
 import { AutomationRuleSet } from '../types/automation';
-import { TaskSchedule } from '../types/tasks';
+import { TaskEventAssociation, TaskNature, TaskSchedule, TaskStatus } from '../types/tasks';
 
 export interface Person {
   id: string;
@@ -41,15 +41,18 @@ export interface Event {
 export interface Task {
   id: string;
   content: string;
-  status: 0 | 1 | 2; // 0 = not_started, 1 = doing, 2 = done
+  status: TaskStatus; // 0 = not_started, 1 = in_focus, 2 = done
+  nature: TaskNature;
   groupId?: string;
-  subtasks: Task[] | undefined
+  order?: number;
+  subtasks: Task[] | undefined;
   parentTaskId?: string | null
   createdAt?: Date | Timestamp;
   lastActionCompletedDate?: string;
   actionPlanning?: ActionPlanning;
   automation?: AutomationRuleSet;
   schedule?: TaskSchedule;
+  eventAssociation?: TaskEventAssociation;
 }
 
 export interface EventSuggestion {

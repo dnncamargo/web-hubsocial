@@ -162,7 +162,7 @@ export function getTaskActionCandidates(
     })
   }
 
-  // Em andamento is a presentation priority: keep the original planning and
+  // Em foco is a presentation priority: keep the original planning and
   // schedule candidates, while adding a day candidate for canonical display.
   if (task.status === 1) {
     candidates.set('day', {

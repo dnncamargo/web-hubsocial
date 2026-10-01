@@ -125,7 +125,7 @@ function ActionRow({
           <span className={styles.completedTodayLabel}>Concluída hoje</span>
         )}
         {item.inProgress && !item.completed && !item.completedToday && (
-          <span className={styles.inProgressLabel}>Em andamento</span>
+          <span className={styles.inProgressLabel}>Em foco</span>
         )}
         {automationStatus && (
           <span className={automationStatus.className}>
