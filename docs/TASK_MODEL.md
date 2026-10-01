@@ -297,6 +297,59 @@ they are not the top-level Firestore document id.
 Malformed or unknown lifecycle status values hydrate defensively as `0`, and
 invalid legacy schedules are ignored rather than exposed as executable rules.
 
+## 13.2. Scheduling engine checkpoint
+
+### Implemented
+
+The pure scheduling domain currently validates and evaluates the schedule
+forms that the existing wire can represent:
+
+- `daily` is recurring and occurs on every valid civil date;
+- `weekly` with selected weekdays compares civil weekdays, including multiple
+  selected days;
+- `weekly` without weekdays remains a valid flexible week-level rule, but it
+  does not invent an exact weekday occurrence;
+- `monthly` by `dayOfMonth` compares civil days and clamps 29, 30, or 31 to
+  the final day of a shorter month;
+- `eventRelative` is punctual and calculates one effective civil date by
+  subtracting `leadDays` from the related Event date; and
+- no schedule is punctual and has no calendar occurrence.
+
+`getNextTaskOccurrence` uses an exclusive `afterDate` boundary. The
+date-specific recurrence functions do not read Task status or
+`lastActionCompletedDate`; those fields belong to the future projection and
+daily-execution layers.
+
+Schedule validation rejects unknown or incomplete objects, invalid weekdays,
+duplicate weekdays, non-integer monthly days outside 1–31, and event-relative
+lead times outside the current 0–365-day editor contract. Invalid legacy
+schedules are ignored during hydration and are not emitted by writers.
+
+All date comparisons use `YYYY-MM-DD` civil-date semantics. Date-only strings
+are validated and operated on as local civil calendar values; they are never
+parsed with `new Date('YYYY-MM-DD')` or shifted through UTC.
+
+### Planned
+
+The following normative forms remain outside the current wire and are not
+invented by this checkpoint:
+
+- monthly calendar positions such as the last Thursday of a month;
+- no-fixed-day monthly recurrence;
+- an absolute-date punctual schedule; and
+- the future canonical Event association and migration fields.
+
+The projection engine, rollover, persisted Actions, Calendar integration, and
+daily execution decisions remain future work.
+
+### Legacy compatibility
+
+The existing `tasks-list` schedule wire is preserved. Event-relative schedules
+continue to round-trip in their legacy shape and hydrate to an independent
+Event association. Flexible weekly schedules continue to project at the week
+horizon without a fabricated date. No historical migration is required by
+this checkpoint.
+
 This checkpoint freezes product semantics, not persistence shape. Do not yet
 invent or freeze exact TypeScript or Firestore representations for:
 

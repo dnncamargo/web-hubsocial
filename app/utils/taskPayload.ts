@@ -4,15 +4,29 @@ import type { ActionPlanning } from '../types/actions'
 import type {
   AutomationRule,
   AutomationRuleSet,
-  WeekdayName,
 } from '../types/automation'
 import type {
   TaskEventAssociation,
-  TaskNature,
   TaskSchedule,
   TaskStatus,
 } from '../types/tasks'
 import type { Task } from './interfaces'
+import {
+  deriveTaskNature,
+  normalizeTaskSchedule,
+} from './taskSchedule.ts'
+
+export { deriveTaskNature } from './taskSchedule.ts'
+
+const weekdayNames = new Set([
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+])
 
 export interface TaskDocumentData {
   content: string
@@ -56,16 +70,6 @@ export interface TaskPayloadInput {
   schedule?: TaskSchedule
 }
 
-const weekdayNames = new Set([
-  'sunday',
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-])
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -106,49 +110,6 @@ function normalizeAutomation(value: unknown): AutomationRuleSet | undefined {
   }
 }
 
-function normalizeSchedule(value: unknown): TaskSchedule | undefined {
-  if (!isRecord(value) || typeof value.type !== 'string') return undefined
-
-  if (value.type === 'daily') return { type: 'daily' }
-
-  if (value.type === 'weekly') {
-    const weekdays = Array.isArray(value.weekdays)
-      ? value.weekdays.filter(
-        (weekday): weekday is WeekdayName =>
-          typeof weekday === 'string' && weekdayNames.has(weekday),
-      )
-      : undefined
-
-    return weekdays && weekdays.length > 0
-      ? { type: 'weekly', weekdays }
-      : { type: 'weekly' }
-  }
-
-  if (value.type === 'monthly' && typeof value.dayOfMonth === 'number') {
-    return { type: 'monthly', dayOfMonth: value.dayOfMonth }
-  }
-
-  if (
-    value.type === 'eventRelative'
-    && typeof value.eventId === 'string'
-    && typeof value.leadDays === 'number'
-  ) {
-    return {
-      type: 'eventRelative',
-      eventId: value.eventId,
-      leadDays: value.leadDays,
-    }
-  }
-
-  return undefined
-}
-
-export function deriveTaskNature(schedule: TaskSchedule | undefined): TaskNature {
-  return schedule && ['daily', 'weekly', 'monthly'].includes(schedule.type)
-    ? 'recurring'
-    : 'punctual'
-}
-
 function deriveEventAssociation(
   schedule: TaskSchedule | undefined,
 ): TaskEventAssociation | undefined {
@@ -163,7 +124,7 @@ function deriveEventAssociation(
 function normalizeSubtask(value: unknown): Task | null {
   if (!isRecord(value) || typeof value.id !== 'string') return null
 
-  const schedule = normalizeSchedule(value.schedule)
+  const schedule = normalizeTaskSchedule(value.schedule)
   return {
     id: value.id,
     content: typeof value.content === 'string' ? value.content : '',
@@ -192,7 +153,7 @@ function normalizeSubtask(value: unknown): Task | null {
 }
 
 export function hydrateTask(id: string, data: Record<string, unknown>): Task {
-  const schedule = normalizeSchedule(data.schedule)
+  const schedule = normalizeTaskSchedule(data.schedule)
   const subtasks = Array.isArray(data.subtasks)
     ? data.subtasks.map(normalizeSubtask).filter((item): item is Task => item !== null)
     : undefined
@@ -223,6 +184,8 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
 }
 
 function serializeNestedTask(task: Task): TaskNestedDocument {
+  const schedule = normalizeTaskSchedule(task.schedule)
+
   return {
     id: task.id,
     content: task.content,
@@ -238,7 +201,7 @@ function serializeNestedTask(task: Task): TaskNestedDocument {
       : {}),
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
     ...(task.automation !== undefined ? { automation: task.automation } : {}),
-    ...(task.schedule !== undefined ? { schedule: task.schedule } : {}),
+    ...(schedule ? { schedule } : {}),
   }
 }
 
@@ -247,6 +210,8 @@ export function serializeTaskSubtask(task: Task): TaskNestedDocument {
 }
 
 export function serializeTask(task: Task): TaskDocumentData {
+  const schedule = normalizeTaskSchedule(task.schedule)
+
   return {
     content: task.content,
     status: task.status,
@@ -262,7 +227,7 @@ export function serializeTask(task: Task): TaskDocumentData {
       : {}),
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
     ...(task.automation !== undefined ? { automation: task.automation } : {}),
-    ...(task.schedule !== undefined ? { schedule: task.schedule } : {}),
+    ...(schedule ? { schedule } : {}),
   }
 }
 
@@ -277,11 +242,13 @@ export function buildTaskPayload(input: TaskPayloadInput): TaskDocumentData {
 }
 
 export function buildTaskUpdate(input: Pick<TaskPayloadInput, 'content' | 'actionPlanning' | 'automation' | 'schedule'>): UpdateData<TaskDocumentData> {
+  const schedule = normalizeTaskSchedule(input.schedule)
+
   return {
     content: input.content.trim(),
     actionPlanning: input.actionPlanning ?? {},
     automation: input.automation ?? { match: 'all', rules: [] },
-    ...(input.schedule ? { schedule: input.schedule } : { schedule: deleteField() }),
+    ...(schedule ? { schedule } : { schedule: deleteField() }),
   }
 }
 

@@ -1,4 +1,4 @@
-import { AutomationEvaluation } from './automation'
+import type { AutomationEvaluation } from './automation'
 
 export type ActionHorizon = 'day' | 'week' | 'month'
 
