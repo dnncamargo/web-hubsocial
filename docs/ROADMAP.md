@@ -2,7 +2,7 @@
 
 Status: **canonical execution roadmap**
 
-Last refreshed against `main`: `df723ba295d70023afe82fd75d5877503b4845cc`
+Last refreshed against `main`: `7bfe62dae90019c408bc654094ccb1c62d8c9d67`
 
 This document records execution order, completed checkpoints, migration debt, and the next work areas.
 
@@ -549,6 +549,56 @@ Mobile behavior:
 - no desktop-sidebar-as-drawer.
 
 Quick create routes to the existing Task, Event, and Person creation editors through transient URL intent and does not add persistence.
+
+---
+
+### 6.7. Simple Subtasks and Task archiving
+
+**Status: DOCUMENTATION CHECKPOINT — DECIDED / NEXT IMPLEMENTATION AREA**
+
+This work area updates the normative product contract before production
+behavior changes. It does not authorize a bulk migration or freeze an exact
+new wire shape before the implementation audit.
+
+#### DECIDED
+
+- Subtasks are binary and deliberately simpler than root Tasks;
+- hierarchy is created only through direct `Task → Criar subtask`;
+- a Supertask status is the aggregate of its Subtasks;
+- recurring Subtask checklists are scoped to the current occurrence; and
+- Archive is independent of the three operational statuses.
+
+#### TO IMPLEMENT
+
+- persistence boundary for archive and Subtask completion;
+- occurrence-scoped Subtask completion;
+- archive and restore;
+- direct create, edit, and promote flows;
+- parent aggregate status and confirmed bulk status commands;
+- root-only Projected Actions and projection simplification; and
+- archive filter and dedicated archived section in the UI.
+
+#### LEGACY COMPATIBILITY
+
+- existing rich Subtasks with old Task capabilities;
+- opaque `groupId`; and
+- old nested action and completion fields.
+
+Readers/hydration must preserve legacy data defensively. Legacy Subtask
+status `1` is interpreted as not made by the new binary model unless the
+implementation audit establishes a safer transformation. New Subtask
+authoring does not create status `1`.
+
+#### DEFERRED
+
+Deferred roadmap items that do not belong to this work area remain deferred in
+their existing roadmap sections. They must not be pulled into the Subtask or
+archive implementation merely because they touch the same screens.
+
+The exact archive wire (prefer an optional `archivedAt`-equivalent marker),
+the occurrence-scoped Subtask completion wire, and any compatibility
+transformation remain implementation-audit decisions. No retroactive
+occurrence backfill is part of this work area.
 
 ---
 

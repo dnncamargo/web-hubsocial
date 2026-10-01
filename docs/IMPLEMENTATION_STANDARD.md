@@ -198,26 +198,37 @@ Views may project domain data but must not persist parallel copies solely for pr
 Tasks and Events remain canonical entities.
 
 "Ações do dia", "Esta semana", and "Este mês" are projections of the
-canonical entities, not separate persisted copies. Task placement is derived
-from Task nature, lifecycle status, recurrence/date, daily execution, Event
-association, and favorable conditions. The old generic manual `Hoje` /
-`Esta semana` / `Este mês` planning model is legacy compatibility where it
-conflicts with the Task model; it is not a second canonical Task model.
+canonical root entities, not separate persisted copies. Task placement is
+derived from root Task nature, the three operational statuses, archive
+lifecycle, recurrence/date, occurrence completion, Event association, and
+root Task favorable conditions. The old generic manual `Hoje` / `Esta semana`
+/ `Este mês` planning model is legacy compatibility where it conflicts with
+the Task model; it is not a second canonical Task model.
 
-An in-focus Task has priority for the day projection without mutating its
-recurrence or legacy planning metadata, and a canonical Task must not appear
-twice across the visible action sections.
+Only root Tasks generate Projected Actions. Archived root Tasks are excluded
+from operational projections and recurring archived Tasks do not generate
+operational occurrences. An in-focus root Task has priority for the day
+projection without mutating its recurrence or legacy planning metadata, and a
+root Task must not appear twice across the visible action sections. Subtasks
+never generate independent Actions.
 
 Daily execution is distinct from Task lifecycle completion. Completing an
-action for today must not change the Task's lifecycle status, and a completed
-Task remains persistent and reopenable even when it is suppressed from active
-action projections.
+occurrence must not end a recurring Task. A completed Task remains persistent
+and may be archived or restored without changing its operational status.
 
 Automation rules evaluate favorable conditions and affect relevance or
 highlighting. They do not create occurrences, change lifecycle status, or
 silently remove an otherwise relevant/manual action when a condition is not
-matched. The effective visual state must respect lifecycle precedence before
-favorable-condition highlighting.
+matched. Conditions belong to root Tasks; they do not own Subtask checkboxes
+or create Subtask Actions. The effective visual state must respect lifecycle
+precedence before favorable-condition highlighting.
+
+For a Supertask, Subtasks are binary internal progress items. With at least
+one Subtask, aggregate status is the source of truth: all incomplete means
+`Não iniciada`, mixed means `Em foco`, and all complete means `Concluída`.
+Only `Não iniciada` and `Concluída` are global commands, both confirmed by the
+user; `Em foco` is derived from mixed progress. Recurring Subtask completion
+is scoped to the current occurrence, not reset indiscriminately at midnight.
 
 For the complete Task contract, including nature, recurrence, Event
 association, daily execution, and Task/Supertask/Subtask structure, see
@@ -277,6 +288,19 @@ Schema changes require:
 2. compatibility analysis;
 3. migration strategy when historical data is affected;
 4. tests for both current and legacy data when compatibility is retained.
+
+The Task archive marker and occurrence-scoped Subtask completion wire are
+implementation-audit decisions, not assumptions to encode ahead of evidence.
+Prefer an optional archive timestamp equivalent to `archivedAt?: timestamp`
+over a fourth operational status, but confirm the exact wire against current
+readers, writers, projections, and historical documents first. Do not perform
+a bulk migration as part of a documentation or implementation checkpoint
+unless it is explicitly approved.
+
+New Subtasks are binary and deliberately lack root-Task capabilities such as
+nature, schedule, recurrence, planning, focus date, Event association,
+automation, conditions, and independent Actions. Hydration must preserve
+legacy rich Subtask fields defensively; it must not erase them incidentally.
 
 ## 12. Configuration and instance identity
 
