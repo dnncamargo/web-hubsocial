@@ -325,15 +325,36 @@ its children.
 
 ## 11. Tasks and Calendar
 
-A recurring Task does not become a Calendar Event. These remain Tasks and are
-projected in Actions according to recurrence:
+Calendar is an Event-only projection. It represents explicit temporal Event
+documents, not everything that is relevant in Today or in Actions.
+
+Tasks are never projected directly into the Calendar. This applies to:
+
+- Tasks without planning;
+- legacy `actionPlanning` windows (`Hoje`, `Esta semana`, and `Este mês`);
+- `daily`, weekly flexible, weekly fixed, and monthly recurrence;
+- `eventRelative` effective dates;
+- `eventAssociation` context;
+- rollover and favorable-condition matches; and
+- root Tasks, Supertasks, and Subtasks.
+
+Recurring Tasks remain one canonical Task and are projected in Actions
+according to recurrence:
 
 - Robótica on Monday and Wednesday;
 - a bill on day 15; and
 - a report on the last Thursday of the month.
 
-Only explicit Task → Event conversion creates an Event and makes the result
-eligible for the Event/Calendar surfaces.
+`actionPlanning` is an operational Action window, not a civil Calendar date.
+`eventRelative` answers when a punctual Task becomes operational relative to an
+Event; its `effectiveDate` does not create another Calendar item. Rollover
+never moves a historical date into Today in the Calendar, and conditions never
+include, exclude, move, or highlight Calendar content.
+
+Only explicit Task → Event conversion creates an Event and makes the new Event
+eligible for the Event/Calendar surfaces. The original Task is not projected
+alongside it. If the original Task is later completed, that does not remove or
+alter the converted Event; Event and Task lifecycles remain independent.
 
 ## 12. Deletion and reopening
 
@@ -470,8 +491,9 @@ use lifecycle `status`. Neither path creates a persisted Action.
 
 ### Planned
 
-Calendar integration, persisted daily-execution history beyond the current
-date field, and broader hierarchy UI remain future work.
+Persisted daily-execution history beyond the current date field and broader
+hierarchy UI remain future work. Task-to-Calendar integration is intentionally
+outside this model; the Calendar boundary remains Event-only.
 
 ### Legacy compatibility
 
