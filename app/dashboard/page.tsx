@@ -16,10 +16,10 @@ import { getActionPeriodKeys } from '../utils/actionPlanning';
 import {
   hasWeatherRules,
   PlannedActionSource,
+  projectActionsForDate,
   projectActionSources,
 } from '../utils/actionProjection';
 import {
-  getTaskActionCandidates,
   TaskScheduleEventContext,
 } from '../utils/taskSchedule';
 import { format, isToday, isTomorrow, eachDayOfInterval, isThisWeek, addMonths, parseISO } from 'date-fns';
@@ -28,7 +28,11 @@ import { Link } from 'react-router';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatDateTime } from '../utils/datePresentation'
-import { buildTaskDailyCompletionUpdate, hydrateTask } from '../utils/taskPayload'
+import {
+  buildTaskDailyCompletionUpdate,
+  buildTaskStatusUpdate,
+  hydrateTask,
+} from '../utils/taskPayload'
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
 import styles from './Dashboard.module.css'
@@ -204,24 +208,30 @@ export default function Dashboard(): JSX.Element {
       month: [],
     }
 
-    for (const task of tasks) {
-      const candidates = getTaskActionCandidates(task, referenceDate, linkedEvents)
+    const projectedTaskActions = projectActionsForDate(
+      tasks,
+      format(referenceDate, 'yyyy-MM-dd'),
+      { events: linkedEvents },
+    )
 
-      for (const candidate of candidates) {
-        taskSourcesByHorizon[candidate.horizon].push({
-          item: {
-            key: `task:${task.id}`,
-            sourceType: 'task',
-            sourceId: task.id,
-            title: task.content,
-            completed: task.status === 2 || candidate.completedToday === true,
-            completedToday: candidate.completedToday,
-            inProgress: task.status === 1,
-            ...(candidate.date ? { date: candidate.date } : {}),
-          },
-          automation: task.automation,
-        })
-      }
+    for (const action of projectedTaskActions) {
+      const task = tasks.find(candidate => candidate.id === action.taskId)
+      if (!task) continue
+
+      taskSourcesByHorizon[action.horizon].push({
+        item: {
+          key: `task:${task.id}`,
+          sourceType: 'task',
+          sourceId: task.id,
+          title: task.content,
+          completed: false,
+          source: action.source,
+          completionMode: action.completionMode,
+          inProgress: task.status === 1,
+          ...(action.effectiveDate ? { date: action.effectiveDate } : {}),
+        },
+        automation: task.automation,
+      })
     }
 
     const sourcesByHorizon = eventSourcesByHorizon.map(([horizon, sources]) => (
@@ -364,11 +374,13 @@ export default function Dashboard(): JSX.Element {
         return
       }
 
+      const taskUpdate = item.completionMode === 'daily'
+        ? buildTaskDailyCompletionUpdate(item.date ?? format(new Date(), 'yyyy-MM-dd'))
+        : buildTaskStatusUpdate(2)
+
       await updateDoc(
         doc(db, `users/${uid}/tasks-list`, item.sourceId),
-        buildTaskDailyCompletionUpdate(
-          item.completedToday ? null : format(new Date(), 'yyyy-MM-dd'),
-        ),
+        taskUpdate,
       )
       await fetchPlannedActions()
     } catch (error) {

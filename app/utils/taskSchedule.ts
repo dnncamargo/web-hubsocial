@@ -151,6 +151,25 @@ function addCivilDays(dateKey: string, amount: number): string | null {
   return parsed ? formatLocalDate(addDays(parsed.date, amount)) : null
 }
 
+/** Returns the Monday that starts the civil week containing the given date. */
+export function getCivilWeekKey(value: TaskScheduleDateInput): string | null {
+  const dateKey = toCivilDateKey(value)
+  const parsed = dateKey ? parseCivilDate(dateKey) : null
+  if (!dateKey || !parsed) return null
+
+  const mondayOffset = (parsed.date.getDay() + 6) % 7
+  return addCivilDays(dateKey, -mondayOffset)
+}
+
+export function isSameTaskWeek(
+  firstDate: TaskScheduleDateInput,
+  secondDate: TaskScheduleDateInput,
+): boolean {
+  const firstWeek = getCivilWeekKey(firstDate)
+  const secondWeek = getCivilWeekKey(secondDate)
+  return firstWeek !== null && firstWeek === secondWeek
+}
+
 function getMonthlyOccurrenceDate(
   year: number,
   month: number,
@@ -188,6 +207,40 @@ function getEventRelativeDate(
   return eventDate ? addCivilDays(eventDate, -schedule.leadDays) : null
 }
 
+export function getTaskEffectiveDate(
+  task: Pick<Task, 'schedule'>,
+  events: TaskScheduleEventContext[] = [],
+): string | null {
+  const schedule = normalizeTaskSchedule(task.schedule)
+  return schedule?.type === 'eventRelative'
+    ? getEventRelativeDate(schedule, events)
+    : null
+}
+
+export function isTaskOccurrenceCompletedForDate(
+  task: Pick<Task, 'schedule' | 'lastActionCompletedDate'>,
+  targetDate: TaskScheduleDateInput,
+  occurrenceDate?: TaskScheduleDateInput,
+): boolean {
+  const targetKey = toCivilDateKey(targetDate)
+  const completionKey = task.lastActionCompletedDate
+    ? toCivilDateKey(task.lastActionCompletedDate)
+    : null
+  const schedule = normalizeTaskSchedule(task.schedule)
+
+  if (!targetKey || !completionKey || !schedule || completionKey > targetKey) {
+    return false
+  }
+
+  if (schedule.type === 'weekly'
+    && (!schedule.weekdays || schedule.weekdays.length === 0)) {
+    return isSameTaskWeek(completionKey, targetKey)
+  }
+
+  const occurrenceKey = occurrenceDate ? toCivilDateKey(occurrenceDate) : targetKey
+  return occurrenceKey !== null && completionKey === occurrenceKey
+}
+
 function getOccurrenceOnOrAfter(
   schedule: TaskSchedule,
   referenceDate: string,
@@ -196,7 +249,7 @@ function getOccurrenceOnOrAfter(
   if (schedule.type === 'daily') return referenceDate
 
   if (schedule.type === 'weekly') {
-    if (!schedule.weekdays || schedule.weekdays.length === 0) return null
+    if (!schedule.weekdays || schedule.weekdays.length === 0) return referenceDate
 
     for (let offset = 0; offset < 7; offset += 1) {
       const candidate = addCivilDays(referenceDate, offset)
@@ -230,8 +283,9 @@ function getOccurrenceOnOrAfter(
  * Answers only the calendar question. Lifecycle status and daily execution
  * are intentionally not inputs to recurrence.
  *
- * Flexible weekly schedules have no exact civil weekday, so they remain a
- * week-level projection and do not claim a false date-level occurrence.
+ * Flexible weekly schedules return true for any date in their active weekly
+ * window. They represent one pending execution window, not seven occurrences;
+ * isTaskOccurrenceCompletedForDate applies the week-level completion rule.
  */
 export function isTaskScheduledForDate(
   task: Pick<Task, 'schedule'>,

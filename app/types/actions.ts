@@ -21,12 +21,23 @@ export interface ActionPlanning {
 
 export type ActionSourceType = 'event' | 'task'
 
+export type ActionSource =
+  | 'planned'
+  | 'recurring'
+  | 'rollover'
+  | 'eventRelative'
+  | 'status'
+
+export type ActionCompletionMode = 'daily' | 'lifecycle'
+
 export interface ActionProjectionItem {
   key: string
   sourceType: ActionSourceType
   sourceId: string
   title: string
   completed: boolean
+  source?: ActionSource
+  completionMode?: ActionCompletionMode
   completedToday?: boolean
   inProgress?: boolean
   categories?: string[]

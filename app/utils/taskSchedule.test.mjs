@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  getCivilWeekKey,
   getNextTaskOccurrence,
   getTaskNature,
+  isSameTaskWeek,
+  isTaskOccurrenceCompletedForDate,
   isTaskScheduledForDate,
   validateTaskSchedule,
 } from './taskSchedule.ts'
@@ -29,12 +32,40 @@ test('weekly selected weekdays use the civil weekday and cross week boundaries',
   assert.equal(getNextTaskOccurrence(weekly, '2026-09-30'), '2026-10-05')
 })
 
-test('weekly flexible form remains a week-level rule without inventing a weekday', () => {
+test('weekly flexible form remains active across its civil week without creating seven occurrences', () => {
   const weekly = task({ type: 'weekly' })
 
   assert.equal(validateTaskSchedule(weekly.schedule), true)
-  assert.equal(isTaskScheduledForDate(weekly, '2026-10-01'), false)
+  assert.equal(isTaskScheduledForDate(weekly, '2026-10-01'), true)
   assert.equal(getNextTaskOccurrence(weekly, '2026-10-01'), null)
+})
+
+test('weekly flexible recurrence uses a Monday-to-Sunday civil boundary', () => {
+  const weekly = task({ type: 'weekly' })
+
+  assert.equal(getCivilWeekKey('2026-10-05'), '2026-10-05')
+  assert.equal(getCivilWeekKey('2026-10-11'), '2026-10-05')
+  assert.equal(isSameTaskWeek('2026-10-05', '2026-10-11'), true)
+  assert.equal(isSameTaskWeek('2026-10-11', '2026-10-12'), false)
+
+  assert.equal(
+    isTaskOccurrenceCompletedForDate(weekly, '2026-10-06', '2026-10-06'),
+    false,
+  )
+  assert.equal(
+    isTaskOccurrenceCompletedForDate(
+      { ...weekly, lastActionCompletedDate: '2026-10-05' },
+      '2026-10-11',
+    ),
+    true,
+  )
+  assert.equal(
+    isTaskOccurrenceCompletedForDate(
+      { ...weekly, lastActionCompletedDate: '2026-10-12' },
+      '2026-10-11',
+    ),
+    false,
+  )
 })
 
 test('monthly recurrence clamps to the final civil day of short months', () => {

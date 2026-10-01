@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   buildTaskDailyCompletionUpdate,
   buildTaskPayload,
+  buildTaskStatusUpdate,
   buildTaskUpdate,
   deriveTaskNature,
   hydrateTask,
@@ -117,4 +118,5 @@ test('builds explicit updates for schedule removal and daily completion changes'
   assert.equal('schedule' in update, true)
   assert.equal(completed.lastActionCompletedDate, '2026-09-30')
   assert.equal('lastActionCompletedDate' in cleared, true)
+  assert.deepEqual(buildTaskStatusUpdate(2), { status: 2 })
 })

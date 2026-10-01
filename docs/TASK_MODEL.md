@@ -307,8 +307,9 @@ forms that the existing wire can represent:
 - `daily` is recurring and occurs on every valid civil date;
 - `weekly` with selected weekdays compares civil weekdays, including multiple
   selected days;
-- `weekly` without weekdays remains a valid flexible week-level rule, but it
-  does not invent an exact weekday occurrence;
+- `weekly` without weekdays is one flexible execution per civil week
+  (Monday–Sunday): it remains available until completed, then is suppressed for
+  the rest of that week and becomes available again the following Monday;
 - `monthly` by `dayOfMonth` compares civil days and clamps 29, 30, or 31 to
   the final day of a shorter month;
 - `eventRelative` is punctual and calculates one effective civil date by
@@ -316,9 +317,11 @@ forms that the existing wire can represent:
 - no schedule is punctual and has no calendar occurrence.
 
 `getNextTaskOccurrence` uses an exclusive `afterDate` boundary. The
-date-specific recurrence functions do not read Task status or
-`lastActionCompletedDate`; those fields belong to the future projection and
-daily-execution layers.
+date-specific recurrence functions do not read Task status. The weekly
+flexible window uses the Monday civil date as its internal comparison key and
+does not persist that key. `lastActionCompletedDate` suppresses daily,
+selected-weekday, and monthly occurrences by occurrence date; it suppresses a
+flexible weekly occurrence for the remainder of its Monday–Sunday week.
 
 Schedule validation rejects unknown or incomplete objects, invalid weekdays,
 duplicate weekdays, non-integer monthly days outside 1–31, and event-relative
@@ -339,23 +342,62 @@ invented by this checkpoint:
 - an absolute-date punctual schedule; and
 - the future canonical Event association and migration fields.
 
-The projection engine, rollover, persisted Actions, Calendar integration, and
-daily execution decisions remain future work.
+Persisted Actions, Calendar integration, and the remaining hierarchy UI remain
+future work.
 
 ### Legacy compatibility
 
 The existing `tasks-list` schedule wire is preserved. Event-relative schedules
 continue to round-trip in their legacy shape and hydrate to an independent
 Event association. Flexible weekly schedules continue to project at the week
-horizon without a fabricated date. No historical migration is required by
-this checkpoint.
+horizon without creating seven occurrences. No historical migration is
+required by this checkpoint.
+
+## 13.3. Action projection checkpoint
+
+### Implemented
+
+`projectActionsForDate` is a pure projection over hydrated Tasks and explicit
+Event context. It returns at most one runtime Action per Task; no Action or
+occurrence document is persisted.
+
+The projection now applies these rules:
+
+- `status === 2` suppresses every Task Action, including recurring Tasks;
+- recurring daily, selected-weekday, and monthly occurrences are suppressed
+  when their occurrence date equals `lastActionCompletedDate`;
+- flexible weekly recurrence is one Action window per Monday–Sunday week and
+  is suppressed after a completion recorded within that same civil week;
+- punctual Tasks use current manual day planning, future planning is excluded,
+  and an open past day plan rolls over to the target date;
+- punctual Tasks without planning remain absent unless they are explicitly
+  `Em foco`, which promotes them to the day projection;
+- event-relative Tasks receive resolved Event context, project on their
+  effective date, and roll over after that date while still open; and
+- status, schedule, planning, and completion matches are resolved before
+  favorable-condition highlighting.
+
+Projected Actions carry their source and completion mode in memory. Recurring
+completion writes use `lastActionCompletedDate`; punctual completion writes
+use lifecycle `status`. Neither path creates a persisted Action.
+
+### Planned
+
+Calendar integration, persisted daily-execution history beyond the current
+date field, and broader hierarchy UI remain future work.
+
+### Legacy compatibility
+
+`actionPlanning` remains readable for existing Tasks and is interpreted in the
+projection layer. It does not replace recurrence or create a parallel Action
+model. Existing weather/automation evaluation remains a post-projection
+highlighting step; unavailable weather does not remove the base Action.
 
 This checkpoint freezes product semantics, not persistence shape. Do not yet
 invent or freeze exact TypeScript or Firestore representations for:
 
 - Task nature;
 - monthly calendar-position recurrence;
-- no-fixed-day weekly recurrence;
 - no-fixed-day monthly recurrence;
 - independent Event association; or
 - migration fields and backfill markers.

@@ -259,3 +259,9 @@ export function buildTaskDailyCompletionUpdate(
     ? { lastActionCompletedDate: completedDate }
     : { lastActionCompletedDate: deleteField() }
 }
+
+export function buildTaskStatusUpdate(
+  status: TaskStatus,
+): UpdateData<TaskDocumentData> {
+  return { status }
+}
