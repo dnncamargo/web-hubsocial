@@ -11,6 +11,7 @@ import { formatDate } from '../../utils/datePresentation'
 import {
   changeTaskFrequency,
   changeWeeklyMode,
+  synchronizeEventRelativeSchedule,
   toggleTaskWeekday,
 } from '../../utils/taskAuthoring'
 import styles from './TaskScheduleControl.module.css'
@@ -45,7 +46,6 @@ export default function TaskScheduleControl({
   const [events, setEvents] = useState<Event[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const selectedAssociationId = eventAssociation?.eventId
-  const selectedRelativeId = value?.type === 'eventRelative' ? value.eventId : undefined
 
   useEffect(() => {
     let active = true
@@ -111,14 +111,9 @@ export default function TaskScheduleControl({
   }
 
   const selectEventAssociation = (eventId: string) => {
-    if (value?.type === 'eventRelative') return
-    onEventAssociationChange(eventId ? { eventId } : undefined)
-  }
-
-  const selectRelativeEvent = (eventId: string) => {
-    if (value?.type !== 'eventRelative' || !eventId) return
-    onChange({ ...value, eventId })
-    onEventAssociationChange({ eventId })
+    const nextAssociation = eventId ? { eventId } : undefined
+    onEventAssociationChange(nextAssociation)
+    onChange(synchronizeEventRelativeSchedule(value, nextAssociation))
   }
 
   const selectTemporalRule = (rule: string) => {
@@ -127,11 +122,10 @@ export default function TaskScheduleControl({
       return
     }
 
-    const eventId = eventAssociation?.eventId ?? events[0]?.id
+    const eventId = eventAssociation?.eventId
     if (!eventId) return
 
     onChange({ type: 'eventRelative', eventId, leadDays: 14 })
-    onEventAssociationChange({ eventId })
   }
 
   const scheduleFrequency = value?.type === 'daily'
@@ -143,7 +137,7 @@ export default function TaskScheduleControl({
     ? 'specific'
     : 'flexible'
   const temporalRule = value?.type === 'eventRelative' ? 'eventRelative' : 'none'
-  const associationId = selectedAssociationId ?? selectedRelativeId ?? ''
+  const associationId = selectedAssociationId ?? ''
 
   return (
     <>
@@ -220,9 +214,9 @@ export default function TaskScheduleControl({
       )}
 
       <fieldset className={styles.fieldset}>
-        <legend className={styles.legend}>Contexto / Event associado</legend>
+        <legend className={styles.legend}>Contexto</legend>
         <p className={styles.description}>
-          Use o Event como contexto ou como referência temporal da tarefa.
+          Associe a tarefa a um Event quando ele fizer parte do contexto.
         </p>
 
         {nature === 'punctual' && (
@@ -235,36 +229,18 @@ export default function TaskScheduleControl({
                 onChange={event => selectTemporalRule(event.currentTarget.value)}
               >
                 <option value="none">Nenhuma</option>
-                <option value="eventRelative">Antes de um evento</option>
+                <option value="eventRelative" disabled={!eventAssociation}>
+                  Antes do Event associado
+                </option>
               </select>
             </label>
 
             {value?.type === 'eventRelative' && (
-              <label className={styles.field}>
-                <span>Evento da regra temporal</span>
-                <select
-                  className={styles.select}
-                  value={value.eventId}
-                  disabled={eventsLoading || events.length === 0}
-                  onChange={event => selectRelativeEvent(event.currentTarget.value)}
-                >
-                  {value.eventId && !events.some(event => event.id === value.eventId) && (
-                    <option value={value.eventId}>Evento indisponível</option>
-                  )}
-                  {events.length === 0 ? (
-                    <option value="">Nenhum evento futuro disponível</option>
-                  ) : (
-                    events.map(event => (
-                      <option key={event.id} value={event.id}>
-                        {event.title} · {formatDate(event.startDate)}
-                      </option>
-                    ))
-                  )}
-                </select>
-                <span className={styles.hint}>Esta regra mantém o vínculo com o mesmo Event.</span>
+              <div className={styles.field}>
+                <span>Antecedência</span>
                 <input
                   className={styles.numberInput}
-                  aria-label="Dias antes do evento"
+                  aria-label="Dias antes do Event associado"
                   type="number"
                   min="0"
                   max="365"
@@ -274,17 +250,18 @@ export default function TaskScheduleControl({
                     leadDays: Math.max(0, Math.min(365, Number(event.currentTarget.value))),
                   })}
                 />
-              </label>
+                <span className={styles.hint}>A regra usa o Event associado acima.</span>
+              </div>
             )}
           </div>
         )}
 
         <label className={styles.field}>
-          <span>Evento associado</span>
+          <span>Event associado</span>
           <select
             className={styles.select}
             value={associationId}
-            disabled={eventsLoading || value?.type === 'eventRelative'}
+            disabled={eventsLoading}
             onChange={event => selectEventAssociation(event.currentTarget.value)}
           >
             <option value="">Nenhum</option>

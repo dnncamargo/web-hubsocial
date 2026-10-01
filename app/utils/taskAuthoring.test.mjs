@@ -5,6 +5,8 @@ import {
   changeTaskNature,
   changeWeeklyMode,
   sortTaskWeekdays,
+  synchronizeEventRelativeSchedule,
+  synchronizeUpcomingEventRule,
   toggleTaskWeekday,
 } from './taskAuthoring.ts'
 
@@ -45,6 +47,50 @@ test('weekly weekdays are deduplicated and normalized to Monday-first order', ()
   assert.deepEqual(
     sortTaskWeekdays(['friday', 'monday', 'friday', 'wednesday']),
     ['monday', 'wednesday', 'friday'],
+  )
+})
+
+test('changing the associated Event updates the temporal rule without changing leadDays', () => {
+  assert.deepEqual(
+    synchronizeEventRelativeSchedule(
+      { type: 'eventRelative', eventId: 'event-a', leadDays: 14 },
+      { eventId: 'event-b' },
+    ),
+    { type: 'eventRelative', eventId: 'event-b', leadDays: 14 },
+  )
+  assert.equal(
+    synchronizeEventRelativeSchedule(
+      { type: 'eventRelative', eventId: 'event-a', leadDays: 14 },
+      undefined,
+    ),
+    undefined,
+  )
+})
+
+test('changing or removing the associated Event preserves independent favorable conditions', () => {
+  const automation = {
+    match: 'any',
+    rules: [
+      { id: 'weekday', type: 'weekday', weekdays: ['monday'] },
+      { id: 'weather', type: 'weather', condition: 'rainy' },
+      { id: 'event', type: 'upcomingEvent', eventId: 'event-a', withinDays: 3 },
+    ],
+  }
+
+  assert.deepEqual(
+    synchronizeUpcomingEventRule(automation, 'event-b'),
+    {
+      ...automation,
+      rules: [
+        automation.rules[0],
+        automation.rules[1],
+        { ...automation.rules[2], eventId: 'event-b' },
+      ],
+    },
+  )
+  assert.deepEqual(
+    synchronizeUpcomingEventRule(automation, undefined),
+    { match: 'any', rules: [automation.rules[0], automation.rules[1]] },
   )
 })
 

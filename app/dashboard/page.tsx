@@ -192,17 +192,9 @@ export default function Dashboard(): JSX.Element {
     }
 
     for (const task of tasks) {
-      const effectiveStatus = getEffectiveTaskStatus(task, currentCivilDate)
-      if (task.schedule?.type === 'eventRelative' && task.schedule.eventId) {
-        referencedEventIds.add(task.schedule.eventId)
+      if (task.eventAssociation?.eventId) {
+        referencedEventIds.add(task.eventAssociation.eventId)
       }
-      collectEventReferences({ item: {
-        key: `task:${task.id}`,
-        sourceType: 'task',
-        sourceId: task.id,
-        title: task.content,
-        completed: effectiveStatus === 2,
-      }, automation: task.automation })
     }
 
     const linkedEvents: TaskScheduleEventContext[] = (

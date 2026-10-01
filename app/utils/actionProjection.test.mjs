@@ -274,13 +274,48 @@ test('event-relative Tasks use resolved Event context and roll over only after t
     type: 'eventRelative',
     eventId: 'event-1',
     leadDays: 2,
-  })
+  }, { eventAssociation: { eventId: 'event-1' } })
   const events = [{ id: 'event-1', startDate: '2026-10-10' }]
 
   assert.equal(taskActions([relative], '2026-10-08', events)[0].source, 'eventRelative')
   assert.equal(taskActions([relative], '2026-10-09', events)[0].source, 'rollover')
   assert.equal(taskActions([relative], '2026-10-07', events).length, 0)
   assert.equal(taskActions([relative], '2026-10-08').length, 0)
+})
+
+test('event-relative projection gives precedence to the canonical association id', () => {
+  const relative = task('relative-canonical', {
+    type: 'eventRelative',
+    eventId: 'event-legacy',
+    leadDays: 2,
+  }, { eventAssociation: { eventId: 'event-1' } })
+
+  assert.equal(
+    taskActions([relative], '2026-10-08', [{ id: 'event-1', startDate: '2026-10-10' }])[0].source,
+    'eventRelative',
+  )
+})
+
+test('projected upcoming-Event conditions evaluate the canonical associated Event', () => {
+  const source = taskSource({
+    match: 'all',
+    rules: [{
+      id: 'event-rule',
+      type: 'upcomingEvent',
+      eventId: 'event-1',
+      withinDays: 3,
+    }],
+  })
+  const projection = projectActionSources(
+    [['day', [source]], ['week', []], ['month', []]],
+    {
+      referenceDate,
+      events: [{ id: 'event-1', startDate: '2026-10-02' }],
+    },
+  )
+
+  assert.equal(projection.day[0].automation.status, 'matched')
+  assert.equal(projection.day[0].automation.highlighted, true)
 })
 
 test('one Task produces one projected Action even when multiple rules match', () => {

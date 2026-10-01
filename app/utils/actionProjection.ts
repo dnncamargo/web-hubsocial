@@ -55,10 +55,14 @@ function getTaskScheduleCandidate(
   targetDateValue: Date,
   events: Array<{ id: string; startDate: string }>,
 ): TaskActionCandidate | { suppressed: true } | null {
-  if (!task.schedule) return null
+  const schedule = task.schedule?.type === 'eventRelative' && task.eventAssociation?.eventId
+    ? { ...task.schedule, eventId: task.eventAssociation.eventId }
+    : task.schedule
 
-  if (task.schedule.type === 'eventRelative') {
-    const effectiveDate = getTaskEffectiveDate(task, events)
+  if (!schedule) return null
+
+  if (schedule.type === 'eventRelative') {
+    const effectiveDate = getTaskEffectiveDate({ ...task, schedule }, events)
     if (!effectiveDate) return null
 
     if (effectiveDate === targetDate) {
@@ -85,7 +89,7 @@ function getTaskScheduleCandidate(
   }
 
   const occurrence = deriveTaskScheduleOccurrence(
-    task.schedule,
+    schedule,
     task.status,
     targetDateValue,
     events,

@@ -17,7 +17,11 @@ test('Task authoring exposes favorable conditions with the same editor in Add an
     assert.match(source, /<AutomationRulesEditor/)
     assert.match(source, /value=\{automation\}/)
     assert.match(source, /onChange=\{setAutomation\}/)
+    assert.match(source, /associatedEventId=\{eventAssociation\?\.eventId \?\? null\}/)
   }
+  assert.match(conditionEditor, /Proximidade do Event associado/)
+  assert.match(conditionEditor, /Associe um Event primeiro/)
+  assert.match(conditionEditor, /!usesAssociatedTaskEvent && \(/)
 })
 
 test('Task persistence keeps conditions independent from schedule and Event association fields', () => {
