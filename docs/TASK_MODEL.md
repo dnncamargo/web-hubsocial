@@ -3,8 +3,8 @@
 Status: **normative**
 
 This document defines the canonical product semantics for Tasks, their nature,
-lifecycle, recurrence, projections, daily execution, favorable conditions,
-Event association, and Task hierarchy.
+operational status, recurrence, archiving, projections, favorable conditions,
+Event association, and Task/Supertask/Subtask hierarchy.
 
 Existing implementation that conflicts with this document is migration debt,
 not product precedent. This document freezes product semantics; it does not
@@ -12,34 +12,36 @@ freeze the future TypeScript or Firestore representation of every concept.
 
 ## 1. Core model
 
-A Task is a persistent object. A Task is removed only when explicitly deleted.
-Changing its status does not delete or archive it. A completed Task remains
-persisted, remains visible in the Tasks workspace, and may be reopened.
+A Task is a persistent root object. It is removed only by explicit deletion.
+Changing its operational status does not delete or archive it. Archiving is an
+independent lifecycle dimension and preserves the Task and its current status.
 
 The model separates independent concerns:
 
 ```text
 Task
 ├── Natureza
-├── Status
+├── Status operacional (0, 1, 2)
 ├── Recorrência
-├── Execução diária
+├── Arquivamento
+├── Execução da ocorrência atual
 ├── Associação a Event
 ├── Condições favoráveis
 └── Estrutura Task / Supertask / Subtask
 ```
 
 One concern must not be represented by silently changing the meaning of
-another concern. In particular, recurrence is not lifecycle status, daily
-execution is not lifecycle completion, and Event association is not
+another concern. In particular, recurrence is not lifecycle status, archive
+is not status, daily focus is not completion, and Event association is not
 automatically recurrence.
 
 ## 2. Task nature
 
-Every Task is one of these product natures:
+Every root Task is one of these product natures:
 
 - **Pontual** — a one-off Task;
-- **Recorrente** — a Task whose plan produces eligible occurrences over time.
+- **Recorrente** — a Task whose recurrence rule produces eligible occurrences
+  over time.
 
 There is no separate `Contínua` or `Flexível` nature. “Without a specified
 weekday” and “without a specified day” describe flexible recurrence rules
@@ -50,157 +52,253 @@ The current action horizon does not determine nature. A punctual Task shown in
 semana` does not become weekly.
 
 The exact persisted representation of nature is intentionally deferred to a
-future schema decision and migration audit.
+future schema decision and implementation audit.
 
-## 3. Lifecycle status
+## 3. Operational status
 
-The canonical user-facing Task statuses are:
+A Task has exactly three operational states. There is no fourth operational
+status:
 
 | Persisted value | User-facing status | Meaning |
 | ---: | --- | --- |
-| `0` | Não iniciada | The Task has not started. |
-| `1` | Em foco | This plan/Task is active. |
-| `2` | Concluída | The Task lifecycle is complete. |
+| `0` | Não iniciada | Work has not started. |
+| `1` | Em foco | Work is selected for execution or is partially in progress. |
+| `2` | Concluída | Work for the relevant Task or occurrence has finished. |
 
-The persisted numeric values remain `0`, `1`, and `2` for this documentation
-checkpoint. The later implementation migration may change labels and behavior
-without renaming those existing numeric values in stored data.
+### 3.1. Punctual Tasks
 
-`Concluída` is not deleted or archived. A completed Task may be reopened to
-`Não iniciada` or `Em foco`. Only explicit deletion removes it.
+For a punctual Task:
+
+- `Não iniciada` means work has not started;
+- `Em foco` means the work was selected for execution; and
+- `Concluída` means the work has finished.
+
+`Concluída` is terminal for that Task unless the user explicitly changes it in
+the future. It is not deletion and it is not archiving.
+
+The existing daily-focus rule remains applicable only to a simple punctual
+Task without Subtasks:
+
+```text
+Em foco + not completed today → Não iniciada on the next civil day
+Em foco + completed           → Concluída
+```
+
+The operational wire may carry `focusedOnDate` as the civil date
+(`YYYY-MM-DD`) on which the Task entered focus. This rule is not a generic
+midnight reset and does not override a Supertask aggregate or recurrence.
+
+### 3.2. Recurring Tasks
+
+For a recurring Task, the same three states describe the current occurrence:
+
+- `Não iniciada` means the current occurrence has not started;
+- `Em foco` means the current occurrence is partially or fully in execution;
+  and
+- `Concluída` means the current occurrence has been completed.
+
+`Concluída` does not end the recurrence. The Task remains visually
+`Concluída` until the recurrence engine starts the next occurrence. At that
+boundary, the status becomes `Não iniciada`:
+
+```text
+previous occurrence = Concluída → next occurrence = Não iniciada
+previous occurrence = Em foco    → next occurrence = Não iniciada
+```
+
+The boundary is the next real occurrence, not midnight:
+
+- `daily` → the next civil day;
+- weekly with selected weekdays → the next configured weekday;
+- flexible weekly → the next civil Monday–Sunday week; and
+- monthly → the next effective monthly occurrence.
+
+No generic midnight reset is canonical. Completion of an occurrence remains
+identifiable through the canonical occurrence/completion mechanism. Occurrence
+documents are never persisted.
 
 ## 4. Recurring Task forms
 
-A recurring Task remains one canonical Task. Its occurrences are derived from
-its recurrence rule; they are not separate persisted Tasks or Calendar Events.
+A recurring Task remains one canonical root Task. Its occurrences are derived
+from its recurrence rule; they are not separate persisted Tasks or Calendar
+Events.
 
-### 4.1. Diária
+### 4.1. Daily
 
 The Task occurs every day.
 
-### 4.2. Semanal
+### 4.2. Weekly
 
 A weekly Task can be expressed in either of these ways:
 
-1. **Selected weekdays** — exact weekdays are selected, such as:
-   - Robótica: Monday and Wednesday;
-   - Pedagogia: Tuesday and Friday;
-   - trash: Tuesday, Thursday, and Saturday;
-   - cleaning: Saturday.
-2. **Within the week without a specified weekday** — the Task should happen
-   during that week, but no exact weekday is required.
+1. **Selected weekdays** — exact weekdays are selected, such as Monday and
+   Wednesday.
+2. **Flexible week** — the Task should happen during a Monday–Sunday civil
+   week, but no exact weekday is required.
 
 The second form is a flexible weekly recurrence rule, not a third Task nature.
 
-### 4.3. Mensal
+### 4.3. Monthly
 
-A monthly Task can be expressed in either of these ways:
+A monthly Task can be expressed in these ways:
 
-1. **Civil day of month** — for example, a credit card bill on day 15;
+1. **Civil day of month** — for example, day 15;
 2. **Calendar position** — for example, the last Thursday of the month; or
-3. **Within the month without a specified day** — for example, skin care once
-   during the month.
+3. **Flexible month** — one occurrence during the month without a fixed day.
 
-Calendar position is a real calendar rule. It must not be approximated as a
-fixed day such as 27, 28, or 29. The third form is simply monthly recurrence
-without a fixed day and must not be called `Contínua`.
+Calendar position must not be approximated as a fixed day such as 27, 28, or
+29. Flexible monthly recurrence is still monthly recurrence and must not be
+called `Contínua`.
 
-The exact persisted representation of these recurrence forms is intentionally
-deferred. Current legacy schedule fields are migration inputs, not a complete
-canonical schema.
+The exact persisted representation of recurrence forms remains subject to the
+implementation audit. Current legacy schedule fields are migration inputs,
+not a complete canonical schema.
 
-## 5. Punctual Task behavior
+## 5. Recurrence lifecycle
 
-A punctual Task does not use the generic persisted manual planning choices
-`Hoje`, `Esta semana`, and `Este mês` as its canonical planning model.
-
-A punctual Task normally starts as `Não iniciada`. When the user brings it into
-current attention, it becomes `Em foco` and belongs in `Ações do dia`.
-
-At the end of the civil day, a punctual Task in focus follows this rule:
+The following are separate facts:
 
 ```text
-Em foco + NOT feita hoje → Não iniciada
-Em foco + feita hoje     → Concluída
+status of recurring Task ≠ existence of recurrence
 ```
 
-`Em foco` is a daily operational state for punctual Tasks, not a recurrence or
-completion record. The wire may carry `focusedOnDate` as the civil date
-(`YYYY-MM-DD`) on which that Task entered focus. On a later civil day, an open
-punctual focus returns to `Não iniciada` and the marker is removed. Legacy
-`Em foco` data without a marker is treated as focus for the current civil day
-and may receive the marker opportunistically when that document is read. A
-completed punctual Task keeps status `Concluída` on later days and has no focus
-marker.
+While a recurring Task is active, it can continue to produce future
+occurrences. Completing the current occurrence does not globally complete the
+Task or terminate its recurrence. The completion of the current occurrence
+must remain discoverable by the canonical occurrence/completion mechanism.
 
-This rollover changes only lifecycle focus. Existing `actionPlanning` remains
-intact and may independently roll an old manual day plan into an Action for the
-current day. Without another valid planning or schedule rule, no Action is
-projected after the focus rollover.
+No occurrence document is persisted. Projection and completion use the Task's
+canonical recurrence and completion data in memory and through the existing
+wire boundary.
 
-This rollover applies to punctual Tasks only. It does not turn the daily
-execution of a recurring Task into global lifecycle completion.
+## 6. Archive lifecycle
 
-## 6. Recurring Task daily execution
-
-“Feita hoje” is a daily execution state, separate from lifecycle status.
-
-For a recurring Task, completing today's occurrence satisfies today's work but
-does not globally complete the Task. For example:
+Archiving replaces the superseded proposal of `status = 3` or
+`Encerrada`. Archive is an independent lifecycle dimension:
 
 ```text
-Robótica
-Status: Em foco
-Recurrence: Monday + Wednesday
-
-Monday completed → today's occurrence is satisfied
-Wednesday         → the Task appears again
+Task lifecycle: Active | Archived
 ```
 
-The recurring Task remains `Em foco` unless the user explicitly changes its
-lifecycle status. At the end of the day, the daily execution state clears or
-expires for the next occurrence; it must not complete the recurring Task.
+Any root Task can be archived:
 
-The exact persisted representation of daily execution is intentionally
-deferred. The product meaning must remain date-scoped and must not be replaced
-by a lifecycle status mutation.
+- punctual or recurring;
+- with or without Subtasks; and
+- `Não iniciada`, `Em foco`, or `Concluída`.
+
+Archiving preserves the operational status. Valid combinations include:
+
+```text
+Não iniciada + Arquivada
+Em foco       + Arquivada
+Concluída     + Arquivada
+```
+
+The preferred domain representation is an optional archive marker equivalent
+to:
+
+```ts
+archivedAt?: timestamp
+```
+
+The implemented wire field is the root-level Firestore `Timestamp` marker
+`archivedAt?: Timestamp`. No bulk migration is implied by this decision.
+
+When the archive marker is present:
+
+- the Task is excluded from normal operational surfaces;
+- it does not generate Projected Actions;
+- recurrence does not generate operational occurrences;
+- Calendar remains unchanged; and
+- the Task data remains preserved.
+
+Archiving does not mean completing.
+
+### 6.1. Restore
+
+An archived Task can be restored. Restore removes the archive marker and
+preserves:
+
+- nature;
+- operational status;
+- recurrence;
+- planning;
+- Event association and `eventRelative` data;
+- favorable conditions; and
+- Subtasks.
+
+Restoring a recurring Task does not create retroactive occurrences or perform
+backfill. It resumes from the current or next occurrence according to the
+recurrence engine. Completion already belonging to the current occurrence may
+remain valid.
+
+### 6.2. Archive visibility and authoring
+
+The normal Task list contains only the three operational sections:
+
+```text
+Não iniciadas | Em foco | Concluídas
+```
+
+Archived Tasks are not distributed among those sections. A secondary filter
+below the main status line controls their visibility:
+
+```text
+[ ] Mostrar arquivadas
+```
+
+When enabled, archived Tasks appear in a separate section below the
+operational sections:
+
+```text
+Arquivadas
+```
+
+Archive is not a normal quick card action and is not an option in the common
+status selector. It belongs inside `Editar Task` as a confirmed secondary
+action:
+
+- active Task → `Arquivar tarefa`;
+- archived Task → `Restaurar tarefa`.
+
+Both punctual and recurring Tasks support these actions.
+
+The current list implementation derives active and archived roots from the
+same hydrated collection. The secondary `Mostrar arquivadas` filter is off by
+default; when enabled it renders a separate `Arquivadas` section below the
+three operational sections. Archived cards preserve and display their
+operational status, but expose only administrative Edit/Delete actions. Their
+status controls, execution gestures, Subtask checkboxes, and `Criar subtask`
+action are disabled. Restore is available only inside Edit Task, and editing
+metadata does not restore the Task implicitly. A Supertask uses one root
+archive marker; its embedded Subtasks are archived and restored with the
+parent and never receive individual archive markers.
 
 ## 7. Actions are projections
 
 `Ações do dia`, `Esta semana`, and `Este mês` are derived projections of
-canonical Tasks and Events. They are not a second independent persisted
+canonical root Tasks and Events. They are not a second independent persisted
 planning model and must not create occurrence documents.
+
+Only root Tasks generate Projected Actions. Subtasks are internal progress
+items and never generate independent Actions.
 
 Projection derives coherently from:
 
-- Task nature;
-- Task status;
+- root Task nature;
+- operational status;
+- archive lifecycle;
 - recurrence and civil date;
-- daily execution;
+- occurrence completion;
 - Event association; and
-- favorable conditions.
+- root Task favorable conditions.
 
-The old generic manual `Hoje` / `Esta semana` / `Este mês` planning model is
-legacy or migration debt wherever it conflicts with this contract. Existing
-planning metadata may be read for compatibility during migration, but it does
-not define the canonical nature or recurrence of a Task.
+An archived root Task is excluded before action projection. A root Task may
+appear at most once across the visible operational sections. Projection
+deduplication uses stable root Task identity, never title, date, or horizon.
 
-For visible placement, lifecycle priority comes first:
-
-```text
-1. completed Task → suppressed from active action projections
-2. Em foco → Ações do dia
-3. otherwise eligible recurring occurrence → its applicable day/week/month view
-```
-
-An `Em foco` Task is promoted to `Ações do dia` even when legacy planning or
-legacy schedule data points to a wider horizon. This is a presentation rule.
-It must not mutate the original recurrence or legacy planning metadata.
-
-A canonical Task appears at most once across the visible sections. Projection
-deduplication uses stable Task identity, never the title, date, or horizon.
-The action row should retain a subtle `Em foco` indication so the reason for
-the day projection is understandable.
+`actionPlanning` remains legacy-compatible metadata where it does not conflict
+with this model. It is not a second canonical Task model.
 
 ## 8. Favorable conditions
 
@@ -208,56 +306,30 @@ Favorable conditions answer:
 
 > When is it a favorable moment to do this?
 
-They are independent from recurrence and lifecycle. Examples include:
+Conditions belong to the root Task. A Subtask does not have its own condition.
+A favorable condition may highlight the root Task's Projected Action; it does
+not individually alter Subtask checkboxes, create a Subtask Action, create an
+occurrence, redefine recurrence, change lifecycle status, or place a Task in
+Calendar.
 
-```text
-Lavar roupa
-→ recurring within the week
-→ favorable condition: sunny
+The current persisted wire keeps the technical `automation` field for legacy
+compatibility; it is the condition configuration boundary, not a second
+scheduling engine. Supported rules remain weekday, current weather, and
+upcoming Event, with `all` / `any` matching and explicit in-memory evaluation
+states:
 
-Colocar plantas na chuva
-→ recurring according to its plan
-→ favorable condition: rain
-```
+- `noConditions`;
+- `matched`;
+- `notMatched`; and
+- `notEvaluable`.
 
-A favorable condition changes attention or highlighting. It does not create a
-new Task occurrence, redefine recurrence, change lifecycle status, or place a
-Task in Calendar. A manually relevant Task is not silently removed because a
-condition is not currently satisfied.
+An absent, failed, or timed-out weather result therefore leaves the root
+Action visible with `notEvaluable`. Evaluation happens only after canonical
+root projection and is never persisted.
 
-Favorable conditions are a Task dimension of their own. They are evaluated
-only after the canonical Task/Event projection has produced an Action, and
-the result enriches that Action in memory. The current persisted wire keeps
-the technical `automation` field for compatibility; it is the single
-condition configuration boundary, not a second scheduling engine.
+## 9. Event association and planning
 
-The supported condition rules remain weekday, current weather, and upcoming
-Event. `all` requires every rule to match; `any` requires at least one rule to
-match. An Action evaluation has one explicit status:
-
-- `noConditions`: the Task has no configured conditions;
-- `matched`: the configured match mode is satisfied and the Action may be
-  highlighted;
-- `notMatched`: every required context was available and the match mode was
-  not satisfied; or
-- `notEvaluable`: at least one required context or rule was unavailable or
-  invalid.
-
-An absent, failed, or timed-out weather result therefore produces
-`notEvaluable` while keeping the Action visible. Weather is requested lazily
-only when a projected source has a weather rule, and the resolved context is
-passed into the pure evaluator from outside; geolocation and provider access
-do not belong to the evaluator. Evaluated status is never persisted.
-
-The dimension is independent from Task nature, frequency, schedule, manual
-Action planning, lifecycle status, hierarchy, and Event association. A
-Subtask owns and evaluates its own conditions; a Supertask's conditions are
-not inherited. An explicit upcoming-Event condition may use Event context,
-but it does not merge with the separate `eventAssociation` field.
-
-## 9. Event association
-
-Event association is an independent Task dimension. For example:
+Event association and planning belong to the root Task. For example:
 
 ```text
 Alugar terno
@@ -266,13 +338,7 @@ Associated Event: Casamento do Raphael
 Lead time: 14 days
 ```
 
-The Task remains a Task. The associated Event provides context and may
-determine when the Task becomes relevant or highlighted. This relationship is
-not itself Task recurrence and does not automatically put the Task into
-Calendar.
-
-Only the explicit Task → Event conversion creates an Event. The canonical
-association wire is independent from recurrence:
+The canonical association wire is independent from recurrence:
 
 ```ts
 eventAssociation?: {
@@ -280,258 +346,374 @@ eventAssociation?: {
 }
 ```
 
-`eventAssociation` represents context only and does not contain `leadDays`.
 The legacy `eventRelative` schedule remains a separate punctual temporal rule
 whose `eventId` and `leadDays` determine its effective civil date. Canonical
-writes persist both fields for an Event-relative Task and synchronize their
-Event ids. Removing an Event-relative rule may preserve an independent
-association; removing the association deletes only `eventAssociation`.
+writes may preserve both contracts with synchronized Event ids. Removing an
+Event-relative rule may preserve an independent association; removing the
+association deletes only `eventAssociation`.
 
-## 10. Task structure
+New Subtasks do not individually have:
 
-The canonical hierarchy is:
+- nature;
+- schedule or recurrence;
+- `actionPlanning`;
+- `focusedOnDate`;
+- Event association or `eventRelative`;
+- automation or favorable conditions.
 
-- normal Task;
-- Supertask; and
-- Subtask.
+Only a root Task participates in the explicit Task → Event flow. A Subtask
+must be promoted before it can assume Task/Event capabilities. No conversion
+is implicit.
 
-A Task with one or more subtasks is called a Supertask. A Subtask is a full
-Task object embedded in the root Task document's `subtasks[]` array. The
-embedded Subtask carries its own `id`, `parentTaskId`, status, nature,
-schedule, automation, planning, daily execution, and Event association.
+## 10. Canonical hierarchy
 
-The canonical depth is exactly one level:
+The canonical depth is exactly one:
 
 ```text
-Supertask
+Task / Supertask
 ├── Subtask
 └── Subtask
 ```
 
-A Subtask cannot receive another Subtask. `parentTaskId` is the operational
-backlink to the root Task; the embedded position is the storage relationship.
-`groupId` is not part of this hierarchy. It is a legacy opaque compatibility
-field preserved when present, never generated for new Tasks, and never used to
-derive or mutate parent/child relationships.
+Never:
 
-A Task may attach to a root Task and become a Subtask. Unlinking or promoting
-a Subtask makes it a normal standalone Task while preserving its logical Task
-identity and its own configuration. Attach, promotion, removal, validation,
-and direct-subtask reordering use the canonical hierarchy domain helpers.
+```text
+Task
+└── Subtask
+    └── Subtask
+```
 
-Legacy documents may contain nested descendants or malformed backlinks. Read
-hydration preserves those descendants defensively and reports hierarchy
-issues in runtime only; it does not write or migrate them. Authoring refuses
-operations that would create depth greater than one or silently discard
-descendants.
+There is no recursive tree authoring. A root Task is never demoted into a
+Subtask and an existing root Task is never attached below another root Task.
 
-Deleting a Supertask deletes its Subtasks. Converting a Supertask to an Event
-carries its Subtasks into the Event as a Task List in OptionalFields.
+### 10.1. Creating hierarchy
 
-This document does not change current status-propagation rules for parents and
-children. Any future redesign of group-wide status behavior is a separate
-decision and implementation checkpoint.
+Hierarchy is created only through the direct flow:
 
-Supertasks and Subtasks are independently scheduled Tasks. A Subtask may
-produce its own Action when eligible, and its completion does not complete the
-parent or siblings automatically. A parent Action likewise does not complete
-its children.
+```text
+Task → Criar subtask
+```
 
-## 11. Tasks and Calendar
+Root Task actions are:
+
+- `Criar subtask`;
+- `Editar`; and
+- `Excluir`.
+
+Subtask actions are:
+
+- `Promover`;
+- `Editar`; and
+- `Excluir`.
+
+A Subtask cannot create another Subtask, become a child of another Task, or be
+attached. It can be promoted to a root Task.
+
+## 11. Subtask model
+
+A Subtask is deliberately simpler than a root Task. A new Subtask has only:
+
+- stable `id`;
+- `content`;
+- binary completion state;
+- `position`; and
+- an implicit/operational parent Task relationship.
+
+The visible states are:
+
+```text
+Não feita | Concluída
+```
+
+There is no `Em foco` state for a Subtask. A checkbox is the preferred UI.
+Subtasks represent internal progress of their root Task or current occurrence;
+they do not represent independent plans.
+
+### 11.1. Punctual Supertask
+
+For a punctual Supertask, a Subtask checkbox is permanent for that Task:
+
+```text
+unchecked → Não feita
+checked   → Concluída
+```
+
+There is no next occurrence that resets the checklist.
+
+### 11.2. Recurring Supertask
+
+For a recurring Supertask, the checkbox answers:
+
+> Was this Subtask completed in the current occurrence?
+
+Its completion is occurrence-scoped. For example:
+
+```text
+1 Oct: ☑ A  ☑ B  ☑ C → occurrence completed
+2 Oct: ☐ A  ☐ B  ☐ C → new occurrence
+```
+
+The implementation must use the identity of the current occurrence to
+determine each Subtask's completion. It must not require indiscriminate
+midnight resets. The concrete wire for occurrence-scoped Subtask completion is
+deferred to the implementation audit; this document does not invent a field.
+
+### 11.3. Aggregate status
+
+When `subtasks.length > 0`, Subtasks are the source of truth for the
+Supertask's status for the Task or current occurrence:
+
+| Subtask progress | Aggregate status |
+| --- | --- |
+| all incomplete | `Não iniciada` |
+| mixed | `Em foco` |
+| all complete | `Concluída` |
+
+For a punctual Supertask, this is the definitive Task lifecycle. For a
+recurring Supertask, it describes the current occurrence. A Supertask's
+aggregate status has precedence over `focusedOnDate` rollover.
+
+## 12. Global status command
+
+Aggregate status also acts as a global command on a Supertask. The user may
+choose only:
+
+- `Não iniciada`; or
+- `Concluída`.
+
+Both operations require confirmation. After confirmation:
+
+- `Não iniciada` marks all Subtasks not made; and
+- `Concluída` marks all Subtasks complete.
+
+`Em foco` is never a global command; it is derived exclusively from mixed
+progress. For a recurring Supertask, these commands affect only the current
+occurrence and do not terminate recurrence.
+
+## 13. Focused date and recurrence boundaries
+
+`focusedOnDate` remains relevant to simple punctual root Tasks. A Supertask's
+aggregate status is not replaced by the daily focused-date rollover. For a
+recurring root Task, transition to a new occurrence is governed by the
+recurrence engine, not by `focusedOnDate`.
+
+## 14. Calendar boundary
 
 Calendar is an Event-only projection. It represents explicit temporal Event
-documents, not everything that is relevant in Today or in Actions.
+documents, not everything relevant in Today or Actions.
 
-Tasks are never projected directly into the Calendar. This applies to:
+Tasks are never projected directly into the Calendar. This applies to root Tasks,
+Supertasks, Subtasks, action-planning windows, recurrence, event-relative
+dates, rollover, and favorable-condition matches.
 
-- Tasks without planning;
-- legacy `actionPlanning` windows (`Hoje`, `Esta semana`, and `Este mês`);
-- `daily`, weekly flexible, weekly fixed, and monthly recurrence;
+This exclusion also covers legacy `actionPlanning` windows, `eventRelative`
+effective dates, `eventAssociation` context, rollover and favorable-condition
+matches, and root Tasks, Supertasks, and Subtasks. Task-to-Calendar integration
+is intentionally limited to explicit Task → Event conversion.
+
+Canonical exclusion summary:
+
+- legacy `actionPlanning` windows;
 - `eventRelative` effective dates;
 - `eventAssociation` context;
 - rollover and favorable-condition matches; and
 - root Tasks, Supertasks, and Subtasks.
 
-Recurring Tasks remain one canonical Task and are projected in Actions
-according to recurrence:
+Task-to-Calendar integration is intentionally limited to explicit Task → Event
+conversion.
 
-- Robótica on Monday and Wednesday;
-- a bill on day 15; and
-- a report on the last Thursday of the month.
+Only explicit Task → Event conversion creates an Event and makes the new
+Event eligible for Event/Calendar surfaces. The original root Task is not
+projected alongside it. A Subtask must be promoted before this conversion is
+available.
 
-`actionPlanning` is an operational Action window, not a civil Calendar date.
-`eventRelative` answers when a punctual Task becomes operational relative to an
-Event; its `effectiveDate` does not create another Calendar item. Rollover
-never moves a historical date into Today in the Calendar, and conditions never
-include, exclude, move, or highlight Calendar content.
+## 15. Promotion
 
-Only explicit Task → Event conversion creates an Event and makes the new Event
-eligible for the Event/Calendar surfaces. The original Task is not projected
-alongside it. If the original Task is later completed, that does not remove or
-alter the converted Event; Event and Task lifecycles remain independent.
-
-## 12. Deletion and reopening
+Promoting a Subtask creates a root Task. The status mapping is:
 
 ```text
-Concluída ≠ deleted
+Subtask Não feita  → root Task Não iniciada
+Subtask Concluída  → root Task Concluída
 ```
 
-A completed Task remains persisted and visible in the Tasks workspace. It may
-be reopened to `Não iniciada` or `Em foco`. Only explicit deletion removes a
-Task.
+After promotion, it gains all capabilities of a normal root Task:
 
-## 13. Migration rule
+- nature;
+- planning;
+- recurrence;
+- Event association;
+- favorable conditions;
+- creating Subtasks; and
+- Projected Actions.
 
-## 13.1. Current foundation boundary
+Preserve the Subtask `id` and `content` when technically safe. No implicit
+conversion to Event occurs.
 
-The current persistence foundation keeps the existing `tasks-list` wire
-collection and its decided fields: `content`, numeric `status`, `order`,
-`createdAt`, hierarchy, legacy planning, automation/favorable conditions,
-daily execution, operational punctual focus date, legacy `schedule` data, and
-canonical `eventAssociation`. `focusedOnDate` is operational only: it is not
-recurrence, planning, completion, or Calendar data.
-Readers hydrate the
-Firestore document id separately
-from document data, and writers use an explicit whitelist, so the top-level
-runtime `id` is never written as a document field.
+## 16. Deletion
 
-`nature` is currently a domain-only value derived in memory: daily, weekly,
-and monthly schedules are `recurring`; no schedule and legacy
-event-relative schedules are `punctual`. Canonical `eventAssociation` takes
-precedence during hydration. If absent, valid legacy event-relative data
-derives the runtime association without mutating the source document. If both
-are present but disagree, hydration preserves the conflict defensively; a
-later canonical write synchronizes the association to the event-relative rule.
-Legacy event-relative data therefore round-trips with forward normalization,
-without a bulk migration.
+- Deleting a Subtask removes only that Subtask.
+- Deleting a root Task without Subtasks requires the canonical confirmation
+  and removes the root Task.
+- Deleting a Supertask requires an explicit warning that all Subtasks will be
+  deleted, then removes the root document and embedded Subtasks together.
 
-Nested subtask ids remain part of the existing decided hierarchy wire format;
-they are not the top-level Firestore document id. `groupId` remains an opaque
-legacy field and is preserved by the whitelist without participating in
-hierarchy operations. Root documents contain embedded direct subtasks only in
-the canonical model; nested legacy descendants are tolerated but not
-authorable.
+There is no automatic promotion and no orphaned Subtask.
 
-Malformed or unknown lifecycle status values hydrate defensively as `0`, and
-invalid legacy schedules are ignored rather than exposed as executable rules.
+Archiving a Supertask archives the entire operational set through the root
+Task. Subtasks do not need separate archive markers. Restoring the root makes
+the root and its Subtasks accessible together.
 
-## 13.2. Scheduling engine checkpoint
+## 17. Migration and legacy compatibility
 
-### Implemented
+Current data may contain Subtasks with capabilities that are no longer
+canonical:
 
-The pure scheduling domain currently validates and evaluates the schedule
-forms that the existing wire can represent:
+- operational status `1`;
+- schedule or recurrence;
+- `actionPlanning`;
+- automation;
+- Event association or `eventRelative`;
+- `lastActionCompletedDate`; and
+- nested Subtasks.
 
-- `daily` is recurring and occurs on every valid civil date;
-- `weekly` with selected weekdays compares civil weekdays, including multiple
-  selected days;
-- `weekly` without weekdays is one flexible execution per civil week
-  (Monday–Sunday): it remains available until completed, then is suppressed for
-  the rest of that week and becomes available again the following Monday;
-- `monthly` by `dayOfMonth` compares civil days and clamps 29, 30, or 31 to
-  the final day of a shorter month;
-- `eventRelative` is punctual and calculates one effective civil date by
-  subtracting `leadDays` from the related Event date; and
-- no schedule is punctual and has no calendar occurrence.
+Readers and hydration must preserve these legacy fields defensively. There is
+no bulk migration in this documentation checkpoint, and legacy fields must
+not be deleted incidentally before an explicit policy exists.
 
-`getNextTaskOccurrence` uses an exclusive `afterDate` boundary. The
-date-specific recurrence functions do not read Task status. The weekly
-flexible window uses the Monday civil date as its internal comparison key and
-does not persist that key. `lastActionCompletedDate` suppresses daily,
-selected-weekday, and monthly occurrences by occurrence date; it suppresses a
-flexible weekly occurrence for the remainder of its Monday–Sunday week.
+Legacy Subtask status `1` is interpreted as `Não feita` in the new binary
+model unless the implementation audit finds a safer transformation. New
+canonical Subtask authoring never creates status `1`.
 
-Schedule validation rejects unknown or incomplete objects, invalid weekdays,
-duplicate weekdays, non-integer monthly days outside 1–31, and event-relative
-lead times outside the current 0–365-day editor contract. Invalid legacy
-schedules are ignored during hydration and are not emitted by writers.
+`groupId` remains a legacy opaque compatibility field. It is preserved when
+present and is never used to derive or mutate parent/child relationships.
+Legacy nested descendants are tolerated defensively by readers but are never
+created by canonical authoring.
 
-All date comparisons use `YYYY-MM-DD` civil-date semantics. Date-only strings
-are validated and operated on as local civil calendar values; they are never
-parsed with `new Date('YYYY-MM-DD')` or shifted through UTC.
+The following previous decisions are explicitly superseded:
 
-### Planned
+1. Subtask as a semantically complete Task;
+2. Subtask-owned recurrence;
+3. Subtask-owned Event association;
+4. Subtask-owned favorable conditions;
+5. Subtask-generated independent Action;
+6. attach/demote of an existing root Task into a Subtask; and
+7. a fourth status named `Encerrada`.
 
-The following normative forms remain outside the current wire and are not
-invented by this checkpoint:
+The replacement contract is:
 
-- monthly calendar positions such as the last Thursday of a month;
-- no-fixed-day monthly recurrence;
-- an absolute-date punctual schedule; and
-- migration markers and backfill fields.
+- Subtask is binary and simple;
+- only root Tasks own planning, recurrence, Event, conditions, and Actions;
+- Supertask status is aggregate progress; and
+- Archive is orthogonal to the three operational statuses.
 
-Persisted Actions, Calendar integration, and the remaining hierarchy UI remain
-future work.
+## 18. Current implementation boundary
 
-### Legacy compatibility
+The current persistence foundation keeps the existing `tasks-list` collection
+and its established fields, including `content`, numeric status, `order`,
+`createdAt`, embedded hierarchy, legacy planning, automation, daily execution,
+operational punctual focus date, legacy schedule data, Event association, and
+legacy completion data. Readers hydrate the Firestore document id separately
+from document data, and writers use an explicit whitelist.
 
-The existing `tasks-list` schedule wire is preserved. Event-relative schedules
-continue to round-trip in their legacy shape and hydrate to an independent
-Event association. New and edited documents also persist the canonical
-`eventAssociation` field; an Event-relative write emits both contracts with
-the same Event id. Flexible weekly schedules continue to project at the week
-horizon without creating seven occurrences. No historical migration is
-required by this checkpoint.
+The implemented root archive wire is:
 
-## 13.3. Action projection checkpoint
+```ts
+archivedAt?: Timestamp
+```
 
-### Implemented
+An absent field hydrates as Active. A valid Firestore `Timestamp` hydrates as
+Archived. Invalid legacy values are ignored defensively without fabricating an
+archive marker, throwing during hydration, or writing during reads. Archive
+and restore use partial update builders: archive writes `Timestamp.now()` and
+restore deletes only `archivedAt`, preserving all other root fields.
 
-`projectActionsForDate` is a pure projection over hydrated Tasks and explicit
-Event context. It returns at most one runtime Action per Task; no Action or
-occurrence document is persisted.
+The implemented embedded Subtask occurrence wire is:
 
-The projection now applies these rules:
+```ts
+lastCompletedOccurrenceDate?: string // YYYY-MM-DD civil date
+```
 
-- `status === 2` suppresses every Task Action, including recurring Tasks;
-- recurring daily, selected-weekday, and monthly occurrences are suppressed
-  when their occurrence date equals `lastActionCompletedDate`;
-- flexible weekly recurrence is one Action window per Monday–Sunday week and
-  is suppressed after a completion recorded within that same civil week;
-- punctual Tasks use current manual day planning, future planning is excluded,
-  and an open past day plan rolls over to the target date;
-- punctual Tasks without planning remain absent unless they are explicitly
-  `Em foco`, which promotes them to the day projection;
-- event-relative Tasks receive resolved Event context, project on their
-  effective date, and roll over after that date while still open; and
-- root Tasks and their direct embedded Subtasks are projected independently;
-  a Subtask uses only its own status, recurrence, daily execution, planning,
-  automation, and Event association; and
-- status, schedule, planning, and completion matches are resolved before
-  favorable-condition evaluation, which only enriches the already projected
-  Action.
+For recurring parents, the domain resolves that marker through the existing
+daily, weekly, flexible-week, and monthly recurrence engine. It does not use
+the marker as a simple `marker === today` check for every frequency. No
+occurrence document or generated occurrence identifier is persisted.
 
-Projected Actions carry their source and completion mode in memory. Recurring
-completion writes use `lastActionCompletedDate`; punctual completion writes
-use lifecycle `status`. Neither path creates a persisted Action.
+New Subtask creation emits only the minimal binary shape. Legacy Subtask
+status `1` hydrates as effective status `0` while an internal compatibility
+marker preserves an untouched wire round-trip; explicit canonical status
+writes emit only `0` or `2`. Legacy rich fields and nested descendants remain
+defensively round-trippable when an embedded update is made.
 
-### Planned
+No bulk migration is performed.
 
-Persisted daily-execution history beyond the current date field and broader
-hierarchy UI remain future work. Task-to-Calendar integration is intentionally
-outside this model; the Calendar boundary remains Event-only.
+The implemented root occurrence markers are:
 
-### Legacy compatibility
+```ts
+lastActionCompletedDate?: string   // completion of the current occurrence
+lastFocusedOccurrenceDate?: string // Em foco for the current occurrence
+```
 
-`actionPlanning` remains readable for existing Tasks and is interpreted in the
-projection layer. It does not replace recurrence or create a parallel Action
-model. Existing weather/automation evaluation remains the single
-post-projection favorable-condition step; unavailable weather does not remove
-the base Action. The technical `automation` name is retained in storage and
-code paths until a future migration is explicitly scoped.
+Both values are civil dates and are interpreted through the same recurrence
+boundaries. `lastActionCompletedDate` is reused as the canonical completion
+marker for a recurring root Task; `lastFocusedOccurrenceDate` is distinct
+because `focusedOnDate` remains the punctual-only daily focus field. A
+recurring root status without a marker for its current occurrence is
+effective `Não iniciada`, rather than being treated as terminal.
 
-This checkpoint freezes product semantics and the decided association wire.
-Do not yet invent or freeze exact TypeScript or Firestore representations for:
+The pure effective-status boundary is `getEffectiveTaskStatus(task,
+targetDate)`. It preserves archived status for inspection, derives a
+Supertask from occurrence-scoped Subtasks, and otherwise resolves recurring
+root status against the current occurrence. Reconciliation uses the same
+boundary and writes only when persisted status has become stale; hydration and
+other read paths do not write. Archived Tasks are excluded from operational
+projection and temporal reconciliation, preserving their status and markers
+until restore.
 
-- Task nature;
-- monthly calendar-position recurrence;
-- no-fixed-day monthly recurrence; or
-- migration fields and backfill markers.
+The implemented Action projection is root-only: `projectActionsForDate(...)`
+receives only root Tasks, excludes archived roots, and produces at most one
+Projected Action per root. A Subtask's legacy schedule, planning, automation,
+Event association, event-relative schedule, and nested descendants remain
+preserved in the embedded wire but are inert while the item remains a
+Subtask. Conditions are evaluated once for the root Action. The root Action's
+operational state is derived from `getEffectiveTaskStatus(...)`, including the
+occurrence-scoped aggregate for Supertasks. Recurring completion therefore
+does not block projection after the next real occurrence boundary.
 
-Those representations require a separate `AUDIT → EVIDENCE → DECISION`
-checkpoint covering historical documents and compatibility.
+Completing a simple root Action uses the canonical root status writer. A
+Supertask Action has bulk semantics: completing or reopening it must update
+the current occurrence's Subtasks through the canonical bulk helper rather
+than writing only the derived parent status. Its confirmation reuses the same
+semantic boundary as the global `Concluída` command; cancelling performs no
+write.
 
-When existing implementation behavior conflicts with this document, it is
-migration debt. New work must follow this model and must not use legacy
-manual-horizon behavior, recurring completion as global completion, or Event
-association encoded as recurrence as precedent for new features.
+The implemented hierarchy authoring follows the canonical UI boundary. Root
+Tasks expose `Criar subtask`, `Editar`, and `Excluir`; Subtasks expose a
+binary checkbox, `Promover`, `Editar`, and `Excluir`. Creating or editing a
+Subtask uses the simple content-only editor and the canonical
+`createCanonicalSubtask(...)` factory, so no new recurrence, planning, Event,
+condition, or Action fields are authored. Individual checkbox changes use
+`isSubtaskCompletedForOccurrence(...)` and preserve legacy rich fields.
+
+Supertask `Não iniciada` and `Concluída` commands share the confirmed bulk
+status boundary; `Em foco` remains derived from mixed progress and is not a
+manual target. The same confirmation and bulk writer are used when completing
+a Supertask Projected Action. Promotion preserves the stable id/content and
+valid legacy root capabilities without inheriting the parent's recurrence;
+deletion removes only the selected Subtask or, after explicit root warning,
+the root and its embedded Subtasks. Legacy nested descendants remain
+preserved defensively and do not acquire new authoring affordances.
+
+Archive/Restore is implemented as a confirmed secondary Edit Task action.
+Archive writes only `archivedAt`; Restore deletes only that marker. Neither
+operation changes status, recurrence, planning, Event association, favorable
+conditions, occurrence markers, or embedded Subtasks. Archived roots are not
+reconciled or projected while hidden, and restoring does not replay missed
+occurrences or create backfill.
+
+Date-only values use `YYYY-MM-DD` civil-date semantics and are never shifted
+through UTC. Invalid legacy schedules or unknown lifecycle values are hydrated
+defensively rather than exposed as executable canonical rules.
+
+No generic midnight reset or occurrence collection is introduced. The
+recurrence engine proves the next real boundary for daily, selected-weekday,
+flexible-week, and clamped-monthly schedules.

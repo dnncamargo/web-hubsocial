@@ -10,7 +10,10 @@ const taskCardCss = readComponentFile('TaskCard.module.css')
 const taskCard = readComponentFile('TaskCard.tsx')
 const taskSectionCss = readComponentFile('TaskSection.module.css')
 const taskSection = readComponentFile('TaskSection.tsx')
+const tasksListPage = readFileSync(join(componentsRoot, '../page.tsx'), 'utf8')
+const editTaskModal = readComponentFile('EditTaskModal.tsx')
 const tokens = readFileSync(join(componentsRoot, '../../styles/tokens.css'), 'utf8')
+const dashboard = readFileSync(join(componentsRoot, '../../dashboard/page.tsx'), 'utf8')
 
 test('section headers expose independent semantic status accents', () => {
   assert.match(taskSectionCss, /\.header\s*\{[\s\S]*?position:\s*relative/)
@@ -43,6 +46,36 @@ test('status tokens exist for light and dark themes and subtasks reuse TaskCard'
     assert.equal((tokens.match(new RegExp(token.replaceAll('-', '\\-'), 'g')) ?? []).length >= 2, true, token)
   }
 
-  assert.equal((taskSection.match(/<TaskCard/g) ?? []).length, 2)
+  assert.equal((taskSection.match(/<TaskCard/g) ?? []).length >= 2, true)
   assert.match(taskSection, /className=\{styles\.subtasks\}/)
+})
+
+test('archived Tasks use a secondary filter, dedicated section, and administrative card mode', () => {
+  assert.match(tasksListPage, /Mostrar arquivadas/)
+  assert.match(tasksListPage, /isTaskArchived/)
+  assert.match(tasksListPage, /archivedTasks/)
+  assert.match(tasksListPage, /section="Arquivadas"/)
+  assert.match(taskSection, /archived?/)
+  assert.match(taskCard, /archived \? styles\.archivedRow/)
+  assert.match(taskCard, /disabled={archived}/)
+  assert.doesNotMatch(taskCard, /Criar subtask.*archived/)
+  assert.match(editTaskModal, /buildTaskArchiveUpdate/)
+  assert.match(editTaskModal, /buildTaskRestoreUpdate/)
+  assert.match(editTaskModal, /Restaurar tarefa/)
+})
+
+test('canonical hierarchy actions replace positional attach and demote controls', () => {
+  assert.match(taskCard, /Criar subtask/)
+  assert.match(taskCard, /Promover subtarefa/)
+  assert.match(taskCard, /type="checkbox"/)
+  assert.doesNotMatch(taskCard, /onMakeSubtask|Transformar em subtarefa|ArrowDownRight/)
+  assert.doesNotMatch(taskSection, /attachSubtask|handleMakeSubtask|makeSubtask/)
+})
+
+test('Supertask status and Action completion share the confirmed bulk boundary', () => {
+  assert.match(taskSection, /getSupertaskStatusConfirmationMessage/)
+  assert.match(taskSection, /buildSupertaskStatusUpdate/)
+  assert.match(dashboard, /getSupertaskStatusConfirmationMessage/)
+  assert.match(dashboard, /buildSupertaskStatusUpdate/)
+  assert.doesNotMatch(dashboard, /requer confirmação bulk da UI/)
 })

@@ -15,9 +15,11 @@ import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
 import { TaskEventAssociation, TaskNature, TaskSchedule } from '../../types/tasks'
 import {
+  buildTaskArchiveUpdate,
+  buildTaskRestoreUpdate,
   buildTaskUpdate,
   hydrateTask,
-  serializeTaskSubtask,
+  isTaskArchived,
 } from '../../utils/taskPayload'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
@@ -35,7 +37,6 @@ import styles from './TaskEditor.module.css'
 
 interface EditTaskModalProps {
   task: Task
-  parentTaskId?: string | null
   isOpen: boolean
   onClose: () => void
   onUpdated: () => void
@@ -58,7 +59,6 @@ function buildTaskOptionalFields(task: Task): OptionalField[] {
 
 export default function EditTaskModal({
   task,
-  parentTaskId = null,
   isOpen,
   onClose,
   onUpdated,
@@ -115,7 +115,7 @@ export default function EditTaskModal({
     setSaveError('')
     setShowAssociatePersonModal(false)
     resetAssociatedPeople()
-  }, [task.id, parentTaskId, isOpen])
+  }, [task.id, isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -184,32 +184,6 @@ export default function EditTaskModal({
     })
   }
 
-  const convertEmbeddedSubtask = async () => {
-    if (!uid || !parentTaskId) return
-
-    const parentReference = doc(db, `users/${uid}/tasks-list`, parentTaskId)
-    await runTransaction(db, async transaction => {
-      const parentSnapshot = await transaction.get(parentReference)
-      if (!parentSnapshot.exists()) {
-        throw new Error('A tarefa pai não existe mais.')
-      }
-
-      const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
-      const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
-      const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
-      if (subtaskIndex === -1) {
-        throw new Error('A subtarefa não foi encontrada na tarefa pai.')
-      }
-
-      const currentSubtask = subtasks[subtaskIndex]
-      const eventReference = doc(collection(db, `users/${uid}/events-history`))
-      const updatedSubtasks = subtasks.filter(subtask => subtask.id !== task.id)
-
-      transaction.set(eventReference, buildEventFromTask(currentSubtask))
-      transaction.update(parentReference, { subtasks: updatedSubtasks })
-    })
-  }
-
   const updateTopLevelTask = async () => {
     if (!uid) return
 
@@ -217,50 +191,6 @@ export default function EditTaskModal({
       doc(db, `users/${uid}/tasks-list`, task.id),
       buildTaskUpdate({ content, actionPlanning, automation, schedule, eventAssociation }),
     )
-  }
-
-  const updateEmbeddedSubtask = async () => {
-    if (!uid || !parentTaskId) return
-
-    const parentReference = doc(db, `users/${uid}/tasks-list`, parentTaskId)
-    await runTransaction(db, async transaction => {
-      const parentSnapshot = await transaction.get(parentReference)
-      if (!parentSnapshot.exists()) {
-        throw new Error('A tarefa pai não existe mais.')
-      }
-
-      const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
-      const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
-      const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
-      if (subtaskIndex === -1) {
-        throw new Error('A subtarefa não foi encontrada na tarefa pai.')
-      }
-
-      const currentSubtask = subtasks[subtaskIndex]
-      const updatedSubtasks = subtasks.map((subtask, index) => (
-        index === subtaskIndex
-          ? (() => {
-            const {
-              schedule: _schedule,
-              eventAssociation: _eventAssociation,
-              ...withoutScheduleAndAssociation
-            } = currentSubtask
-            return {
-              ...withoutScheduleAndAssociation,
-              content: content.trim(),
-              actionPlanning,
-              automation,
-              ...(schedule ? { schedule } : {}),
-              ...(eventAssociation ? { eventAssociation } : {}),
-            }
-          })()
-          : subtask
-      ))
-
-      transaction.update(parentReference, {
-        subtasks: updatedSubtasks.map(serializeTaskSubtask),
-      })
-    })
   }
 
   const handleUpdate = async (submitEvent?: React.FormEvent<HTMLFormElement>) => {
@@ -277,7 +207,7 @@ export default function EditTaskModal({
 
     if (addingDate && !validateEventSchedule()) return
 
-    if (addingDate && !parentTaskId && (task.subtasks?.length ?? 0) > 0) {
+    if (addingDate && (task.subtasks?.length ?? 0) > 0) {
       const confirmed = window.confirm(
         'Esta tarefa possui subtarefas.\n\nDeseja que todas elas se incorporem ao novo evento?',
       )
@@ -289,13 +219,7 @@ export default function EditTaskModal({
 
     try {
       if (addingDate) {
-        if (parentTaskId) {
-          await convertEmbeddedSubtask()
-        } else {
-          await convertTopLevelTask()
-        }
-      } else if (parentTaskId) {
-        await updateEmbeddedSubtask()
+        await convertTopLevelTask()
       } else {
         await updateTopLevelTask()
       }
@@ -307,6 +231,40 @@ export default function EditTaskModal({
       setSaveError(error instanceof Error
         ? error.message
         : 'Não foi possível salvar a tarefa. Tente novamente.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleArchiveToggle = async () => {
+    if (isSaving || !uid) return
+
+    const archived = isTaskArchived(task)
+    if (!archived) {
+      const recurringMessage = task.nature === 'recurring'
+        ? '\n\nEnquanto estiver arquivada, novas ocorrências não serão projetadas.'
+        : ''
+      const confirmed = window.confirm(
+        `Arquivar esta tarefa?\n\nEla deixará de aparecer nas áreas de trabalho ativas.\nSeus dados serão preservados.${recurringMessage}`,
+      )
+      if (!confirmed) return
+    }
+
+    setSaveError('')
+    setIsSaving(true)
+
+    try {
+      await updateDoc(
+        doc(db, `users/${uid}/tasks-list`, task.id),
+        archived ? buildTaskRestoreUpdate() : buildTaskArchiveUpdate(),
+      )
+      onUpdated()
+      onClose()
+    } catch (error) {
+      console.error('Erro ao alterar o arquivamento da tarefa:', error)
+      setSaveError(error instanceof Error
+        ? error.message
+        : 'Não foi possível alterar o arquivamento da tarefa. Tente novamente.')
     } finally {
       setIsSaving(false)
     }
@@ -469,6 +427,29 @@ export default function EditTaskModal({
               Limpar
             </button>
           </div>
+
+          <section className={styles.archivePanel} aria-labelledby="task-archive-title">
+            <div>
+              <h3 id="task-archive-title" className={styles.archiveTitle}>
+                {isTaskArchived(task) ? 'Restaurar tarefa' : 'Arquivar tarefa'}
+              </h3>
+              <p className={styles.archiveDescription}>
+                {isTaskArchived(task)
+                  ? 'A tarefa voltará a aparecer nas áreas de trabalho ativas. Seus dados e seu status serão preservados.'
+                  : 'A tarefa deixará de aparecer nas áreas de trabalho ativas. Seus dados serão preservados.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              className={isTaskArchived(task)
+                ? styles.archiveRestoreButton
+                : styles.archiveButton}
+              onClick={() => void handleArchiveToggle()}
+              disabled={isSaving}
+            >
+              {isTaskArchived(task) ? 'Restaurar tarefa' : 'Arquivar tarefa'}
+            </button>
+          </section>
 
           {saveError && <p className={styles.error} role="alert">{saveError}</p>}
         </div>

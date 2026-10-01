@@ -198,6 +198,41 @@ function getMonthlyOccurrenceForReference(
   )
 }
 
+/**
+ * Returns the occurrence date that owns a target civil date. Flexible weekly
+ * recurrence uses the target date as its completion marker and is interpreted
+ * by isTaskOccurrenceCompletedForDate at the Monday–Sunday week boundary.
+ */
+export function getTaskOccurrenceDateForDate(
+  task: Pick<Task, 'schedule'>,
+  targetDate: TaskScheduleDateInput,
+): string | null {
+  const targetKey = toCivilDateKey(targetDate)
+  const schedule = normalizeTaskSchedule(task.schedule)
+  if (!targetKey || !schedule) return null
+
+  if (schedule.type === 'daily') return targetKey
+
+  if (schedule.type === 'weekly') {
+    if (!schedule.weekdays || schedule.weekdays.length === 0) return targetKey
+
+    for (let offset = 0; offset <= 6; offset += 1) {
+      const candidate = addCivilDays(targetKey, -offset)
+      if (candidate && isTaskScheduledForDate({ schedule }, candidate)) return candidate
+    }
+
+    return null
+  }
+
+  if (schedule.type === 'monthly') {
+    const current = getMonthlyOccurrenceForReference(targetKey, schedule.dayOfMonth, 0)
+    if (current && current <= targetKey) return current
+    return getMonthlyOccurrenceForReference(targetKey, schedule.dayOfMonth, -1)
+  }
+
+  return null
+}
+
 function getEventRelativeDate(
   schedule: Extract<TaskSchedule, { type: 'eventRelative' }>,
   events: TaskScheduleEventContext[],
@@ -222,23 +257,41 @@ export function isTaskOccurrenceCompletedForDate(
   targetDate: TaskScheduleDateInput,
   occurrenceDate?: TaskScheduleDateInput,
 ): boolean {
+  return isTaskOccurrenceMarkerCurrent(
+    task,
+    task.lastActionCompletedDate,
+    targetDate,
+    occurrenceDate,
+  )
+}
+
+/**
+ * Checks whether an arbitrary civil-date marker still belongs to the target
+ * occurrence. Completion and focus use the same recurrence boundary rules.
+ */
+export function isTaskOccurrenceMarkerCurrent(
+  task: Pick<Task, 'schedule'>,
+  marker: string | undefined,
+  targetDate: TaskScheduleDateInput,
+  occurrenceDate?: TaskScheduleDateInput,
+): boolean {
   const targetKey = toCivilDateKey(targetDate)
-  const completionKey = task.lastActionCompletedDate
-    ? toCivilDateKey(task.lastActionCompletedDate)
-    : null
+  const markerKey = marker ? toCivilDateKey(marker) : null
   const schedule = normalizeTaskSchedule(task.schedule)
 
-  if (!targetKey || !completionKey || !schedule || completionKey > targetKey) {
+  if (!targetKey || !markerKey || !schedule || markerKey > targetKey) {
     return false
   }
 
   if (schedule.type === 'weekly'
     && (!schedule.weekdays || schedule.weekdays.length === 0)) {
-    return isSameTaskWeek(completionKey, targetKey)
+    return isSameTaskWeek(markerKey, targetKey)
   }
 
-  const occurrenceKey = occurrenceDate ? toCivilDateKey(occurrenceDate) : targetKey
-  return occurrenceKey !== null && completionKey === occurrenceKey
+  const occurrenceKey = occurrenceDate
+    ? toCivilDateKey(occurrenceDate)
+    : getTaskOccurrenceDateForDate(task, targetKey)
+  return occurrenceKey !== null && markerKey === occurrenceKey
 }
 
 function getOccurrenceOnOrAfter(
@@ -321,7 +374,10 @@ export function getNextTaskOccurrence(
   if (schedule.type === 'daily') return addCivilDays(afterKey, 1)
 
   if (schedule.type === 'weekly') {
-    if (!schedule.weekdays || schedule.weekdays.length === 0) return null
+    if (!schedule.weekdays || schedule.weekdays.length === 0) {
+      const weekKey = getCivilWeekKey(afterKey)
+      return weekKey ? addCivilDays(weekKey, 7) : null
+    }
 
     for (let offset = 1; offset <= 7; offset += 1) {
       const candidate = addCivilDays(afterKey, offset)

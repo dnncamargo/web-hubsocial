@@ -2,7 +2,7 @@
 
 Status: **canonical execution roadmap**
 
-Last refreshed against `main`: `df723ba295d70023afe82fd75d5877503b4845cc`
+Last refreshed against `main`: `7bfe62dae90019c408bc654094ccb1c62d8c9d67`
 
 This document records execution order, completed checkpoints, migration debt, and the next work areas.
 
@@ -549,6 +549,63 @@ Mobile behavior:
 - no desktop-sidebar-as-drawer.
 
 Quick create routes to the existing Task, Event, and Person creation editors through transient URL intent and does not add persistence.
+
+---
+
+### 6.7. Simple Subtasks and Task archiving
+
+**Status: IMPLEMENTED — DOMAIN, HIERARCHY AUTHORING, AND ARCHIVE UI**
+
+This work area implements the audited domain, persistence boundary, canonical
+hierarchy authoring, and Archive/Restore UI. It does not authorize a bulk
+migration.
+
+#### DECIDED
+
+- Subtasks are binary and deliberately simpler than root Tasks;
+- hierarchy is created only through direct `Task → Criar subtask`;
+- a Supertask status is the aggregate of its Subtasks;
+- recurring Subtask checklists are scoped to the current occurrence; and
+- Archive is independent of the three operational statuses.
+
+#### IMPLEMENTED
+
+- root `archivedAt?: Timestamp` archive/restore updates;
+- binary Subtask status interpretation and minimal factory;
+- `lastCompletedOccurrenceDate?: YYYY-MM-DD` for recurring Subtasks;
+- recurring root status integration using `lastActionCompletedDate` and
+  `lastFocusedOccurrenceDate` occurrence markers;
+- effective status classification and boundary-aware reconciliation;
+- occurrence-scoped aggregate status and confirmed bulk-status primitives; and
+- defensive legacy rich-Subtask round-trip;
+- root-only Projected Actions and projection simplification; and
+- direct Subtask create/edit, binary checkbox, promotion, canonical delete,
+  confirmed Supertask bulk commands, and confirmed Supertask Action completion.
+- confirmed Edit Task Archive/Restore actions;
+- the secondary `Mostrar arquivadas` filter and dedicated `Arquivadas` section;
+- archived-card interaction locks that preserve administrative Edit/Delete only;
+- archive-aware root list classification from the shared hydrated collection.
+
+#### LEGACY COMPATIBILITY
+
+- existing rich Subtasks with old Task capabilities;
+- opaque `groupId`; and
+- old nested action and completion fields.
+
+Readers/hydration must preserve legacy data defensively. Legacy Subtask
+status `1` is interpreted as not made by the new binary model unless the
+implementation audit establishes a safer transformation. New Subtask
+authoring does not create status `1`.
+
+#### DEFERRED
+
+Deferred roadmap items that do not belong to this work area remain deferred in
+their existing roadmap sections. They must not be pulled into the Subtask or
+archive implementation merely because they touch the same screens.
+
+No retroactive occurrence backfill is part of this work area. Recurring status
+integration uses civil-date markers and the existing recurrence engine; it does
+not create occurrence documents.
 
 ---
 

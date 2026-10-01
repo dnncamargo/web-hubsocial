@@ -4,7 +4,6 @@ import { useAuth } from '../../components/auth/AuthProvider'
 import {
   updateDoc,
   doc,
-  setDoc,
   deleteDoc,
   runTransaction,
 } from 'firebase/firestore'
@@ -24,20 +23,23 @@ import {
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { Task } from '../../utils/interfaces'
 import {
-  buildTaskDailyCompletionUpdate,
-  buildTaskStatusUpdate,
+  buildTaskStatusUpdateForTask,
+  buildSupertaskStatusUpdate,
   hydrateTask,
   serializeTask,
+  serializeTaskSubtask,
 } from '../../utils/taskPayload'
+import { getCurrentCivilDate } from '../../utils/taskFocus'
 import {
-  applyTaskStatusTransition,
-  getCurrentCivilDate,
-} from '../../utils/taskFocus'
+  getEffectiveTaskStatus,
+  getSupertaskStatusConfirmationMessage,
+  isSubtaskCompletedForOccurrence,
+  updateSubtaskCompletionForOccurrence,
+} from '../../utils/taskSubtasks'
+import { getTaskOccurrenceDateForDate } from '../../utils/taskSchedule'
 import {
-  attachSubtask,
   promoteSubtask,
   removeSubtask,
-  updateAllSubtasks,
 } from '../../utils/taskHierarchy'
 import TaskCard from './TaskCard'
 import styles from './TaskSection.module.css'
@@ -47,8 +49,11 @@ interface TaskSectionProps {
   status: 0 | 1 | 2
   tasks: Task[]
   onEditTask: (task: Task, parentTaskId?: string | null) => void
+  onCreateSubtask: (parent: Task) => void
   refreshTasks: () => void
+  updateTaskLocally: (task: Task) => void
   updateTasksLocally: (tasks: Task[]) => void
+  archived?: boolean
 }
 
 export default function TaskSection({
@@ -56,8 +61,11 @@ export default function TaskSection({
   status,
   tasks,
   onEditTask,
+  onCreateSubtask,
   refreshTasks,
+  updateTaskLocally,
   updateTasksLocally,
+  archived = false,
 }: TaskSectionProps) {
   const { uid } = useAuth()
 
@@ -70,19 +78,10 @@ export default function TaskSection({
     }),
   )
 
-  const resetDailyCompletion = (
-    task: Task,
-    newStatus: 0 | 1 | 2,
-    currentCivilDate: string,
-  ): Task => {
-    const updatedTask = applyTaskStatusTransition(task, newStatus, currentCivilDate)
-    delete updatedTask.lastActionCompletedDate
-    return updatedTask
-  }
-
   const handlePromoteSubtask = async (subtask: Task, parentTaskId: string): Promise<boolean> => {
     if (!uid) return false
 
+    const targetDate = getCurrentCivilDate()
     const parentRef = doc(db, `users/${uid}/tasks-list`, parentTaskId)
     const promotedRef = doc(db, `users/${uid}/tasks-list`, subtask.id)
     let promoted = false
@@ -99,12 +98,44 @@ export default function TaskSection({
           throw new Error('Não foi possível promover: já existe uma Task com esse ID.')
         }
 
-        const parentTask = hydrateTask(parentSnap.id, parentSnap.data())
-        const result = promoteSubtask(parentTask, subtask.id)
+        const parentTask = hydrateTask(parentSnap.id, parentSnap.data(), targetDate)
+        const currentSubtask = parentTask.subtasks?.find(item => item.id === subtask.id)
+        if (!currentSubtask) throw new Error('A subtarefa não foi encontrada na tarefa pai.')
+
+        const promotedStatus = isSubtaskCompletedForOccurrence(
+          parentTask,
+          currentSubtask,
+          targetDate,
+        ) ? 2 : 0
+        const parentStatusBeforePromotion = getEffectiveTaskStatus(parentTask, targetDate)
+        const result = promoteSubtask(parentTask, subtask.id, promotedStatus)
         if (!result.ok) throw new Error(result.reason)
 
-        transaction.set(parentRef, serializeTask(result.value.parent))
-        transaction.set(promotedRef, serializeTask(result.value.promoted))
+        const remainingSubtasks = result.value.parent.subtasks ?? []
+        const parentStatus = remainingSubtasks.length > 0
+          ? getEffectiveTaskStatus(result.value.parent, targetDate)
+          : parentStatusBeforePromotion
+        const parentUpdate = {
+          ...buildTaskStatusUpdateForTask(
+            { ...result.value.parent, status: parentStatus },
+            parentStatus,
+            targetDate,
+          ),
+          subtasks: remainingSubtasks.map(serializeTaskSubtask),
+        }
+
+        transaction.update(parentRef, parentUpdate)
+        const promotedTask: Task = { ...result.value.promoted, status: promotedStatus }
+        const promotedWire = serializeTask(promotedTask, targetDate)
+        if (promotedStatus === 2 && promotedTask.nature === 'recurring') {
+          promotedWire.lastActionCompletedDate =
+            getTaskOccurrenceDateForDate(promotedTask, targetDate) ?? targetDate
+          delete promotedWire.lastFocusedOccurrenceDate
+        }
+        transaction.set(
+          promotedRef,
+          promotedWire,
+        )
         promoted = true
       })
     } catch (error) {
@@ -114,108 +145,73 @@ export default function TaskSection({
     return promoted
   }
 
-  const handleMakeSubtask = async (currentTask: Task) => {
+  const handleStatusSwitch = async (task: Task, newStatus: 0 | 1 | 2) => {
     if (!uid) return
+    const currentCivilDate = getCurrentCivilDate()
+    const hasSubtasks = (task.subtasks?.length ?? 0) > 0
 
-    const index = tasks.findIndex(task => task.id === currentTask.id)
-    if (index <= 0) {
-      alert('Não há tarefa acima para agrupar.')
-      return
-    }
+    if (hasSubtasks) {
+      if (newStatus === 1) return
 
-    const aboveTask = tasks[index - 1]
-    const parentRef = doc(db, `users/${uid}/tasks-list`, aboveTask.id)
-    const currentRef = doc(db, `users/${uid}/tasks-list`, currentTask.id)
+      const confirmed = window.confirm(
+        getSupertaskStatusConfirmationMessage(newStatus, task.subtasks?.length ?? 0),
+      )
+      if (!confirmed) return
 
-    try {
-      await runTransaction(db, async transaction => {
-        const [parentSnap, currentSnap] = await Promise.all([
-          transaction.get(parentRef),
-          transaction.get(currentRef),
-        ])
-        if (!parentSnap.exists() || !currentSnap.exists()) return
-
-        const parentTask = hydrateTask(parentSnap.id, parentSnap.data())
-        const childTask = hydrateTask(currentSnap.id, currentSnap.data())
-        const result = attachSubtask(parentTask, childTask)
-        if (!result.ok) throw new Error(result.reason)
-
-        transaction.set(parentRef, serializeTask(result.value))
-        transaction.delete(currentRef)
-      })
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Não foi possível anexar a subtask.')
+      const update = buildSupertaskStatusUpdate(task, newStatus, currentCivilDate)
+      if (update) {
+        await updateDoc(doc(db, `users/${uid}/tasks-list`, task.id), update)
+      }
+    } else {
+      await updateDoc(
+        doc(db, `users/${uid}/tasks-list`, task.id),
+        buildTaskStatusUpdateForTask(task, newStatus, currentCivilDate),
+      )
     }
 
     refreshTasks()
   }
 
-  const handleStatusSwitch = async (task: Task, newStatus: 0 | 1 | 2) => {
+  const handleToggleSubtask = async (
+    parent: Task,
+    subtask: Task,
+    completed: boolean,
+  ) => {
     if (!uid) return
-    const currentCivilDate = getCurrentCivilDate()
 
-    const isParent = (task.subtasks?.length ?? 0) > 0
-    const isSubtask = Boolean(task.parentTaskId)
+    const targetDate = getCurrentCivilDate()
+    const parentRef = doc(db, `users/${uid}/tasks-list`, parent.id)
+    let optimisticParent: Task | null = null
 
-    if (!isParent && !isSubtask) {
-      await setDoc(
-        doc(db, `users/${uid}/tasks-list`, task.id),
-        serializeTask(resetDailyCompletion(task, newStatus, currentCivilDate)),
-      )
-      refreshTasks()
-      return
-    }
+    try {
+      await runTransaction(db, async transaction => {
+        const parentSnapshot = await transaction.get(parentRef)
+        if (!parentSnapshot.exists()) return
 
-    if (isParent) {
-      const confirmed = window.confirm(
-        'Esta tarefa possui subtarefas.\n\nDeseja alterar o status de todas elas para refletir essa mudança?',
-      )
-      if (!confirmed) return
-
-      const updatedTask = updateAllSubtasks(
-        resetDailyCompletion(task, newStatus, currentCivilDate),
-        subtask => resetDailyCompletion(subtask, newStatus, currentCivilDate),
-      )
-
-      await setDoc(doc(db, `users/${uid}/tasks-list`, task.id), serializeTask(updatedTask))
-      refreshTasks()
-      return
-    }
-
-    if (isSubtask) {
-      const parentTask = tasks.find(item => item.id === task.parentTaskId)
-      if (!parentTask) return
-
-      const updateParent = window.confirm(
-        'Esta é uma subtarefa.\n\n'
-        + 'OK: aplicar o novo status à tarefa pai e todas as subtarefas.\n'
-        + 'Cancelar: transformar esta subtarefa em tarefa independente e alterar apenas o status dela.',
-      )
-
-      if (updateParent) {
-        const updatedParent = updateAllSubtasks(
-          resetDailyCompletion(parentTask, newStatus, currentCivilDate),
-          subtask => resetDailyCompletion(subtask, newStatus, currentCivilDate),
+        const currentParent = hydrateTask(parentSnapshot.id, parentSnapshot.data(), targetDate)
+        const updatedParent = updateSubtaskCompletionForOccurrence(
+          currentParent,
+          subtask.id,
+          completed,
+          targetDate,
         )
+        if (!updatedParent) return
 
-        await setDoc(
-          doc(db, `users/${uid}/tasks-list`, updatedParent.id),
-          serializeTask(updatedParent),
-        )
-      } else {
-        if (await handlePromoteSubtask(task, parentTask.id)) {
-          const promotedTask = resetDailyCompletion(task, newStatus, currentCivilDate)
-          await updateDoc(
-            doc(db, `users/${uid}/tasks-list`, task.id),
-            {
-              ...buildTaskStatusUpdate(promotedTask.status, promotedTask.focusedOnDate),
-              ...buildTaskDailyCompletionUpdate(null),
-            },
-          )
-        }
-      }
-
+        const aggregateStatus = getEffectiveTaskStatus(updatedParent, targetDate)
+        optimisticParent = { ...updatedParent, status: aggregateStatus }
+        transaction.update(parentRef, {
+          ...buildTaskStatusUpdateForTask(
+            { ...updatedParent, status: aggregateStatus },
+            aggregateStatus,
+            targetDate,
+          ),
+          subtasks: (updatedParent.subtasks ?? []).map(serializeTaskSubtask),
+        })
+      })
+      if (optimisticParent) updateTaskLocally(optimisticParent)
       refreshTasks()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível atualizar a subtask.')
     }
   }
 
@@ -226,48 +222,48 @@ export default function TaskSection({
       item.subtasks?.some(subtask => subtask.id === task.id),
     )
     const isSubtask = Boolean(parent)
-    const isParent = !isSubtask && Boolean(task.subtasks?.length)
-
-    if (isSubtask && task.subtasks?.length) {
-      alert('Esta subtask possui descendants legados e não pode ser excluída sem revisão.')
-      return
-    }
-
-    if (isParent && task.subtasks?.length) {
-      const confirmed = window.confirm(
-        `Esta tarefa possui ${task.subtasks.length} subtarefas. Todas serão excluídas junto com ela.\n\nDeseja continuar?`,
-      )
-      if (!confirmed) return
-
-      await deleteDoc(doc(db, `users/${uid}/tasks-list`, task.id))
-      refreshTasks()
-      return
-    }
+    const hasSubtasks = (task.subtasks?.length ?? 0) > 0
 
     if (isSubtask && parent) {
-
-      const confirmed = window.confirm(
-        'Esta tarefa é uma subtarefa. Deseja removê-la do grupo e excluí-la?',
-      )
+      const confirmed = window.confirm('Deseja excluir esta subtarefa?')
       if (!confirmed) return
 
+      const targetDate = getCurrentCivilDate()
       const parentRef = doc(db, `users/${uid}/tasks-list`, parent.id)
       await runTransaction(db, async transaction => {
         const parentSnapshot = await transaction.get(parentRef)
         if (!parentSnapshot.exists()) return
 
-        const currentParent = hydrateTask(parentSnapshot.id, parentSnapshot.data())
+        const currentParent = hydrateTask(parentSnapshot.id, parentSnapshot.data(), targetDate)
+        const statusBeforeRemoval = getEffectiveTaskStatus(currentParent, targetDate)
         const result = removeSubtask(currentParent, task.id)
         if (!result.ok) return
 
-        transaction.set(parentRef, serializeTask(result.value.parent))
+        const remainingSubtasks = result.value.parent.subtasks ?? []
+        const nextStatus = remainingSubtasks.length > 0
+          ? getEffectiveTaskStatus(result.value.parent, targetDate)
+          : statusBeforeRemoval
+        transaction.update(parentRef, {
+          ...buildTaskStatusUpdateForTask(
+            { ...result.value.parent, status: nextStatus },
+            nextStatus,
+            targetDate,
+          ),
+          subtasks: remainingSubtasks.map(serializeTaskSubtask),
+        })
       })
       refreshTasks()
       return
     }
 
-    const confirmed = window.confirm('Deseja excluir esta tarefa?')
-    if (!confirmed) return
+    if (hasSubtasks) {
+      const confirmed = window.confirm(
+        `Esta tarefa possui ${task.subtasks?.length ?? 0} subtarefas.\n\nAo excluir a tarefa, todas as subtarefas também serão excluídas.`,
+      )
+      if (!confirmed) return
+    } else if (!window.confirm('Deseja excluir esta tarefa?')) {
+      return
+    }
 
     await deleteDoc(doc(db, `users/${uid}/tasks-list`, task.id))
     refreshTasks()
@@ -303,6 +299,63 @@ export default function TaskSection({
   }
 
   if (!uid) return null
+
+  if (archived) {
+    return (
+      <section className={`${styles.section} ${styles.archivedSection}`}>
+        <header className={styles.header}>
+          <h2 className={styles.title}>{section}</h2>
+          <span className={styles.count}>{tasks.length}</span>
+        </header>
+
+        {tasks.length === 0 ? (
+          <p className={styles.empty}>Nenhuma tarefa arquivada.</p>
+        ) : (
+          <ul className={styles.list}>
+            {tasks.map(task => (
+              <li key={task.id} className={styles.taskGroup}>
+                <TaskCard
+                  task={task}
+                  archived
+                  onEditTask={onEditTask}
+                  onPromoteSubtask={() => undefined}
+                  onCreateSubtask={() => undefined}
+                  onStatusSwitch={() => undefined}
+                  parentTaskId={null}
+                  onDelete={() => void handleDeleteTask(task)}
+                  refreshTasks={refreshTasks}
+                />
+
+                {task.subtasks && task.subtasks.length > 0 && (
+                  <div className={styles.subtasks}>
+                    {task.subtasks.map(subtask => (
+                      <TaskCard
+                        key={subtask.id}
+                        task={subtask}
+                        archived
+                        onEditTask={onEditTask}
+                        onPromoteSubtask={() => undefined}
+                        onCreateSubtask={() => undefined}
+                        onStatusSwitch={() => undefined}
+                        subtaskCompleted={isSubtaskCompletedForOccurrence(
+                          task,
+                          subtask,
+                          getCurrentCivilDate(),
+                        )}
+                        parentTaskId={task.id}
+                        onDelete={() => void handleDeleteTask(subtask)}
+                        refreshTasks={refreshTasks}
+                      />
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    )
+  }
 
   const sectionClass = status === 0
     ? `${styles.section} ${styles.notStarted}`
@@ -345,12 +398,12 @@ export default function TaskSection({
                   <TaskCard
                     task={task}
                     onEditTask={onEditTask}
-                    onPromoteSubtask={() => handlePromoteSubtask(task, task.id)}
-                    onMakeSubtask={handleMakeSubtask}
+                    onPromoteSubtask={() => undefined}
+                    onCreateSubtask={() => onCreateSubtask(task)}
                     onStatusSwitch={(newStatus) =>
-                      handleStatusSwitch(task, newStatus)}
+                      void handleStatusSwitch(task, newStatus)}
                     parentTaskId={null}
-                    onDelete={() => handleDeleteTask(task)}
+                    onDelete={() => void handleDeleteTask(task)}
                     refreshTasks={refreshTasks}
                   />
 
@@ -362,12 +415,18 @@ export default function TaskSection({
                           task={subtask}
                           onEditTask={onEditTask}
                           onPromoteSubtask={() =>
-                            handlePromoteSubtask(subtask, task.id)}
-                          onMakeSubtask={handleMakeSubtask}
-                          onStatusSwitch={(newStatus) =>
-                            handleStatusSwitch(subtask, newStatus)}
+                            void handlePromoteSubtask(subtask, task.id)}
+                          onCreateSubtask={() => undefined}
+                          onStatusSwitch={() => undefined}
+                          onToggleSubtask={(completed) =>
+                            void handleToggleSubtask(task, subtask, completed)}
+                          subtaskCompleted={isSubtaskCompletedForOccurrence(
+                            task,
+                            subtask,
+                            getCurrentCivilDate(),
+                          )}
                           parentTaskId={task.id}
-                          onDelete={() => handleDeleteTask(subtask)}
+                          onDelete={() => void handleDeleteTask(subtask)}
                           refreshTasks={refreshTasks}
                         />
                       ))}

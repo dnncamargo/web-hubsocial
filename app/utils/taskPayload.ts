@@ -1,5 +1,5 @@
-import { deleteField } from 'firebase/firestore'
-import type { Timestamp, UpdateData } from 'firebase/firestore'
+import { deleteField, Timestamp } from 'firebase/firestore'
+import type { UpdateData } from 'firebase/firestore'
 import type { ActionPlanning } from '../types/actions'
 import type {
   AutomationRule,
@@ -12,14 +12,22 @@ import type {
 } from '../types/tasks'
 import type { Task } from './interfaces'
 import {
-  applyTaskStatusTransition,
+  getCurrentCivilDate,
   isValidCivilDate,
 } from './taskFocus.ts'
 import {
   deriveTaskNature,
+  getTaskOccurrenceDateForDate,
   normalizeTaskSchedule,
 } from './taskSchedule.ts'
-import { updateSubtask, validateTaskHierarchy } from './taskHierarchy.ts'
+import { validateTaskHierarchy } from './taskHierarchy.ts'
+import {
+  deriveSupertaskStatus,
+  getEffectiveTaskStatus,
+  setSupertaskCompleted,
+  setSupertaskNotStarted,
+  updateSubtaskCompletionForOccurrence,
+} from './taskSubtasks.ts'
 
 export { deriveTaskNature } from './taskSchedule.ts'
 
@@ -42,6 +50,8 @@ export interface TaskDocumentData {
   parentTaskId?: string | null
   createdAt?: Date | Timestamp
   lastActionCompletedDate?: string
+  lastFocusedOccurrenceDate?: string
+  archivedAt?: Timestamp
   focusedOnDate?: string
   actionPlanning?: ActionPlanning
   automation?: AutomationRuleSet
@@ -58,6 +68,7 @@ export interface TaskNestedDocument {
   parentTaskId?: string | null
   createdAt?: Date | Timestamp
   lastActionCompletedDate?: string
+  lastCompletedOccurrenceDate?: string
   focusedOnDate?: string
   actionPlanning?: ActionPlanning
   automation?: AutomationRuleSet
@@ -74,6 +85,8 @@ export interface TaskPayloadInput {
   parentTaskId?: string | null
   createdAt?: Date | Timestamp
   lastActionCompletedDate?: string
+  lastFocusedOccurrenceDate?: string
+  archivedAt?: Timestamp
   focusedOnDate?: string
   actionPlanning?: ActionPlanning
   automation?: AutomationRuleSet
@@ -87,6 +100,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function normalizeStatus(value: unknown): TaskStatus {
   return value === 1 || value === 2 ? value : 0
+}
+
+function normalizeSubtaskStatus(value: unknown): 0 | 2 {
+  return value === 2 ? 2 : 0
+}
+
+function normalizeArchivedAt(value: unknown): Timestamp | undefined {
+  if (!(value instanceof Timestamp) || !Number.isFinite(value.toMillis())) return undefined
+  return value
 }
 
 function isAutomationRule(value: unknown): value is AutomationRule {
@@ -163,17 +185,22 @@ function serializeEventAssociation(
   return deriveEventAssociation(schedule) ?? normalizeEventAssociation(association)
 }
 
+export function isTaskArchived(task: Pick<Task, 'archivedAt'>): boolean {
+  return normalizeArchivedAt(task.archivedAt) !== undefined
+}
+
 function normalizeSubtask(value: unknown): Task | null {
   if (!isRecord(value) || typeof value.id !== 'string') return null
 
   const schedule = normalizeTaskSchedule(value.schedule)
   const nature = deriveTaskNature(schedule)
-  const status = normalizeStatus(value.status)
+  const status = normalizeSubtaskStatus(value.status)
   return {
     id: value.id,
     content: typeof value.content === 'string' ? value.content : '',
     status,
     nature,
+    ...(value.status === 1 ? { legacySubtaskStatus: 1 as const } : {}),
     ...(typeof value.groupId === 'string' ? { groupId: value.groupId } : {}),
     ...(Array.isArray(value.subtasks)
       ? { subtasks: value.subtasks.map(normalizeSubtask).filter((item): item is Task => item !== null) }
@@ -185,8 +212,11 @@ function normalizeSubtask(value: unknown): Task | null {
     ...(typeof value.lastActionCompletedDate === 'string'
       ? { lastActionCompletedDate: value.lastActionCompletedDate }
       : {}),
-    ...(normalizeFocusedOnDate(value.focusedOnDate, nature, status)
-      ? { focusedOnDate: normalizeFocusedOnDate(value.focusedOnDate, nature, status) }
+    ...(isValidCivilDate(value.lastCompletedOccurrenceDate)
+      ? { lastCompletedOccurrenceDate: value.lastCompletedOccurrenceDate }
+      : {}),
+    ...(isValidCivilDate(value.focusedOnDate)
+      ? { focusedOnDate: value.focusedOnDate }
       : {}),
     ...(isRecord(value.actionPlanning) ? { actionPlanning: value.actionPlanning as ActionPlanning } : {}),
     ...(normalizeAutomation(value.automation)
@@ -199,7 +229,11 @@ function normalizeSubtask(value: unknown): Task | null {
   }
 }
 
-export function hydrateTask(id: string, data: Record<string, unknown>): Task {
+export function hydrateTask(
+  id: string,
+  data: Record<string, unknown>,
+  targetDate: string = getCurrentCivilDate(),
+): Task {
   const schedule = normalizeTaskSchedule(data.schedule)
   const nature = deriveTaskNature(schedule)
   const status = normalizeStatus(data.status)
@@ -224,6 +258,12 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
     ...(typeof data.lastActionCompletedDate === 'string'
       ? { lastActionCompletedDate: data.lastActionCompletedDate }
       : {}),
+    ...(isValidCivilDate(data.lastFocusedOccurrenceDate)
+      ? { lastFocusedOccurrenceDate: data.lastFocusedOccurrenceDate }
+      : {}),
+    ...(normalizeArchivedAt(data.archivedAt)
+      ? { archivedAt: normalizeArchivedAt(data.archivedAt) }
+      : {}),
     ...(normalizeFocusedOnDate(data.focusedOnDate, nature, status)
       ? { focusedOnDate: normalizeFocusedOnDate(data.focusedOnDate, nature, status) }
       : {}),
@@ -235,7 +275,13 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
     ...(eventAssociation ? { eventAssociation } : {}),
   }
 
-  const hierarchyIssues = validateTaskHierarchy(hydratedTask)
+  const effectiveTask = {
+    ...hydratedTask,
+    persistedStatus: status,
+    status: getEffectiveTaskStatus(hydratedTask, targetDate),
+  }
+
+  const hierarchyIssues = validateTaskHierarchy(effectiveTask)
   rawSubtasks.forEach((value, index) => {
     if (!isRecord(value) || typeof value.id !== 'string' || value.id.trim() === '') {
       hierarchyIssues.push({ code: 'missing-subtask-id', path: `subtasks[${index}].id` })
@@ -243,19 +289,21 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
   })
 
   return hierarchyIssues.length > 0
-    ? { ...hydratedTask, hierarchyIssues }
-    : hydratedTask
+    ? { ...effectiveTask, hierarchyIssues }
+    : effectiveTask
 }
 
 function serializeNestedTask(task: Task, expectedParentTaskId?: string): TaskNestedDocument {
   const schedule = normalizeTaskSchedule(task.schedule)
-  const nature = deriveTaskNature(schedule)
   const eventAssociation = serializeEventAssociation(task.eventAssociation, schedule)
+  const status = task.legacySubtaskStatus === 1 && task.status === 0
+    ? 1
+    : task.status === 2 ? 2 : 0
 
   return {
     id: task.id,
     content: task.content,
-    status: task.status,
+    status,
     ...(task.groupId !== undefined ? { groupId: task.groupId } : {}),
     ...(task.subtasks !== undefined
       ? { subtasks: task.subtasks.map(subtask => serializeNestedTask(subtask, task.id)) }
@@ -267,8 +315,11 @@ function serializeNestedTask(task: Task, expectedParentTaskId?: string): TaskNes
     ...(task.lastActionCompletedDate !== undefined
       ? { lastActionCompletedDate: task.lastActionCompletedDate }
       : {}),
-    ...(normalizeFocusedOnDate(task.focusedOnDate, nature, task.status)
-      ? { focusedOnDate: normalizeFocusedOnDate(task.focusedOnDate, nature, task.status) }
+    ...(isValidCivilDate(task.lastCompletedOccurrenceDate)
+      ? { lastCompletedOccurrenceDate: task.lastCompletedOccurrenceDate }
+      : {}),
+    ...(isValidCivilDate(task.focusedOnDate)
+      ? { focusedOnDate: task.focusedOnDate }
       : {}),
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
     ...(task.automation !== undefined ? { automation: task.automation } : {}),
@@ -281,14 +332,18 @@ export function serializeTaskSubtask(task: Task): TaskNestedDocument {
   return serializeNestedTask(task)
 }
 
-export function serializeTask(task: Task): TaskDocumentData {
+export function serializeTask(
+  task: Task,
+  targetDate: string = getCurrentCivilDate(),
+): TaskDocumentData {
   const schedule = normalizeTaskSchedule(task.schedule)
   const nature = deriveTaskNature(schedule)
   const eventAssociation = serializeEventAssociation(task.eventAssociation, schedule)
+  const effectiveStatus = getEffectiveTaskStatus(task, targetDate)
 
   return {
     content: task.content,
-    status: task.status,
+    status: effectiveStatus,
     ...(task.order !== undefined ? { order: task.order } : {}),
     ...(task.groupId !== undefined ? { groupId: task.groupId } : {}),
     ...(task.subtasks !== undefined
@@ -298,8 +353,14 @@ export function serializeTask(task: Task): TaskDocumentData {
     ...(task.lastActionCompletedDate !== undefined
       ? { lastActionCompletedDate: task.lastActionCompletedDate }
       : {}),
-    ...(normalizeFocusedOnDate(task.focusedOnDate, nature, task.status)
-      ? { focusedOnDate: normalizeFocusedOnDate(task.focusedOnDate, nature, task.status) }
+    ...(isValidCivilDate(task.lastFocusedOccurrenceDate)
+      ? { lastFocusedOccurrenceDate: task.lastFocusedOccurrenceDate }
+      : {}),
+    ...(normalizeArchivedAt(task.archivedAt)
+      ? { archivedAt: normalizeArchivedAt(task.archivedAt) }
+      : {}),
+    ...(normalizeFocusedOnDate(task.focusedOnDate, nature, effectiveStatus)
+      ? { focusedOnDate: normalizeFocusedOnDate(task.focusedOnDate, nature, effectiveStatus) }
       : {}),
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
     ...(task.automation !== undefined ? { automation: task.automation } : {}),
@@ -336,12 +397,58 @@ export function buildTaskUpdate(input: Pick<TaskPayloadInput, 'content' | 'actio
   }
 }
 
+export function buildTaskArchiveUpdate(): UpdateData<TaskDocumentData> {
+  return { archivedAt: Timestamp.now() }
+}
+
+export function buildTaskRestoreUpdate(): UpdateData<TaskDocumentData> {
+  return { archivedAt: deleteField() }
+}
+
 export function buildTaskDailyCompletionUpdate(
   completedDate: string | null,
 ): UpdateData<TaskDocumentData> {
   return completedDate
     ? { lastActionCompletedDate: completedDate }
     : { lastActionCompletedDate: deleteField() }
+}
+
+export function buildTaskStatusUpdateForTask(
+  task: Task,
+  status: TaskStatus,
+  targetDate: string = getCurrentCivilDate(),
+): UpdateData<TaskDocumentData> {
+  if (task.nature !== 'recurring') {
+    return buildTaskStatusUpdate(status, targetDate)
+  }
+
+  const occurrenceDate = getTaskOccurrenceDateForDate(task, targetDate)
+  const occurrenceMarker = occurrenceDate ?? targetDate
+
+  if (status === 2) {
+    return {
+      status: 2,
+      lastActionCompletedDate: occurrenceMarker,
+      lastFocusedOccurrenceDate: deleteField(),
+      focusedOnDate: deleteField(),
+    }
+  }
+
+  if (status === 1) {
+    return {
+      status: 1,
+      lastFocusedOccurrenceDate: occurrenceMarker,
+      lastActionCompletedDate: deleteField(),
+      focusedOnDate: deleteField(),
+    }
+  }
+
+  return {
+    status: 0,
+    lastFocusedOccurrenceDate: deleteField(),
+    lastActionCompletedDate: deleteField(),
+    focusedOnDate: deleteField(),
+  }
 }
 
 export function buildTaskStatusUpdate(
@@ -361,12 +468,19 @@ export function buildNestedTaskDailyCompletionUpdate(
   subtaskId: string,
   completedDate: string,
 ): UpdateData<TaskDocumentData> | null {
-  const updatedParent = updateSubtask(parentTask, subtaskId, subtask => ({
-    ...subtask,
-    lastActionCompletedDate: completedDate,
-  }))
+  const updatedParent = updateSubtaskCompletionForOccurrence(
+    parentTask,
+    subtaskId,
+    true,
+    completedDate,
+  )
 
-  return updatedParent ? serializeTask(updatedParent) : null
+  return updatedParent
+    ? serializeTask({
+      ...updatedParent,
+      status: deriveSupertaskStatus(updatedParent, completedDate),
+    }, completedDate)
+    : null
 }
 
 export function buildNestedTaskStatusUpdate(
@@ -375,13 +489,41 @@ export function buildNestedTaskStatusUpdate(
   status: TaskStatus,
   focusedOnDate?: string,
 ): UpdateData<TaskDocumentData> | null {
-  const updatedParent = updateSubtask(
+  const targetDate = isValidCivilDate(focusedOnDate)
+    ? focusedOnDate
+    : getCurrentCivilDate()
+  const updatedParent = updateSubtaskCompletionForOccurrence(
     parentTask,
     subtaskId,
-    subtask => applyTaskStatusTransition(subtask, status, focusedOnDate),
+    status === 2,
+    targetDate,
   )
 
-  return updatedParent ? serializeTask(updatedParent) : null
+  return updatedParent
+    ? serializeTask({
+      ...updatedParent,
+      status: deriveSupertaskStatus(updatedParent, targetDate),
+    }, targetDate)
+    : null
+}
+
+export function buildSupertaskStatusUpdate(
+  parentTask: Task,
+  status: 0 | 2,
+  targetDate: string = getCurrentCivilDate(),
+): UpdateData<TaskDocumentData> | null {
+  const updatedTask = status === 2
+    ? setSupertaskCompleted(parentTask, targetDate)
+    : setSupertaskNotStarted(parentTask, targetDate)
+
+  if (!updatedTask) return null
+
+  if (parentTask.nature === 'recurring') {
+    delete updatedTask.lastActionCompletedDate
+    delete updatedTask.lastFocusedOccurrenceDate
+  }
+
+  return serializeTask(updatedTask, targetDate)
 }
 
 export function buildTaskFocusReconciliationUpdate(
@@ -390,8 +532,17 @@ export function buildTaskFocusReconciliationUpdate(
 ): UpdateData<TaskDocumentData> | null {
   const update: UpdateData<TaskDocumentData> = {}
 
-  if (currentTask.status !== reconciledTask.status) {
+  const persistedStatus = currentTask.persistedStatus ?? currentTask.status
+  if (persistedStatus !== reconciledTask.status) {
     update.status = reconciledTask.status
+  }
+
+  if (
+    currentTask.nature === 'recurring'
+    && (currentTask.status === 1 || currentTask.persistedStatus === 1)
+    && reconciledTask.status !== 1
+  ) {
+    update.lastFocusedOccurrenceDate = deleteField()
   }
 
   if (currentTask.focusedOnDate !== reconciledTask.focusedOnDate) {

@@ -3,12 +3,6 @@ import type { Task } from './interfaces'
 
 export const MAX_CANONICAL_SUBTASK_DEPTH = 1
 
-export interface TaskHierarchyEntry {
-  task: Task
-  parentTaskId?: string
-  identity: string
-}
-
 export type HierarchyOperationResult<T> =
   | { ok: true; value: T }
   | { ok: false; reason: string }
@@ -74,54 +68,6 @@ export function validateTaskHierarchy(task: Task): TaskHierarchyIssue[] {
   return issues
 }
 
-export function getDirectTaskEntries(tasks: readonly Task[]): TaskHierarchyEntry[] {
-  const entries: TaskHierarchyEntry[] = []
-  const seenIdentities = new Set<string>()
-
-  for (const task of tasks) {
-    const rootIdentity = `root:${task.id}`
-    if (!seenIdentities.has(rootIdentity)) {
-      seenIdentities.add(rootIdentity)
-      entries.push({ task, identity: rootIdentity })
-    }
-
-    for (const subtask of getDirectSubtasks(task)) {
-      const identity = `subtask:${task.id}:${subtask.id}`
-      if (seenIdentities.has(identity)) continue
-      seenIdentities.add(identity)
-      entries.push({ task: subtask, parentTaskId: task.id, identity })
-    }
-  }
-
-  return entries
-}
-
-export function attachSubtask(
-  parent: Task,
-  child: Task,
-): HierarchyOperationResult<Task> {
-  if (!isRoot(parent)) return { ok: false, reason: 'A subtask não pode receber outra subtask.' }
-  if (!isRoot(child)) return { ok: false, reason: 'A tarefa já pertence a uma Supertask.' }
-  if (parent.id === child.id) return { ok: false, reason: 'Uma tarefa não pode ser filha de si mesma.' }
-  if (getDirectSubtasks(parent).some(subtask => subtask.id === child.id)) {
-    return { ok: false, reason: 'Esta subtask já pertence à Supertask.' }
-  }
-  if (getDirectSubtasks(child).length > 0) {
-    return { ok: false, reason: 'Uma tarefa com subtasks não pode ser anexada como subtask.' }
-  }
-
-  return {
-    ok: true,
-    value: {
-      ...parent,
-      subtasks: [
-        ...getDirectSubtasks(parent),
-        { ...child, parentTaskId: parent.id },
-      ],
-    },
-  }
-}
-
 export function removeSubtask(
   parent: Task,
   subtaskId: string,
@@ -145,6 +91,7 @@ export function removeSubtask(
 export function promoteSubtask(
   parent: Task,
   subtaskId: string,
+  promotedStatus?: 0 | 2,
 ): HierarchyOperationResult<{ parent: Task; promoted: Task }> {
   const removed = removeSubtask(parent, subtaskId)
   if (!removed.ok) return removed
@@ -162,6 +109,7 @@ export function promoteSubtask(
       parent: removed.value.parent,
       promoted: {
         ...removed.value.removed,
+        status: promotedStatus ?? (removed.value.removed.status === 2 ? 2 : 0),
         parentTaskId: null,
       },
     },

@@ -198,26 +198,48 @@ Views may project domain data but must not persist parallel copies solely for pr
 Tasks and Events remain canonical entities.
 
 "Ações do dia", "Esta semana", and "Este mês" are projections of the
-canonical entities, not separate persisted copies. Task placement is derived
-from Task nature, lifecycle status, recurrence/date, daily execution, Event
-association, and favorable conditions. The old generic manual `Hoje` /
-`Esta semana` / `Este mês` planning model is legacy compatibility where it
-conflicts with the Task model; it is not a second canonical Task model.
+canonical root entities, not separate persisted copies. Task placement is
+derived from root Task nature, the three operational statuses, archive
+lifecycle, recurrence/date, occurrence completion, Event association, and
+root Task favorable conditions. The old generic manual `Hoje` / `Esta semana`
+/ `Este mês` planning model is legacy compatibility where it conflicts with
+the Task model; it is not a second canonical Task model.
 
-An in-focus Task has priority for the day projection without mutating its
-recurrence or legacy planning metadata, and a canonical Task must not appear
-twice across the visible action sections.
+Only root Tasks generate Projected Actions. Archived root Tasks are excluded
+from operational projections and recurring archived Tasks do not generate
+operational occurrences. An in-focus root Task has priority for the day
+projection without mutating its recurrence or legacy planning metadata, and a
+root Task must not appear twice across the visible action sections. Subtasks
+never generate independent Actions, including legacy rich Subtasks with their
+own schedule, planning, automation, Event association, or nested descendants.
+Projection evaluates root conditions once and emits at most one Action per
+root. A root Action's state comes from `getEffectiveTaskStatus(...)`, so a
+Supertask Action reflects the occurrence-scoped Subtask aggregate rather than
+the persisted parent status.
+
+Action completion for a simple root uses the canonical root status writer. A
+Supertask Action is a bulk semantic operation and must update the current
+occurrence's Subtasks; writing only the derived parent status is invalid. The
+Action surface reuses the same confirmation message and bulk writer as the
+global Supertask `Concluída` command; cancelling performs no write.
 
 Daily execution is distinct from Task lifecycle completion. Completing an
-action for today must not change the Task's lifecycle status, and a completed
-Task remains persistent and reopenable even when it is suppressed from active
-action projections.
+occurrence must not end a recurring Task. A completed Task remains persistent
+and may be archived or restored without changing its operational status.
 
 Automation rules evaluate favorable conditions and affect relevance or
 highlighting. They do not create occurrences, change lifecycle status, or
 silently remove an otherwise relevant/manual action when a condition is not
-matched. The effective visual state must respect lifecycle precedence before
-favorable-condition highlighting.
+matched. Conditions belong to root Tasks; they do not own Subtask checkboxes
+or create Subtask Actions. The effective visual state must respect lifecycle
+precedence before favorable-condition highlighting.
+
+For a Supertask, Subtasks are binary internal progress items. With at least
+one Subtask, aggregate status is the source of truth: all incomplete means
+`Não iniciada`, mixed means `Em foco`, and all complete means `Concluída`.
+Only `Não iniciada` and `Concluída` are global commands, both confirmed by the
+user; `Em foco` is derived from mixed progress. Recurring Subtask completion
+is scoped to the current occurrence, not reset indiscriminately at midnight.
 
 For the complete Task contract, including nature, recurrence, Event
 association, daily execution, and Task/Supertask/Subtask structure, see
@@ -277,6 +299,28 @@ Schema changes require:
 2. compatibility analysis;
 3. migration strategy when historical data is affected;
 4. tests for both current and legacy data when compatibility is retained.
+
+The Task archive marker is the root-level `archivedAt?: Timestamp` wire. An
+absent marker means Active; a valid Firestore Timestamp means Archived; and an
+invalid legacy value is ignored defensively. Archive writes the current
+Timestamp and restore deletes only the marker. It is never a fourth
+operational status. The occurrence-scoped Subtask wire is
+`lastCompletedOccurrenceDate?: string` using `YYYY-MM-DD` civil dates and the
+existing recurrence engine's boundaries. No occurrence document or generated
+occurrence identifier is introduced, and no bulk migration is performed.
+
+Recurring root status uses the existing root completion marker
+`lastActionCompletedDate?: string` plus the separate civil-date marker
+`lastFocusedOccurrenceDate?: string` for `Em foco`. Both are evaluated by the
+same occurrence-window helper. `getEffectiveTaskStatus(...)` is the read-safe
+boundary for status consumers; reconciliation may persist a stale effective
+status only after that derivation proves a new occurrence boundary. Archive
+freezes this operational reconciliation while preserving status and markers.
+
+New Subtasks are binary and deliberately lack root-Task capabilities such as
+nature, schedule, recurrence, planning, focus date, Event association,
+automation, conditions, and independent Actions. Hydration must preserve
+legacy rich Subtask fields defensively; it must not erase them incidentally.
 
 ## 12. Configuration and instance identity
 

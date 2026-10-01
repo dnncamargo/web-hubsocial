@@ -9,6 +9,8 @@ const readComponent = (name) => readFileSync(join(componentsRoot, name), 'utf8')
 
 const addTaskModal = readComponent('AddTaskModal.tsx')
 const editTaskModal = readComponent('EditTaskModal.tsx')
+const subtaskModal = readComponent('SubtaskModal.tsx')
+const tasksListPage = readComponent('../page.tsx')
 const scheduleControl = readFileSync(
   join(componentsRoot, '../../components/actions/TaskScheduleControl.tsx'),
   'utf8',
@@ -42,4 +44,14 @@ test('recurring schedule controls expose only frequency details and keep Event c
   assert.match(scheduleControl, /Diariamente/)
   assert.match(scheduleControl, /Semanalmente/)
   assert.match(scheduleControl, /Mensalmente/)
+})
+
+test('Subtask authoring uses the simple editor and canonical transient surface', () => {
+  assert.match(subtaskModal, /createCanonicalSubtask/)
+  assert.match(subtaskModal, /useOutsideDismiss/)
+  assert.match(subtaskModal, /Cancelar/)
+  assert.match(subtaskModal, /Salvar/)
+  assert.match(subtaskModal, /Limpar/)
+  assert.doesNotMatch(subtaskModal, /TaskNatureControl|TaskScheduleControl|ActionPlanningControl|AutomationRulesEditor|Event association/i)
+  assert.match(tasksListPage, /SubtaskModal/)
 })

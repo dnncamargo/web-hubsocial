@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  attachSubtask,
-  getDirectTaskEntries,
   promoteSubtask,
   removeSubtask,
   reorderSubtasks,
@@ -22,28 +20,14 @@ function task(id, extra = {}) {
 
 test('validates a root Task and a one-level Supertask', () => {
   const root = task('root')
-  const result = attachSubtask(root, task('child'))
-
   assert.deepEqual(validateTaskHierarchy(root), [])
-  assert.equal(result.ok, true)
-  if (!result.ok) return
-  assert.deepEqual(validateTaskHierarchy(result.value), [])
-  assert.equal(result.value.subtasks?.[0].parentTaskId, 'root')
+  assert.deepEqual(validateTaskHierarchy({
+    ...root,
+    subtasks: [task('child', { parentTaskId: 'root' })],
+  }), [])
 })
 
-test('supports multiple direct subtasks and exposes stable runtime identities', () => {
-  const root = task('root', {
-    subtasks: [task('one', { parentTaskId: 'root' }), task('two', { parentTaskId: 'root' })],
-  })
-
-  assert.equal(validateTaskHierarchy(root).length, 0)
-  assert.deepEqual(
-    getDirectTaskEntries([root]).map(entry => entry.identity),
-    ['root:root', 'subtask:root:one', 'subtask:root:two'],
-  )
-})
-
-test('rejects depth two, self-parent, duplicate IDs, and attaching a child target', () => {
+test('rejects depth two, self-parent, and duplicate IDs', () => {
   const nested = task('root', {
     subtasks: [task('child', {
       parentTaskId: 'root',
@@ -53,33 +37,12 @@ test('rejects depth two, self-parent, duplicate IDs, and attaching a child targe
   const depthIssues = validateTaskHierarchy(nested)
 
   assert.equal(depthIssues.some(issue => issue.code === 'nested-subtask'), true)
-  assert.equal(attachSubtask(task('child', { parentTaskId: 'root' }), task('new')).ok, false)
-  assert.equal(attachSubtask(task('root'), task('root')).ok, false)
-  assert.equal(
-    attachSubtask(task('root', { subtasks: [task('child', { parentTaskId: 'root' })] }), task('child')).ok,
-    false,
-  )
   assert.equal(
     validateTaskHierarchy(task('root', {
       subtasks: [task('same', { parentTaskId: 'root' }), task('same', { parentTaskId: 'root' })],
     })).some(issue => issue.code === 'duplicate-subtask-id'),
     true,
   )
-})
-
-test('attach preserves the child configuration and does not use groupId as hierarchy', () => {
-  const child = task('child', {
-    groupId: 'legacy-group',
-    schedule: { type: 'daily' },
-    eventAssociation: { eventId: 'event-1' },
-  })
-  const result = attachSubtask(task('root'), child)
-
-  assert.equal(result.ok, true)
-  if (!result.ok) return
-  assert.equal(result.value.subtasks?.[0].groupId, 'legacy-group')
-  assert.deepEqual(result.value.subtasks?.[0].schedule, { type: 'daily' })
-  assert.deepEqual(result.value.subtasks?.[0].eventAssociation, { eventId: 'event-1' })
 })
 
 test('promotion removes only the direct child and preserves its own configuration', () => {
@@ -99,9 +62,20 @@ test('promotion removes only the direct child and preserves its own configuratio
   if (!result.ok) return
   assert.deepEqual(result.value.parent.subtasks, [])
   assert.equal(result.value.promoted.parentTaskId, null)
-  assert.equal(result.value.promoted.status, 1)
+  assert.equal(result.value.promoted.status, 0)
   assert.deepEqual(result.value.promoted.schedule, { type: 'weekly' })
   assert.deepEqual(result.value.promoted.eventAssociation, { eventId: 'event-1' })
+})
+
+test('promotion can receive the effective occurrence status of the Subtask', () => {
+  const parent = task('root', {
+    subtasks: [task('child', { parentTaskId: 'root', status: 0 })],
+  })
+  const result = promoteSubtask(parent, 'child', 2)
+
+  assert.equal(result.ok, true)
+  if (!result.ok) return
+  assert.equal(result.value.promoted.status, 2)
 })
 
 test('promotion blocks legacy descendants instead of dropping them', () => {

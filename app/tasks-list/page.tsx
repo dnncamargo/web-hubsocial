@@ -13,11 +13,14 @@ import useCivilDate from '../hooks/useCivilDate'
 import AddTaskModal from './components/AddTaskModal'
 import TaskSection from './components/TaskSection'
 import EditTaskModal from './components/EditTaskModal'
+import SubtaskModal from './components/SubtaskModal'
 import {
   buildTaskFocusReconciliationUpdate,
   hydrateTask,
+  isTaskArchived,
 } from '../utils/taskPayload'
 import { reconcileTaskFocusTree } from '../utils/taskFocus'
+import { getEffectiveTaskStatus } from '../utils/taskSubtasks'
 import styles from './TasksList.module.css'
 
 export default function TasksList() {
@@ -29,7 +32,11 @@ export default function TasksList() {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-  const [selectedTaskParentId, setSelectedTaskParentId] = useState<string | null>(null)
+  const [showArchived, setShowArchived] = useState(false)
+  const [subtaskEditor, setSubtaskEditor] = useState<{
+    parent: Task
+    subtask?: Task
+  } | null>(null)
 
   useEffect(() => {
     if (uid) {
@@ -56,7 +63,7 @@ export default function TasksList() {
 
     const querySnapshot = await getDocs(tasksQuery)
     const fetchedTasks = querySnapshot.docs.map(snapshot =>
-      hydrateTask(snapshot.id, snapshot.data()),
+      hydrateTask(snapshot.id, snapshot.data(), civilDate),
     )
     const reconciledTasks = reconcileTaskFocusTree(fetchedTasks, civilDate)
 
@@ -87,9 +94,23 @@ export default function TasksList() {
   }
 
   const openEditTaskModal = (task: Task, parentTaskId?: string | null): void => {
+    if (parentTaskId) {
+      const parent = tasks.find(candidate => candidate.id === parentTaskId)
+      if (parent) setSubtaskEditor({ parent, subtask: task })
+      return
+    }
+
     setSelectedTask(task)
-    setSelectedTaskParentId(parentTaskId ?? null)
     setIsEditTaskModalOpen(true)
+  }
+
+  const updateTaskLocally = (updatedTask: Task): void => {
+    setTasks(previous => previous.map(task =>
+      task.id === updatedTask.id ? updatedTask : task))
+  }
+
+  const openCreateSubtaskModal = (parent: Task): void => {
+    setSubtaskEditor({ parent })
   }
 
   const sections = [
@@ -97,6 +118,12 @@ export default function TasksList() {
     { label: 'Em foco', status: 1 as const },
     { label: 'Concluídas', status: 2 as const },
   ]
+  const effectiveTasks = tasks.map(task => ({
+    ...task,
+    status: getEffectiveTaskStatus(task, civilDate),
+  }))
+  const activeTasks = effectiveTasks.filter(task => !isTaskArchived(task))
+  const archivedTasks = tasks.filter(task => isTaskArchived(task))
 
   return (
     <ProtectedRoute>
@@ -119,6 +146,15 @@ export default function TasksList() {
           </button>
         </header>
 
+        <label className={styles.archiveFilter}>
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(event) => setShowArchived(event.target.checked)}
+          />
+          Mostrar arquivadas
+        </label>
+
         {tasks.length === 0 ? (
           <p className={styles.emptyState}>Nenhuma tarefa cadastrada.</p>
         ) : (
@@ -128,13 +164,31 @@ export default function TasksList() {
                 key={status}
                 section={label}
                 status={status}
-                tasks={tasks.filter(task => task.status === status)}
+                tasks={activeTasks.filter(task => task.status === status)}
                 onEditTask={openEditTaskModal}
+                onCreateSubtask={openCreateSubtaskModal}
                 refreshTasks={fetchTasks}
+                updateTaskLocally={updateTaskLocally}
                 updateTasksLocally={(updatedTasks) =>
                   handleUpdateSectionTasks(status, updatedTasks)}
               />
             ))}
+          </div>
+        )}
+
+        {showArchived && archivedTasks.length > 0 && (
+          <div className={styles.archivedBoard}>
+            <TaskSection
+              section="Arquivadas"
+              status={0}
+              tasks={archivedTasks}
+              archived
+              onEditTask={openEditTaskModal}
+              onCreateSubtask={openCreateSubtaskModal}
+              refreshTasks={fetchTasks}
+              updateTaskLocally={updateTaskLocally}
+              updateTasksLocally={() => undefined}
+            />
           </div>
         )}
 
@@ -149,10 +203,19 @@ export default function TasksList() {
         {isEditTaskModalOpen && selectedTask && (
           <EditTaskModal
             task={selectedTask}
-            parentTaskId={selectedTaskParentId}
             isOpen={isEditTaskModalOpen}
             onClose={() => setIsEditTaskModalOpen(false)}
             onUpdated={fetchTasks}
+          />
+        )}
+
+        {subtaskEditor && (
+          <SubtaskModal
+            parent={subtaskEditor.parent}
+            subtask={subtaskEditor.subtask}
+            isOpen
+            onClose={() => setSubtaskEditor(null)}
+            onSaved={fetchTasks}
           />
         )}
       </main>
