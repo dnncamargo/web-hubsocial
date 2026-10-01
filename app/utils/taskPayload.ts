@@ -12,6 +12,10 @@ import type {
 } from '../types/tasks'
 import type { Task } from './interfaces'
 import {
+  applyTaskStatusTransition,
+  isValidCivilDate,
+} from './taskFocus.ts'
+import {
   deriveTaskNature,
   normalizeTaskSchedule,
 } from './taskSchedule.ts'
@@ -38,6 +42,7 @@ export interface TaskDocumentData {
   parentTaskId?: string | null
   createdAt?: Date | Timestamp
   lastActionCompletedDate?: string
+  focusedOnDate?: string
   actionPlanning?: ActionPlanning
   automation?: AutomationRuleSet
   schedule?: TaskSchedule
@@ -53,6 +58,7 @@ export interface TaskNestedDocument {
   parentTaskId?: string | null
   createdAt?: Date | Timestamp
   lastActionCompletedDate?: string
+  focusedOnDate?: string
   actionPlanning?: ActionPlanning
   automation?: AutomationRuleSet
   schedule?: TaskSchedule
@@ -68,6 +74,7 @@ export interface TaskPayloadInput {
   parentTaskId?: string | null
   createdAt?: Date | Timestamp
   lastActionCompletedDate?: string
+  focusedOnDate?: string
   actionPlanning?: ActionPlanning
   automation?: AutomationRuleSet
   schedule?: TaskSchedule
@@ -139,6 +146,14 @@ function resolveEventAssociation(
   return normalizeEventAssociation(value) ?? deriveEventAssociation(schedule)
 }
 
+function normalizeFocusedOnDate(
+  value: unknown,
+  nature: Task['nature'],
+  status: Task['status'],
+): string | undefined {
+  return nature === 'punctual' && status === 1 && isValidCivilDate(value) ? value : undefined
+}
+
 function serializeEventAssociation(
   association: TaskEventAssociation | undefined,
   schedule: TaskSchedule | undefined,
@@ -152,11 +167,13 @@ function normalizeSubtask(value: unknown): Task | null {
   if (!isRecord(value) || typeof value.id !== 'string') return null
 
   const schedule = normalizeTaskSchedule(value.schedule)
+  const nature = deriveTaskNature(schedule)
+  const status = normalizeStatus(value.status)
   return {
     id: value.id,
     content: typeof value.content === 'string' ? value.content : '',
-    status: normalizeStatus(value.status),
-    nature: deriveTaskNature(schedule),
+    status,
+    nature,
     ...(typeof value.groupId === 'string' ? { groupId: value.groupId } : {}),
     ...(Array.isArray(value.subtasks)
       ? { subtasks: value.subtasks.map(normalizeSubtask).filter((item): item is Task => item !== null) }
@@ -167,6 +184,9 @@ function normalizeSubtask(value: unknown): Task | null {
     ...(value.createdAt !== undefined ? { createdAt: value.createdAt as Task['createdAt'] } : {}),
     ...(typeof value.lastActionCompletedDate === 'string'
       ? { lastActionCompletedDate: value.lastActionCompletedDate }
+      : {}),
+    ...(normalizeFocusedOnDate(value.focusedOnDate, nature, status)
+      ? { focusedOnDate: normalizeFocusedOnDate(value.focusedOnDate, nature, status) }
       : {}),
     ...(isRecord(value.actionPlanning) ? { actionPlanning: value.actionPlanning as ActionPlanning } : {}),
     ...(normalizeAutomation(value.automation)
@@ -181,6 +201,8 @@ function normalizeSubtask(value: unknown): Task | null {
 
 export function hydrateTask(id: string, data: Record<string, unknown>): Task {
   const schedule = normalizeTaskSchedule(data.schedule)
+  const nature = deriveTaskNature(schedule)
+  const status = normalizeStatus(data.status)
   const rawSubtasks = Array.isArray(data.subtasks) ? data.subtasks : []
   const subtasks = Array.isArray(data.subtasks)
     ? data.subtasks.map(normalizeSubtask).filter((item): item is Task => item !== null)
@@ -190,8 +212,8 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
   const hydratedTask: Task = {
     id,
     content: typeof data.content === 'string' ? data.content : '',
-    status: normalizeStatus(data.status),
-    nature: deriveTaskNature(schedule),
+    status,
+    nature,
     ...(typeof data.order === 'number' ? { order: data.order } : {}),
     ...(typeof data.groupId === 'string' ? { groupId: data.groupId } : {}),
     subtasks,
@@ -201,6 +223,9 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
     ...(data.createdAt !== undefined ? { createdAt: data.createdAt as Task['createdAt'] } : {}),
     ...(typeof data.lastActionCompletedDate === 'string'
       ? { lastActionCompletedDate: data.lastActionCompletedDate }
+      : {}),
+    ...(normalizeFocusedOnDate(data.focusedOnDate, nature, status)
+      ? { focusedOnDate: normalizeFocusedOnDate(data.focusedOnDate, nature, status) }
       : {}),
     ...(isRecord(data.actionPlanning) ? { actionPlanning: data.actionPlanning as ActionPlanning } : {}),
     ...(normalizeAutomation(data.automation)
@@ -224,6 +249,7 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
 
 function serializeNestedTask(task: Task, expectedParentTaskId?: string): TaskNestedDocument {
   const schedule = normalizeTaskSchedule(task.schedule)
+  const nature = deriveTaskNature(schedule)
   const eventAssociation = serializeEventAssociation(task.eventAssociation, schedule)
 
   return {
@@ -241,6 +267,9 @@ function serializeNestedTask(task: Task, expectedParentTaskId?: string): TaskNes
     ...(task.lastActionCompletedDate !== undefined
       ? { lastActionCompletedDate: task.lastActionCompletedDate }
       : {}),
+    ...(normalizeFocusedOnDate(task.focusedOnDate, nature, task.status)
+      ? { focusedOnDate: normalizeFocusedOnDate(task.focusedOnDate, nature, task.status) }
+      : {}),
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
     ...(task.automation !== undefined ? { automation: task.automation } : {}),
     ...(schedule ? { schedule } : {}),
@@ -254,6 +283,7 @@ export function serializeTaskSubtask(task: Task): TaskNestedDocument {
 
 export function serializeTask(task: Task): TaskDocumentData {
   const schedule = normalizeTaskSchedule(task.schedule)
+  const nature = deriveTaskNature(schedule)
   const eventAssociation = serializeEventAssociation(task.eventAssociation, schedule)
 
   return {
@@ -267,6 +297,9 @@ export function serializeTask(task: Task): TaskDocumentData {
     ...(task.createdAt !== undefined ? { createdAt: task.createdAt } : {}),
     ...(task.lastActionCompletedDate !== undefined
       ? { lastActionCompletedDate: task.lastActionCompletedDate }
+      : {}),
+    ...(normalizeFocusedOnDate(task.focusedOnDate, nature, task.status)
+      ? { focusedOnDate: normalizeFocusedOnDate(task.focusedOnDate, nature, task.status) }
       : {}),
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
     ...(task.automation !== undefined ? { automation: task.automation } : {}),
@@ -293,6 +326,9 @@ export function buildTaskUpdate(input: Pick<TaskPayloadInput, 'content' | 'actio
     content: input.content.trim(),
     actionPlanning: input.actionPlanning ?? {},
     automation: input.automation ?? { match: 'all', rules: [] },
+    ...(deriveTaskNature(schedule) === 'recurring'
+      ? { focusedOnDate: deleteField() }
+      : {}),
     ...(schedule ? { schedule } : { schedule: deleteField() }),
     ...(eventAssociation
       ? { eventAssociation }
@@ -310,8 +346,14 @@ export function buildTaskDailyCompletionUpdate(
 
 export function buildTaskStatusUpdate(
   status: TaskStatus,
+  focusedOnDate?: string,
 ): UpdateData<TaskDocumentData> {
-  return { status }
+  return {
+    status,
+    ...(status === 1 && isValidCivilDate(focusedOnDate)
+      ? { focusedOnDate }
+      : { focusedOnDate: deleteField() }),
+  }
 }
 
 export function buildNestedTaskDailyCompletionUpdate(
@@ -331,11 +373,34 @@ export function buildNestedTaskStatusUpdate(
   parentTask: Task,
   subtaskId: string,
   status: TaskStatus,
+  focusedOnDate?: string,
 ): UpdateData<TaskDocumentData> | null {
-  const updatedParent = updateSubtask(parentTask, subtaskId, subtask => ({
-    ...subtask,
-    status,
-  }))
+  const updatedParent = updateSubtask(
+    parentTask,
+    subtaskId,
+    subtask => applyTaskStatusTransition(subtask, status, focusedOnDate),
+  )
 
   return updatedParent ? serializeTask(updatedParent) : null
+}
+
+export function buildTaskFocusReconciliationUpdate(
+  currentTask: Task,
+  reconciledTask: Task,
+): UpdateData<TaskDocumentData> | null {
+  const update: UpdateData<TaskDocumentData> = {}
+
+  if (currentTask.status !== reconciledTask.status) {
+    update.status = reconciledTask.status
+  }
+
+  if (currentTask.focusedOnDate !== reconciledTask.focusedOnDate) {
+    update.focusedOnDate = reconciledTask.focusedOnDate ?? deleteField()
+  }
+
+  if (currentTask.subtasks !== reconciledTask.subtasks) {
+    update.subtasks = serializeTask(reconciledTask).subtasks ?? []
+  }
+
+  return Object.keys(update).length > 0 ? update : null
 }

@@ -124,6 +124,20 @@ Em foco + NOT feita hoje → Não iniciada
 Em foco + feita hoje     → Concluída
 ```
 
+`Em foco` is a daily operational state for punctual Tasks, not a recurrence or
+completion record. The wire may carry `focusedOnDate` as the civil date
+(`YYYY-MM-DD`) on which that Task entered focus. On a later civil day, an open
+punctual focus returns to `Não iniciada` and the marker is removed. Legacy
+`Em foco` data without a marker is treated as focus for the current civil day
+and may receive the marker opportunistically when that document is read. A
+completed punctual Task keeps status `Concluída` on later days and has no focus
+marker.
+
+This rollover changes only lifecycle focus. Existing `actionPlanning` remains
+intact and may independently roll an old manual day plan into an Action for the
+current day. Without another valid planning or schedule rule, no Action is
+projected after the focus rollover.
+
 This rollover applies to punctual Tasks only. It does not turn the daily
 execution of a recurring Task into global lifecycle completion.
 
@@ -373,7 +387,9 @@ Task.
 The current persistence foundation keeps the existing `tasks-list` wire
 collection and its decided fields: `content`, numeric `status`, `order`,
 `createdAt`, hierarchy, legacy planning, automation/favorable conditions,
-daily execution, legacy `schedule` data, and canonical `eventAssociation`.
+daily execution, operational punctual focus date, legacy `schedule` data, and
+canonical `eventAssociation`. `focusedOnDate` is operational only: it is not
+recurrence, planning, completion, or Calendar data.
 Readers hydrate the
 Firestore document id separately
 from document data, and writers use an explicit whitelist, so the top-level

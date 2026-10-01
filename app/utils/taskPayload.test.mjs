@@ -5,6 +5,7 @@ import {
   buildNestedTaskDailyCompletionUpdate,
   buildNestedTaskStatusUpdate,
   buildTaskPayload,
+  buildTaskFocusReconciliationUpdate,
   buildTaskStatusUpdate,
   buildTaskUpdate,
   deriveTaskNature,
@@ -232,6 +233,25 @@ test('round-trips the decided nested hierarchy and association without using ids
   }])
 })
 
+test('round-trips the punctual operational focus date and rejects it for recurring tasks', () => {
+  const punctual = hydrateTask('punctual', {
+    content: 'Pontual em foco',
+    status: 1,
+    focusedOnDate: '2026-10-01',
+  })
+  const recurring = hydrateTask('recurring', {
+    content: 'Diária em foco',
+    status: 1,
+    focusedOnDate: '2026-10-01',
+    schedule: { type: 'daily' },
+  })
+
+  assert.equal(punctual.focusedOnDate, '2026-10-01')
+  assert.equal(serializeTask(punctual).focusedOnDate, '2026-10-01')
+  assert.equal(recurring.focusedOnDate, undefined)
+  assert.equal('focusedOnDate' in serializeTask(recurring), false)
+})
+
 test('hydrates malformed hierarchy defensively without dropping valid siblings or nested descendants', () => {
   const task = hydrateTask('parent-1', {
     content: 'Projeto',
@@ -278,12 +298,42 @@ test('builds explicit updates for schedule removal and daily completion changes'
     actionPlanning: {},
     automation: { match: 'all', rules: [] },
   })
+  const recurringUpdate = buildTaskUpdate({
+    content: 'Tarefa recorrente',
+    actionPlanning: {},
+    automation: { match: 'all', rules: [] },
+    schedule: { type: 'daily' },
+  })
   const completed = buildTaskDailyCompletionUpdate('2026-09-30')
   const cleared = buildTaskDailyCompletionUpdate(null)
 
   assert.equal(update.content, 'Tarefa editada')
   assert.equal('schedule' in update, true)
+  assert.equal('focusedOnDate' in recurringUpdate, true)
   assert.equal(completed.lastActionCompletedDate, '2026-09-30')
   assert.equal('lastActionCompletedDate' in cleared, true)
-  assert.deepEqual(buildTaskStatusUpdate(2), { status: 2 })
+  assert.equal(buildTaskStatusUpdate(2).status, 2)
+  assert.equal('focusedOnDate' in buildTaskStatusUpdate(2), true)
+})
+
+test('focus reconciliation emits only the changed root fields and canonical nested array', () => {
+  const current = hydrateTask('root', {
+    content: 'Projeto',
+    status: 1,
+    focusedOnDate: '2026-09-30',
+    subtasks: [{ id: 'child', content: 'Etapa', status: 1, focusedOnDate: '2026-09-30' }],
+  })
+  const reconciled = {
+    ...current,
+    status: 0,
+    focusedOnDate: undefined,
+    subtasks: [{ ...current.subtasks[0], status: 0, focusedOnDate: undefined }],
+  }
+  const update = buildTaskFocusReconciliationUpdate(current, reconciled)
+
+  assert.equal(update?.status, 0)
+  assert.equal('focusedOnDate' in update, true)
+  assert.equal('content' in update, false)
+  assert.equal(update?.subtasks?.[0].status, 0)
+  assert.equal(update?.subtasks?.[0].parentTaskId, 'root')
 })

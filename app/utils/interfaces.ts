@@ -55,6 +55,7 @@ export interface Task {
   parentTaskId?: string | null
   createdAt?: Date | Timestamp;
   lastActionCompletedDate?: string;
+  focusedOnDate?: string;
   actionPlanning?: ActionPlanning;
   automation?: AutomationRuleSet;
   schedule?: TaskSchedule;

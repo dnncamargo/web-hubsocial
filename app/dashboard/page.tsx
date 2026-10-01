@@ -27,14 +27,17 @@ import { ArrowUpRight, CalendarDays, Check, MapPin, Star, UserRound } from 'luci
 import { Link } from 'react-router';
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 import { usePageTitle } from '../hooks/usePageTitle'
+import useCivilDate from '../hooks/useCivilDate'
 import { formatDateTime } from '../utils/datePresentation'
 import {
   buildTaskDailyCompletionUpdate,
   buildNestedTaskDailyCompletionUpdate,
   buildNestedTaskStatusUpdate,
+  buildTaskFocusReconciliationUpdate,
   buildTaskStatusUpdate,
   hydrateTask,
 } from '../utils/taskPayload'
+import { reconcileTaskFocusTree } from '../utils/taskFocus'
 import { getDirectTaskEntries } from '../utils/taskHierarchy'
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
@@ -57,6 +60,7 @@ type GroupedEvents = {
 export default function Dashboard(): JSX.Element {
   const { uid } = useAuth(); /** @const {uid | null} uid - O usuário do Firebase autenticado. */
   usePageTitle('Hoje')
+  const civilDate = useCivilDate()
   const { categoryColors } = useEventCategories();
   const [person, setPerson] = useState<Person[]>([]); /** @state {Person[]} person - Array de pessoas buscadas do Firestore. */
   const [events, setEvents] = useState<GroupedEvents>({
@@ -87,7 +91,7 @@ export default function Dashboard(): JSX.Element {
     // Isso garante que a lista de pessoas e eventos seja carregada assim que o componente for exibido.
     if (uid) {
       fetchAndGroupEvents()
-      fetchPlannedActions()
+      fetchPlannedActions(undefined, civilDate)
       fetchPerson();
     }
 
@@ -95,7 +99,7 @@ export default function Dashboard(): JSX.Element {
       isMountedRef.current = false
       actionRequestIdRef.current += 1
     }
-  }, [uid]); // <- Executa quando user estiver pronto
+  }, [uid, civilDate]); // <- Executa quando user estiver pronto ou o dia civil mudar
 
   /**
   * @async
@@ -111,6 +115,7 @@ export default function Dashboard(): JSX.Element {
 
   const fetchPlannedActions = async (
     weatherOverride?: WeatherSnapshot | null,
+    currentCivilDate: string = format(new Date(), 'yyyy-MM-dd'),
   ): Promise<void> => {
     if (!uid) return
 
@@ -153,11 +158,24 @@ export default function Dashboard(): JSX.Element {
       getDocs(collection(db, `users/${uid}/tasks-list`)),
     ])
 
-    const tasks = taskSnapshot.docs.map(snapshot =>
+    const fetchedTasks = taskSnapshot.docs.map(snapshot =>
       hydrateTask(snapshot.id, snapshot.data()),
     )
+    const tasks = reconcileTaskFocusTree(fetchedTasks, currentCivilDate)
 
     if (!canCommit()) return
+
+    void Promise.all(
+      tasks.flatMap((task, index) => {
+        if (task === fetchedTasks[index]) return []
+        const update = buildTaskFocusReconciliationUpdate(fetchedTasks[index], task)
+        return update
+          ? [updateDoc(doc(db, `users/${uid}/tasks-list`, task.id), update)]
+          : []
+      }),
+    ).catch(error => {
+      console.error('Não foi possível persistir a virada de foco das tarefas:', error)
+    })
 
     const referencedEventIds = new Set<string>()
     const collectEventReferences = (source: PlannedActionSource) => {
@@ -213,7 +231,7 @@ export default function Dashboard(): JSX.Element {
 
     const projectedTaskActions = projectActionsForDate(
       tasks,
-      format(referenceDate, 'yyyy-MM-dd'),
+      currentCivilDate,
       { events: linkedEvents },
     )
 

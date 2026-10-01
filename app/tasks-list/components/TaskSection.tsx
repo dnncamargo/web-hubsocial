@@ -25,9 +25,14 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { Task } from '../../utils/interfaces'
 import {
   buildTaskDailyCompletionUpdate,
+  buildTaskStatusUpdate,
   hydrateTask,
   serializeTask,
 } from '../../utils/taskPayload'
+import {
+  applyTaskStatusTransition,
+  getCurrentCivilDate,
+} from '../../utils/taskFocus'
 import {
   attachSubtask,
   promoteSubtask,
@@ -65,8 +70,12 @@ export default function TaskSection({
     }),
   )
 
-  const resetDailyCompletion = (task: Task, newStatus: 0 | 1 | 2): Task => {
-    const updatedTask = { ...task, status: newStatus }
+  const resetDailyCompletion = (
+    task: Task,
+    newStatus: 0 | 1 | 2,
+    currentCivilDate: string,
+  ): Task => {
+    const updatedTask = applyTaskStatusTransition(task, newStatus, currentCivilDate)
     delete updatedTask.lastActionCompletedDate
     return updatedTask
   }
@@ -143,6 +152,7 @@ export default function TaskSection({
 
   const handleStatusSwitch = async (task: Task, newStatus: 0 | 1 | 2) => {
     if (!uid) return
+    const currentCivilDate = getCurrentCivilDate()
 
     const isParent = (task.subtasks?.length ?? 0) > 0
     const isSubtask = Boolean(task.parentTaskId)
@@ -150,7 +160,7 @@ export default function TaskSection({
     if (!isParent && !isSubtask) {
       await setDoc(
         doc(db, `users/${uid}/tasks-list`, task.id),
-        serializeTask(resetDailyCompletion(task, newStatus)),
+        serializeTask(resetDailyCompletion(task, newStatus, currentCivilDate)),
       )
       refreshTasks()
       return
@@ -163,8 +173,8 @@ export default function TaskSection({
       if (!confirmed) return
 
       const updatedTask = updateAllSubtasks(
-        resetDailyCompletion(task, newStatus),
-        subtask => resetDailyCompletion(subtask, newStatus),
+        resetDailyCompletion(task, newStatus, currentCivilDate),
+        subtask => resetDailyCompletion(subtask, newStatus, currentCivilDate),
       )
 
       await setDoc(doc(db, `users/${uid}/tasks-list`, task.id), serializeTask(updatedTask))
@@ -184,8 +194,8 @@ export default function TaskSection({
 
       if (updateParent) {
         const updatedParent = updateAllSubtasks(
-          resetDailyCompletion(parentTask, newStatus),
-          subtask => resetDailyCompletion(subtask, newStatus),
+          resetDailyCompletion(parentTask, newStatus, currentCivilDate),
+          subtask => resetDailyCompletion(subtask, newStatus, currentCivilDate),
         )
 
         await setDoc(
@@ -194,10 +204,11 @@ export default function TaskSection({
         )
       } else {
         if (await handlePromoteSubtask(task, parentTask.id)) {
+          const promotedTask = resetDailyCompletion(task, newStatus, currentCivilDate)
           await updateDoc(
             doc(db, `users/${uid}/tasks-list`, task.id),
             {
-              status: newStatus,
+              ...buildTaskStatusUpdate(promotedTask.status, promotedTask.focusedOnDate),
               ...buildTaskDailyCompletionUpdate(null),
             },
           )
