@@ -10,7 +10,6 @@ import type { TaskEventAssociation, TaskNature, TaskSchedule } from '../../types
 import { formatDate } from '../../utils/datePresentation'
 import {
   changeTaskFrequency,
-  changeTaskNature,
   changeWeeklyMode,
   toggleTaskWeekday,
 } from '../../utils/taskAuthoring'
@@ -20,7 +19,6 @@ interface TaskScheduleControlProps {
   uid: string
   nature: TaskNature
   value?: TaskSchedule
-  onNatureChange: (value: TaskNature) => void
   onChange: (value: TaskSchedule | undefined) => void
   eventAssociation?: TaskEventAssociation
   onEventAssociationChange: (value: TaskEventAssociation | undefined) => void
@@ -40,7 +38,6 @@ export default function TaskScheduleControl({
   uid,
   nature,
   value,
-  onNatureChange,
   onChange,
   eventAssociation,
   onEventAssociationChange,
@@ -89,11 +86,6 @@ export default function TaskScheduleControl({
       active = false
     }
   }, [uid])
-
-  const changeNature = (nextNature: TaskNature) => {
-    onNatureChange(nextNature)
-    onChange(changeTaskNature(value, nextNature))
-  }
 
   const selectFrequency = (frequency: string) => {
     if (frequency === 'daily' || frequency === 'weekly' || frequency === 'monthly') {
@@ -155,94 +147,85 @@ export default function TaskScheduleControl({
 
   return (
     <>
+      {nature === 'recurring' && (
+        <fieldset className={styles.fieldset}>
+          <legend className={styles.legend}>Com que frequência ela se repete?</legend>
+          <label className={styles.field}>
+            <span>Frequência</span>
+            <select
+              className={styles.select}
+              value={scheduleFrequency}
+              onChange={event => selectFrequency(event.currentTarget.value)}
+            >
+              <option value="daily">Diariamente</option>
+              <option value="weekly">Semanalmente</option>
+              <option value="monthly">Mensalmente</option>
+            </select>
+          </label>
+
+          {value?.type === 'weekly' && (
+            <div className={styles.detail}>
+              <label className={styles.field}>
+                <span>Forma semanal</span>
+                <select
+                  className={styles.select}
+                  value={weeklyMode}
+                  onChange={event => selectWeeklyMode(event.currentTarget.value)}
+                >
+                  <option value="flexible">Flexível</option>
+                  <option value="specific">Em dias específicos</option>
+                </select>
+              </label>
+
+              {weeklyMode === 'specific' && (
+                <div className={styles.weekdays}>
+                  {weekdays.map(weekday => (
+                    <label className={styles.weekday} key={weekday.value}>
+                      <input
+                        type="checkbox"
+                        checked={value.weekdays?.includes(weekday.value) ?? false}
+                        onChange={event =>
+                          toggleWeekday(weekday.value, event.currentTarget.checked)}
+                      />
+                      <span>{weekday.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {weeklyMode === 'flexible' && (
+                <p className={styles.hint}>Uma execução em qualquer dia da semana atual.</p>
+              )}
+            </div>
+          )}
+
+          {value?.type === 'monthly' && (
+            <label className={styles.field}>
+              <span>Dia do mês</span>
+              <input
+                className={styles.numberInput}
+                type="number"
+                min="1"
+                max="31"
+                value={value.dayOfMonth}
+                onChange={event => onChange({
+                  ...value,
+                  dayOfMonth: Math.max(1, Math.min(31, Number(event.currentTarget.value))),
+                })}
+              />
+              <p className={styles.hint}>Em meses menores, usa o último dia disponível.</p>
+            </label>
+          )}
+        </fieldset>
+      )}
+
       <fieldset className={styles.fieldset}>
-        <legend className={styles.legend}>Natureza e recorrência</legend>
+        <legend className={styles.legend}>Contexto / Event associado</legend>
         <p className={styles.description}>
-          A natureza define se a tarefa acontece uma vez ou se repete. O planejamento manual continua separado.
+          Use o Event como contexto ou como referência temporal da tarefa.
         </p>
 
-        <label className={styles.field}>
-          <span>Natureza</span>
-          <select
-            className={styles.select}
-            value={nature}
-            onChange={event => changeNature(event.currentTarget.value as TaskNature)}
-          >
-            <option value="punctual">Pontual</option>
-            <option value="recurring">Recorrente</option>
-          </select>
-        </label>
-
-        {nature === 'recurring' ? (
-          <>
-            <label className={styles.field}>
-              <span>Frequência</span>
-              <select
-                className={styles.select}
-                value={scheduleFrequency}
-                onChange={event => selectFrequency(event.currentTarget.value)}
-              >
-                <option value="daily">Diária</option>
-                <option value="weekly">Semanal</option>
-                <option value="monthly">Mensal</option>
-              </select>
-            </label>
-
-            {value?.type === 'weekly' && (
-              <div className={styles.detail}>
-                <label className={styles.field}>
-                  <span>Forma semanal</span>
-                  <select
-                    className={styles.select}
-                    value={weeklyMode}
-                    onChange={event => selectWeeklyMode(event.currentTarget.value)}
-                  >
-                    <option value="flexible">Flexível durante a semana</option>
-                    <option value="specific">Dias específicos</option>
-                  </select>
-                </label>
-
-                {weeklyMode === 'specific' && (
-                  <div className={styles.weekdays}>
-                    {weekdays.map(weekday => (
-                      <label className={styles.weekday} key={weekday.value}>
-                        <input
-                          type="checkbox"
-                          checked={value.weekdays?.includes(weekday.value) ?? false}
-                          onChange={event =>
-                            toggleWeekday(weekday.value, event.currentTarget.checked)}
-                        />
-                        <span>{weekday.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-
-                {weeklyMode === 'flexible' && (
-                  <p className={styles.hint}>Uma execução em qualquer dia da semana atual.</p>
-                )}
-              </div>
-            )}
-
-            {value?.type === 'monthly' && (
-              <label className={styles.field}>
-                <span>Dia do mês</span>
-                <input
-                  className={styles.numberInput}
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={value.dayOfMonth}
-                  onChange={event => onChange({
-                    ...value,
-                    dayOfMonth: Math.max(1, Math.min(31, Number(event.currentTarget.value))),
-                  })}
-                />
-                <p className={styles.hint}>Em meses menores, usa o último dia disponível.</p>
-              </label>
-            )}
-          </>
-        ) : (
+        {nature === 'punctual' && (
           <div className={styles.detail}>
             <label className={styles.field}>
               <span>Regra temporal (opcional)</span>
@@ -295,13 +278,7 @@ export default function TaskScheduleControl({
             )}
           </div>
         )}
-      </fieldset>
 
-      <fieldset className={styles.fieldset}>
-        <legend className={styles.legend}>Evento associado</legend>
-        <p className={styles.description}>
-          O vínculo fornece contexto e não altera a natureza ou a frequência da tarefa.
-        </p>
         <label className={styles.field}>
           <span>Evento associado</span>
           <select

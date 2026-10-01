@@ -114,4 +114,3 @@ test('nature is derived from schedule and never from lifecycle status', () => {
   assert.equal(getTaskNature(task(undefined, { status: 1 })), 'punctual')
   assert.equal(getTaskNature(task({ type: 'eventRelative', eventId: 'event-1', leadDays: 0 })), 'punctual')
 })
-
