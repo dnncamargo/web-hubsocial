@@ -554,11 +554,11 @@ Quick create routes to the existing Task, Event, and Person creation editors thr
 
 ### 6.7. Simple Subtasks and Task archiving
 
-**Status: DOMAIN/PERSISTENCE AND HIERARCHY AUTHORING IMPLEMENTED — ARCHIVE UI DEFERRED**
+**Status: IMPLEMENTED — DOMAIN, HIERARCHY AUTHORING, AND ARCHIVE UI**
 
-This work area implements the audited domain, persistence boundary, and
-canonical hierarchy authoring without adding Archive UI. It does not authorize
-a bulk migration.
+This work area implements the audited domain, persistence boundary, canonical
+hierarchy authoring, and Archive/Restore UI. It does not authorize a bulk
+migration.
 
 #### DECIDED
 
@@ -581,10 +581,10 @@ a bulk migration.
 - root-only Projected Actions and projection simplification; and
 - direct Subtask create/edit, binary checkbox, promotion, canonical delete,
   confirmed Supertask bulk commands, and confirmed Supertask Action completion.
-
-#### TO IMPLEMENT
-
-- archive filter and dedicated archived section in the UI.
+- confirmed Edit Task Archive/Restore actions;
+- the secondary `Mostrar arquivadas` filter and dedicated `Arquivadas` section;
+- archived-card interaction locks that preserve administrative Edit/Delete only;
+- archive-aware root list classification from the shared hydrated collection.
 
 #### LEGACY COMPATIBILITY
 

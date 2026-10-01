@@ -30,6 +30,7 @@ interface TaskCardProps {
   parentTaskId?: string | null
   onDelete: () => void
   refreshTasks: () => void
+  archived?: boolean
 }
 
 const statusMeta = {
@@ -64,6 +65,7 @@ export default function TaskCard({
   parentTaskId,
   onDelete,
   refreshTasks,
+  archived = false,
 }: TaskCardProps) {
   const { user } = useAuth()
   const {
@@ -74,7 +76,7 @@ export default function TaskCard({
     transition,
     setActivatorNodeRef,
     isDragging,
-  } = useSortable({ id: task.id })
+  } = useSortable({ id: task.id, disabled: archived })
 
   const [x, setX] = useState(0)
   const [showActionsOn, setShowActionsOn] = useState<'left' | 'right' | null>(null)
@@ -94,7 +96,7 @@ export default function TaskCard({
   }
 
   const showStatusActions = () => {
-    if (isSubtask) return
+    if (isSubtask || archived) return
     setX(threshold)
     setShowActionsOn('left')
   }
@@ -131,6 +133,7 @@ export default function TaskCard({
     styles.row,
     currentStatus.rowClassName,
     isSubtask ? styles.subtaskRow : '',
+    archived ? styles.archivedRow : '',
     isDragging ? styles.rowDragging : '',
   ].filter(Boolean).join(' ')
 
@@ -170,7 +173,7 @@ export default function TaskCard({
         <div className={styles.actionGroup}>
           {showActionsOn === 'right' && (
             <>
-              {isSubtask ? (
+              {isSubtask && !archived ? (
                 <button
                   type="button"
                   className={styles.actionButton}
@@ -180,7 +183,7 @@ export default function TaskCard({
                 >
                   <ArrowUpLeft className={styles.actionIcon} aria-hidden="true" />
                 </button>
-              ) : (
+              ) : !archived ? (
                 <button
                   type="button"
                   className={styles.actionButton}
@@ -193,7 +196,7 @@ export default function TaskCard({
                 >
                   <ListPlus className={styles.actionIcon} aria-hidden="true" />
                 </button>
-              )}
+              ) : null}
 
               <button
                 type="button"
@@ -247,10 +250,11 @@ export default function TaskCard({
         <button
           ref={setActivatorNodeRef}
           type="button"
-          {...attributes}
-          {...listeners}
+          {...(!archived ? attributes : {})}
+          {...(!archived ? listeners : {})}
           className={styles.gripButton}
           aria-label="Reordenar tarefa"
+          disabled={archived}
           onClick={(event) => event.stopPropagation()}
         >
           <GripVertical className={styles.gripIcon} aria-hidden="true" />
@@ -261,6 +265,7 @@ export default function TaskCard({
             type="checkbox"
             className={styles.subtaskCheckbox}
             checked={isCompleted}
+            disabled={archived}
             onChange={(event) => {
               event.stopPropagation()
               onToggleSubtask?.(event.target.checked)
@@ -269,18 +274,28 @@ export default function TaskCard({
             aria-label={isCompleted ? 'Subtask concluída' : 'Subtask não feita'}
           />
         ) : (
-          <button
-            type="button"
-            className={`${styles.statusButton} ${currentStatus.iconClassName}`}
-            onClick={(event) => {
-              event.stopPropagation()
-              showStatusActions()
-            }}
-            aria-label={`Status: ${currentStatus.label}. Alterar status`}
-            title={currentStatus.label}
-          >
-            <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
-          </button>
+          archived ? (
+            <span
+              className={`${styles.statusButton} ${currentStatus.iconClassName}`}
+              aria-label={`Status preservado: ${currentStatus.label}`}
+              title={`Status preservado: ${currentStatus.label}`}
+            >
+              <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
+            </span>
+          ) : (
+            <button
+              type="button"
+              className={`${styles.statusButton} ${currentStatus.iconClassName}`}
+              onClick={(event) => {
+                event.stopPropagation()
+                showStatusActions()
+              }}
+              aria-label={`Status: ${currentStatus.label}. Alterar status`}
+              title={currentStatus.label}
+            >
+              <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
+            </button>
+          )
         )}
 
         <span
@@ -290,6 +305,7 @@ export default function TaskCard({
         >
           {task.content}
           {isSubtask && <span className={styles.subtaskLabel}>Subtask</span>}
+          {archived && <span className={styles.archivedLabel}>Arquivada</span>}
         </span>
 
         <button

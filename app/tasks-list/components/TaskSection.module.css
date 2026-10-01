@@ -18,6 +18,14 @@
   border-top-color: var(--color-task-status-completed);
 }
 
+.archivedSection {
+  border-top-color: var(--color-text-muted);
+}
+
+.archivedSection .header::before {
+  background: var(--color-text-muted);
+}
+
 .header {
   position: relative;
   display: flex;

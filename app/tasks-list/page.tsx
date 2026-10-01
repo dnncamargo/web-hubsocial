@@ -17,6 +17,7 @@ import SubtaskModal from './components/SubtaskModal'
 import {
   buildTaskFocusReconciliationUpdate,
   hydrateTask,
+  isTaskArchived,
 } from '../utils/taskPayload'
 import { reconcileTaskFocusTree } from '../utils/taskFocus'
 import { getEffectiveTaskStatus } from '../utils/taskSubtasks'
@@ -31,6 +32,7 @@ export default function TasksList() {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [showArchived, setShowArchived] = useState(false)
   const [subtaskEditor, setSubtaskEditor] = useState<{
     parent: Task
     subtask?: Task
@@ -120,6 +122,8 @@ export default function TasksList() {
     ...task,
     status: getEffectiveTaskStatus(task, civilDate),
   }))
+  const activeTasks = effectiveTasks.filter(task => !isTaskArchived(task))
+  const archivedTasks = tasks.filter(task => isTaskArchived(task))
 
   return (
     <ProtectedRoute>
@@ -142,6 +146,15 @@ export default function TasksList() {
           </button>
         </header>
 
+        <label className={styles.archiveFilter}>
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(event) => setShowArchived(event.target.checked)}
+          />
+          Mostrar arquivadas
+        </label>
+
         {tasks.length === 0 ? (
           <p className={styles.emptyState}>Nenhuma tarefa cadastrada.</p>
         ) : (
@@ -151,7 +164,7 @@ export default function TasksList() {
                 key={status}
                 section={label}
                 status={status}
-                tasks={effectiveTasks.filter(task => task.status === status)}
+                tasks={activeTasks.filter(task => task.status === status)}
                 onEditTask={openEditTaskModal}
                 onCreateSubtask={openCreateSubtaskModal}
                 refreshTasks={fetchTasks}
@@ -160,6 +173,22 @@ export default function TasksList() {
                   handleUpdateSectionTasks(status, updatedTasks)}
               />
             ))}
+          </div>
+        )}
+
+        {showArchived && archivedTasks.length > 0 && (
+          <div className={styles.archivedBoard}>
+            <TaskSection
+              section="Arquivadas"
+              status={0}
+              tasks={archivedTasks}
+              archived
+              onEditTask={openEditTaskModal}
+              onCreateSubtask={openCreateSubtaskModal}
+              refreshTasks={fetchTasks}
+              updateTaskLocally={updateTaskLocally}
+              updateTasksLocally={() => undefined}
+            />
           </div>
         )}
 

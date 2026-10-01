@@ -15,8 +15,11 @@ import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
 import { TaskEventAssociation, TaskNature, TaskSchedule } from '../../types/tasks'
 import {
+  buildTaskArchiveUpdate,
+  buildTaskRestoreUpdate,
   buildTaskUpdate,
   hydrateTask,
+  isTaskArchived,
 } from '../../utils/taskPayload'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
@@ -233,6 +236,40 @@ export default function EditTaskModal({
     }
   }
 
+  const handleArchiveToggle = async () => {
+    if (isSaving || !uid) return
+
+    const archived = isTaskArchived(task)
+    if (!archived) {
+      const recurringMessage = task.nature === 'recurring'
+        ? '\n\nEnquanto estiver arquivada, novas ocorrências não serão projetadas.'
+        : ''
+      const confirmed = window.confirm(
+        `Arquivar esta tarefa?\n\nEla deixará de aparecer nas áreas de trabalho ativas.\nSeus dados serão preservados.${recurringMessage}`,
+      )
+      if (!confirmed) return
+    }
+
+    setSaveError('')
+    setIsSaving(true)
+
+    try {
+      await updateDoc(
+        doc(db, `users/${uid}/tasks-list`, task.id),
+        archived ? buildTaskRestoreUpdate() : buildTaskArchiveUpdate(),
+      )
+      onUpdated()
+      onClose()
+    } catch (error) {
+      console.error('Erro ao alterar o arquivamento da tarefa:', error)
+      setSaveError(error instanceof Error
+        ? error.message
+        : 'Não foi possível alterar o arquivamento da tarefa. Tente novamente.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const handleClear = () => {
     setContent(task.content)
     setActionPlanning(task.actionPlanning ?? {})
@@ -390,6 +427,29 @@ export default function EditTaskModal({
               Limpar
             </button>
           </div>
+
+          <section className={styles.archivePanel} aria-labelledby="task-archive-title">
+            <div>
+              <h3 id="task-archive-title" className={styles.archiveTitle}>
+                {isTaskArchived(task) ? 'Restaurar tarefa' : 'Arquivar tarefa'}
+              </h3>
+              <p className={styles.archiveDescription}>
+                {isTaskArchived(task)
+                  ? 'A tarefa voltará a aparecer nas áreas de trabalho ativas. Seus dados e seu status serão preservados.'
+                  : 'A tarefa deixará de aparecer nas áreas de trabalho ativas. Seus dados serão preservados.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              className={isTaskArchived(task)
+                ? styles.archiveRestoreButton
+                : styles.archiveButton}
+              onClick={() => void handleArchiveToggle()}
+              disabled={isSaving}
+            >
+              {isTaskArchived(task) ? 'Restaurar tarefa' : 'Arquivar tarefa'}
+            </button>
+          </section>
 
           {saveError && <p className={styles.error} role="alert">{saveError}</p>}
         </div>

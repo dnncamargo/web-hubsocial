@@ -201,8 +201,8 @@ to:
 archivedAt?: timestamp
 ```
 
-The exact wire field and timestamp type are intentionally deferred to the
-implementation audit. No bulk migration is implied by this decision.
+The implemented wire field is the root-level Firestore `Timestamp` marker
+`archivedAt?: Timestamp`. No bulk migration is implied by this decision.
 
 When the archive marker is present:
 
@@ -262,6 +262,17 @@ action:
 - archived Task → `Restaurar tarefa`.
 
 Both punctual and recurring Tasks support these actions.
+
+The current list implementation derives active and archived roots from the
+same hydrated collection. The secondary `Mostrar arquivadas` filter is off by
+default; when enabled it renders a separate `Arquivadas` section below the
+three operational sections. Archived cards preserve and display their
+operational status, but expose only administrative Edit/Delete actions. Their
+status controls, execution gestures, Subtask checkboxes, and `Criar subtask`
+action are disabled. Restore is available only inside Edit Task, and editing
+metadata does not restore the Task implicitly. A Supertask uses one root
+archive marker; its embedded Subtasks are archived and restored with the
+parent and never receive individual archive markers.
 
 ## 7. Actions are projections
 
@@ -675,6 +686,13 @@ valid legacy root capabilities without inheriting the parent's recurrence;
 deletion removes only the selected Subtask or, after explicit root warning,
 the root and its embedded Subtasks. Legacy nested descendants remain
 preserved defensively and do not acquire new authoring affordances.
+
+Archive/Restore is implemented as a confirmed secondary Edit Task action.
+Archive writes only `archivedAt`; Restore deletes only that marker. Neither
+operation changes status, recurrence, planning, Event association, favorable
+conditions, occurrence markers, or embedded Subtasks. Archived roots are not
+reconciled or projected while hidden, and restoring does not replay missed
+occurrences or create backfill.
 
 Date-only values use `YYYY-MM-DD` civil-date semantics and are never shifted
 through UTC. Invalid legacy schedules or unknown lifecycle values are hydrated

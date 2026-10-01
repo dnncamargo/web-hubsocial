@@ -53,6 +53,7 @@ interface TaskSectionProps {
   refreshTasks: () => void
   updateTaskLocally: (task: Task) => void
   updateTasksLocally: (tasks: Task[]) => void
+  archived?: boolean
 }
 
 export default function TaskSection({
@@ -64,6 +65,7 @@ export default function TaskSection({
   refreshTasks,
   updateTaskLocally,
   updateTasksLocally,
+  archived = false,
 }: TaskSectionProps) {
   const { uid } = useAuth()
 
@@ -297,6 +299,63 @@ export default function TaskSection({
   }
 
   if (!uid) return null
+
+  if (archived) {
+    return (
+      <section className={`${styles.section} ${styles.archivedSection}`}>
+        <header className={styles.header}>
+          <h2 className={styles.title}>{section}</h2>
+          <span className={styles.count}>{tasks.length}</span>
+        </header>
+
+        {tasks.length === 0 ? (
+          <p className={styles.empty}>Nenhuma tarefa arquivada.</p>
+        ) : (
+          <ul className={styles.list}>
+            {tasks.map(task => (
+              <li key={task.id} className={styles.taskGroup}>
+                <TaskCard
+                  task={task}
+                  archived
+                  onEditTask={onEditTask}
+                  onPromoteSubtask={() => undefined}
+                  onCreateSubtask={() => undefined}
+                  onStatusSwitch={() => undefined}
+                  parentTaskId={null}
+                  onDelete={() => void handleDeleteTask(task)}
+                  refreshTasks={refreshTasks}
+                />
+
+                {task.subtasks && task.subtasks.length > 0 && (
+                  <div className={styles.subtasks}>
+                    {task.subtasks.map(subtask => (
+                      <TaskCard
+                        key={subtask.id}
+                        task={subtask}
+                        archived
+                        onEditTask={onEditTask}
+                        onPromoteSubtask={() => undefined}
+                        onCreateSubtask={() => undefined}
+                        onStatusSwitch={() => undefined}
+                        subtaskCompleted={isSubtaskCompletedForOccurrence(
+                          task,
+                          subtask,
+                          getCurrentCivilDate(),
+                        )}
+                        parentTaskId={task.id}
+                        onDelete={() => void handleDeleteTask(subtask)}
+                        refreshTasks={refreshTasks}
+                      />
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    )
+  }
 
   const sectionClass = status === 0
     ? `${styles.section} ${styles.notStarted}`
