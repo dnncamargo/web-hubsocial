@@ -588,11 +588,36 @@ operational punctual focus date, legacy schedule data, Event association, and
 legacy completion data. Readers hydrate the Firestore document id separately
 from document data, and writers use an explicit whitelist.
 
-No archive wire field or occurrence-scoped Subtask completion field is frozen
-by this checkpoint. Both require an implementation audit against existing
-readers, writers, projections, and historical documents. In particular, do
-not implement `archivedAt` or a Subtask completion map by assumption, and do
-not perform a bulk migration.
+The implemented root archive wire is:
+
+```ts
+archivedAt?: Timestamp
+```
+
+An absent field hydrates as Active. A valid Firestore `Timestamp` hydrates as
+Archived. Invalid legacy values are ignored defensively without fabricating an
+archive marker, throwing during hydration, or writing during reads. Archive
+and restore use partial update builders: archive writes `Timestamp.now()` and
+restore deletes only `archivedAt`, preserving all other root fields.
+
+The implemented embedded Subtask occurrence wire is:
+
+```ts
+lastCompletedOccurrenceDate?: string // YYYY-MM-DD civil date
+```
+
+For recurring parents, the domain resolves that marker through the existing
+daily, weekly, flexible-week, and monthly recurrence engine. It does not use
+the marker as a simple `marker === today` check for every frequency. No
+occurrence document or generated occurrence identifier is persisted.
+
+New Subtask creation emits only the minimal binary shape. Legacy Subtask
+status `1` hydrates as effective status `0` while an internal compatibility
+marker preserves an untouched wire round-trip; explicit canonical status
+writes emit only `0` or `2`. Legacy rich fields and nested descendants remain
+defensively round-trippable when an embedded update is made.
+
+No bulk migration is performed.
 
 Date-only values use `YYYY-MM-DD` civil-date semantics and are never shifted
 through UTC. Invalid legacy schedules or unknown lifecycle values are hydrated

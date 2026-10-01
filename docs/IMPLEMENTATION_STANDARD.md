@@ -289,13 +289,14 @@ Schema changes require:
 3. migration strategy when historical data is affected;
 4. tests for both current and legacy data when compatibility is retained.
 
-The Task archive marker and occurrence-scoped Subtask completion wire are
-implementation-audit decisions, not assumptions to encode ahead of evidence.
-Prefer an optional archive timestamp equivalent to `archivedAt?: timestamp`
-over a fourth operational status, but confirm the exact wire against current
-readers, writers, projections, and historical documents first. Do not perform
-a bulk migration as part of a documentation or implementation checkpoint
-unless it is explicitly approved.
+The Task archive marker is the root-level `archivedAt?: Timestamp` wire. An
+absent marker means Active; a valid Firestore Timestamp means Archived; and an
+invalid legacy value is ignored defensively. Archive writes the current
+Timestamp and restore deletes only the marker. It is never a fourth
+operational status. The occurrence-scoped Subtask wire is
+`lastCompletedOccurrenceDate?: string` using `YYYY-MM-DD` civil dates and the
+existing recurrence engine's boundaries. No occurrence document or generated
+occurrence identifier is introduced, and no bulk migration is performed.
 
 New Subtasks are binary and deliberately lack root-Task capabilities such as
 nature, schedule, recurrence, planning, focus date, Event association,

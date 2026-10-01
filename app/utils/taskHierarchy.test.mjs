@@ -99,7 +99,7 @@ test('promotion removes only the direct child and preserves its own configuratio
   if (!result.ok) return
   assert.deepEqual(result.value.parent.subtasks, [])
   assert.equal(result.value.promoted.parentTaskId, null)
-  assert.equal(result.value.promoted.status, 1)
+  assert.equal(result.value.promoted.status, 0)
   assert.deepEqual(result.value.promoted.schedule, { type: 'weekly' })
   assert.deepEqual(result.value.promoted.eventAssociation, { eventId: 'event-1' })
 })

@@ -554,11 +554,11 @@ Quick create routes to the existing Task, Event, and Person creation editors thr
 
 ### 6.7. Simple Subtasks and Task archiving
 
-**Status: DOCUMENTATION CHECKPOINT — DECIDED / NEXT IMPLEMENTATION AREA**
+**Status: DOMAIN/PERSISTENCE FOUNDATION IMPLEMENTED — UI DEFERRED**
 
-This work area updates the normative product contract before production
-behavior changes. It does not authorize a bulk migration or freeze an exact
-new wire shape before the implementation audit.
+This work area implements the audited domain and persistence boundary without
+changing layout, card actions, or authoring UI. It does not authorize a bulk
+migration.
 
 #### DECIDED
 
@@ -568,13 +568,17 @@ new wire shape before the implementation audit.
 - recurring Subtask checklists are scoped to the current occurrence; and
 - Archive is independent of the three operational statuses.
 
+#### IMPLEMENTED
+
+- root `archivedAt?: Timestamp` archive/restore updates;
+- binary Subtask status interpretation and minimal factory;
+- `lastCompletedOccurrenceDate?: YYYY-MM-DD` for recurring Subtasks;
+- occurrence-scoped aggregate status and confirmed bulk-status primitives; and
+- defensive legacy rich-Subtask round-trip.
+
 #### TO IMPLEMENT
 
-- persistence boundary for archive and Subtask completion;
-- occurrence-scoped Subtask completion;
-- archive and restore;
-- direct create, edit, and promote flows;
-- parent aggregate status and confirmed bulk status commands;
+- direct create, edit, and promote UI flows;
 - root-only Projected Actions and projection simplification; and
 - archive filter and dedicated archived section in the UI.
 

@@ -37,7 +37,7 @@ test('weekly flexible form remains active across its civil week without creating
 
   assert.equal(validateTaskSchedule(weekly.schedule), true)
   assert.equal(isTaskScheduledForDate(weekly, '2026-10-01'), true)
-  assert.equal(getNextTaskOccurrence(weekly, '2026-10-01'), null)
+  assert.equal(getNextTaskOccurrence(weekly, '2026-10-01'), '2026-10-05')
 })
 
 test('weekly flexible recurrence uses a Monday-to-Sunday civil boundary', () => {

@@ -162,6 +162,7 @@ export function promoteSubtask(
       parent: removed.value.parent,
       promoted: {
         ...removed.value.removed,
+        status: removed.value.removed.status === 2 ? 2 : 0,
         parentTaskId: null,
       },
     },

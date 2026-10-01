@@ -2,6 +2,8 @@ import { WeekdayName } from './automation'
 
 export type TaskStatus = 0 | 1 | 2
 
+export type SubtaskStatus = 0 | 2
+
 export type TaskNature = 'punctual' | 'recurring'
 
 export interface TaskHierarchyIssue {

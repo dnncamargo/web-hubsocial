@@ -198,6 +198,41 @@ function getMonthlyOccurrenceForReference(
   )
 }
 
+/**
+ * Returns the occurrence date that owns a target civil date. Flexible weekly
+ * recurrence uses the target date as its completion marker and is interpreted
+ * by isTaskOccurrenceCompletedForDate at the Monday–Sunday week boundary.
+ */
+export function getTaskOccurrenceDateForDate(
+  task: Pick<Task, 'schedule'>,
+  targetDate: TaskScheduleDateInput,
+): string | null {
+  const targetKey = toCivilDateKey(targetDate)
+  const schedule = normalizeTaskSchedule(task.schedule)
+  if (!targetKey || !schedule) return null
+
+  if (schedule.type === 'daily') return targetKey
+
+  if (schedule.type === 'weekly') {
+    if (!schedule.weekdays || schedule.weekdays.length === 0) return targetKey
+
+    for (let offset = 0; offset <= 6; offset += 1) {
+      const candidate = addCivilDays(targetKey, -offset)
+      if (candidate && isTaskScheduledForDate({ schedule }, candidate)) return candidate
+    }
+
+    return null
+  }
+
+  if (schedule.type === 'monthly') {
+    const current = getMonthlyOccurrenceForReference(targetKey, schedule.dayOfMonth, 0)
+    if (current && current <= targetKey) return current
+    return getMonthlyOccurrenceForReference(targetKey, schedule.dayOfMonth, -1)
+  }
+
+  return null
+}
+
 function getEventRelativeDate(
   schedule: Extract<TaskSchedule, { type: 'eventRelative' }>,
   events: TaskScheduleEventContext[],
@@ -321,7 +356,10 @@ export function getNextTaskOccurrence(
   if (schedule.type === 'daily') return addCivilDays(afterKey, 1)
 
   if (schedule.type === 'weekly') {
-    if (!schedule.weekdays || schedule.weekdays.length === 0) return null
+    if (!schedule.weekdays || schedule.weekdays.length === 0) {
+      const weekKey = getCivilWeekKey(afterKey)
+      return weekKey ? addCivilDays(weekKey, 7) : null
+    }
 
     for (let offset = 1; offset <= 7; offset += 1) {
       const candidate = addCivilDays(afterKey, offset)

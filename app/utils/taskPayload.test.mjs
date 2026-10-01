@@ -276,7 +276,7 @@ test('hydrates malformed hierarchy defensively without dropping valid siblings o
   assert.equal(task.hierarchyIssues?.some(issue => issue.code === 'nested-subtask'), true)
 })
 
-test('nested completion writers update only the embedded child and preserve the parent', () => {
+test('nested completion writers update the child and derive the parent aggregate', () => {
   const parent = hydrateTask('parent-1', {
     content: 'Projeto',
     status: 1,
@@ -285,9 +285,9 @@ test('nested completion writers update only the embedded child and preserve the 
   const dailyUpdate = buildNestedTaskDailyCompletionUpdate(parent, 'child-1', '2026-10-01')
   const statusUpdate = buildNestedTaskStatusUpdate(parent, 'child-1', 2)
 
-  assert.equal(dailyUpdate?.status, 1)
-  assert.equal(dailyUpdate?.subtasks?.[0].lastActionCompletedDate, '2026-10-01')
-  assert.equal(statusUpdate?.status, 1)
+  assert.equal(dailyUpdate?.status, 2)
+  assert.equal('lastActionCompletedDate' in (dailyUpdate?.subtasks?.[0] ?? {}), false)
+  assert.equal(statusUpdate?.status, 2)
   assert.equal(statusUpdate?.subtasks?.[0].status, 2)
   assert.equal(statusUpdate?.subtasks?.[0].parentTaskId, 'parent-1')
 })
@@ -327,11 +327,16 @@ test('focus reconciliation emits only the changed root fields and canonical nest
     ...current,
     status: 0,
     focusedOnDate: undefined,
-    subtasks: [{ ...current.subtasks[0], status: 0, focusedOnDate: undefined }],
+    subtasks: [{
+      ...current.subtasks[0],
+      status: 0,
+      legacySubtaskStatus: undefined,
+      focusedOnDate: undefined,
+    }],
   }
   const update = buildTaskFocusReconciliationUpdate(current, reconciled)
 
-  assert.equal(update?.status, 0)
+  assert.equal('status' in update, false)
   assert.equal('focusedOnDate' in update, true)
   assert.equal('content' in update, false)
   assert.equal(update?.subtasks?.[0].status, 0)
