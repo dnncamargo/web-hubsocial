@@ -12,6 +12,11 @@ const taskSectionCss = readComponentFile('TaskSection.module.css')
 const taskSection = readComponentFile('TaskSection.tsx')
 const tasksListPage = readFileSync(join(componentsRoot, '../page.tsx'), 'utf8')
 const editTaskModal = readComponentFile('EditTaskModal.tsx')
+const taskEditorCss = readComponentFile('TaskEditor.module.css')
+const natureCss = readFileSync(join(componentsRoot, '../../components/actions/TaskNatureControl.module.css'), 'utf8')
+const planningCss = readFileSync(join(componentsRoot, '../../components/actions/ActionPlanningControl.module.css'), 'utf8')
+const scheduleCss = readFileSync(join(componentsRoot, '../../components/actions/TaskScheduleControl.module.css'), 'utf8')
+const automationCss = readFileSync(join(componentsRoot, '../../components/actions/AutomationRulesEditor.module.css'), 'utf8')
 const tokens = readFileSync(join(componentsRoot, '../../styles/tokens.css'), 'utf8')
 const dashboard = readFileSync(join(componentsRoot, '../../dashboard/page.tsx'), 'utf8')
 
@@ -78,4 +83,14 @@ test('Supertask status and Action completion share the confirmed bulk boundary',
   assert.match(dashboard, /getSupertaskStatusConfirmationMessage/)
   assert.match(dashboard, /buildSupertaskStatusUpdate/)
   assert.doesNotMatch(dashboard, /requer confirmação bulk da UI/)
+})
+
+test('Task authoring section shells are square while internal controls keep their radii', () => {
+  for (const css of [natureCss, planningCss, scheduleCss, automationCss]) {
+    assert.match(css, /\.fieldset\s*\{[\s\S]*?border-radius:\s*0;/)
+  }
+  assert.match(taskEditorCss, /\.conversionPanel\s*\{[\s\S]*?border-radius:\s*0;/)
+  assert.match(taskEditorCss, /\.disclosureButton\s*\{[\s\S]*?border-radius:\s*0;/)
+  assert.match(taskEditorCss, /\.input\s*\{[\s\S]*?border-radius:\s*var\(--radius-sm\);/)
+  assert.match(automationCss, /\.select,\s*\.numberInput\s*\{[\s\S]*?border-radius:\s*0\.375rem;/)
 })

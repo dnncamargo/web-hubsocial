@@ -192,13 +192,22 @@ const EditPersonModal = ({
         <form className={styles.form} onSubmit={handleUpdate}>
           <div className={styles.content}>
             <div className={styles.toolbar}>
-              <button type="button" onClick={handleDismiss} className={styles.toolbarButton}>
-                Cancelar
-              </button>
+              <div className={styles.toolbarStart}>
+                <button type="button" onClick={handleDismiss} className={styles.toolbarButton}>
+                  Cancelar
+                </button>
+                {editorDraft.canClearDraft && (
+                  <button type="button" onClick={handleClear} className={styles.toolbarButton}>
+                    Limpar
+                  </button>
+                )}
+              </div>
               <h2 id="edit-person-title" className={styles.toolbarTitle}>Editar pessoa</h2>
-              <button type="submit" className={styles.toolbarButton}>
-                Salvar
-              </button>
+              <div className={styles.toolbarEnd}>
+                <button type="submit" className={styles.toolbarButton}>
+                  Salvar
+                </button>
+              </div>
             </div>
 
             <PersonEditorFields
@@ -235,12 +244,6 @@ const EditPersonModal = ({
               showRelationshipsModal={showRelationshipsModal}
               setShowRelationshipsModal={setShowRelationshipsModal}
             />
-
-            <div className={styles.draftActions}>
-              <button type="button" onClick={handleClear} className={styles.textAction}>
-                Limpar
-              </button>
-            </div>
 
             {error && <p className={styles.error} role="alert">{error}</p>}
 

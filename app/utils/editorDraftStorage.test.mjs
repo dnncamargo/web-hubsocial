@@ -98,6 +98,8 @@ test('the shared lifecycle is used by all four editor modals', () => {
     assert.match(source, /clearDraft\(\)/)
     assert.match(source, /consumeAfterSave\(\)/)
     assert.match(source, />\s*Limpar\s*</)
+    assert.match(source, /toolbarStart/)
+    assert.doesNotMatch(source, /draftActions/)
   }
 })
 

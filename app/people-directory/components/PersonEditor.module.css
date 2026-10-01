@@ -35,7 +35,20 @@
   backdrop-filter: blur(8px);
 }
 
+.toolbarStart,
+.toolbarEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.toolbarEnd {
+  justify-self: end;
+}
+
 .toolbarTitle {
+  justify-self: center;
   margin: 0;
   color: var(--color-text-primary);
   font-size: 0.9375rem;
@@ -226,13 +239,6 @@
 
 .textAction {
   color: var(--color-people-strong);
-}
-
-.draftActions {
-  display: flex;
-  justify-content: flex-start;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--color-border);
 }
 
 .deleteRow {

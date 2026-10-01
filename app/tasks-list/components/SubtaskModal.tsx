@@ -123,11 +123,6 @@ export default function SubtaskModal({
     }
   }
 
-  const handleClear = () => {
-    setContent('')
-    setSaveError('')
-  }
-
   return (
     <motion.div
       className={styles.overlay}
@@ -174,12 +169,6 @@ export default function SubtaskModal({
               className={styles.input}
               autoFocus
             />
-          </div>
-
-          <div className={styles.draftActions}>
-            <button type="button" onClick={handleClear} className={styles.textAction}>
-              Limpar
-            </button>
           </div>
 
           {saveError && <p className={styles.error} role="alert">{saveError}</p>}

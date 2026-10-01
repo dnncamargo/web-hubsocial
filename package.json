@@ -10,7 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:auth": "node --test app/utils/authProfile.test.mjs",
-    "test:automation": "node --test app/utils/actionProjection.test.mjs app/utils/weather.test.mjs",
+    "test:automation": "node --test app/utils/actionProjection.test.mjs app/utils/automation.test.mjs app/utils/weather.test.mjs",
     "test:events": "node --test app/utils/eventPayload.test.mjs app/events-history/editorEntryPointsContract.test.mjs",
     "test:filters": "node --test app/events-history/utils/eventFilters.test.mjs",
     "test:colors": "node --test app/utils/entityColors.test.mjs",

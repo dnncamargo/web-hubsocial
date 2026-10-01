@@ -73,7 +73,7 @@
   gap: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--color-surface);
 }
 
@@ -86,7 +86,7 @@
 .datePanel {
   padding: var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--color-surface);
 }
 
@@ -229,7 +229,20 @@
   backdrop-filter: blur(8px);
 }
 
+.toolbarStart,
+.toolbarEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.toolbarEnd {
+  justify-self: end;
+}
+
 .toolbarTitle {
+  justify-self: center;
   margin: 0;
   color: var(--color-text-primary);
   font-size: 0.9375rem;
@@ -278,13 +291,6 @@
 
 .input::placeholder {
   color: var(--color-text-muted);
-}
-
-.draftActions {
-  display: flex;
-  justify-content: flex-start;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--color-border);
 }
 
 .archivePanel {
@@ -363,7 +369,7 @@
   min-height: 2.75rem;
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--color-surface-muted);
   color: var(--color-text-secondary);
   font: inherit;

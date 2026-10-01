@@ -5,6 +5,7 @@ import type {
   AutomationRule,
   AutomationRuleEvaluation,
   AutomationRuleSet,
+  DayPeriod,
   WeatherCondition,
   WeekdayName,
 } from '../types/automation.ts'
@@ -40,6 +41,91 @@ const weatherConditions = new Set<WeatherCondition>([
   'snowy',
   'stormy',
 ])
+const dayPeriods = new Set<DayPeriod>(['morning', 'afternoon', 'night'])
+const dayPeriodOrder = new Map<DayPeriod, number>([
+  ['morning', 0],
+  ['afternoon', 1],
+  ['night', 2],
+])
+
+export function normalizeDayPeriods(value: unknown): DayPeriod[] {
+  if (!Array.isArray(value)) return []
+
+  return Array.from(new Set(value.filter((period): period is DayPeriod =>
+    typeof period === 'string' && dayPeriods.has(period as DayPeriod))))
+    .sort((first, second) => dayPeriodOrder.get(first)! - dayPeriodOrder.get(second)!)
+}
+
+export function normalizeAutomationRule(value: unknown): AutomationRule | null {
+  if (!value || typeof value !== 'object') return null
+
+  const candidate = value as Record<string, unknown>
+  if (typeof candidate.id !== 'string' || typeof candidate.type !== 'string') return null
+
+  if (candidate.type === 'weekday') {
+    return Array.isArray(candidate.weekdays)
+      && candidate.weekdays.every((weekday) => weekdayNames.has(weekday as WeekdayName))
+      ? {
+          id: candidate.id,
+          type: 'weekday',
+          weekdays: candidate.weekdays as WeekdayName[],
+        }
+      : null
+  }
+
+  if (candidate.type === 'weather') {
+    return weatherConditions.has(candidate.condition as WeatherCondition)
+      ? {
+          id: candidate.id,
+          type: 'weather',
+          condition: candidate.condition as WeatherCondition,
+        }
+      : null
+  }
+
+  if (candidate.type === 'dayPeriod') {
+    const periods = normalizeDayPeriods(candidate.periods)
+    return periods.length > 0
+      ? { id: candidate.id, type: 'dayPeriod', periods }
+      : null
+  }
+
+  return candidate.type === 'upcomingEvent'
+    && typeof candidate.eventId === 'string'
+    && typeof candidate.withinDays === 'number'
+    ? {
+        id: candidate.id,
+        type: 'upcomingEvent',
+        eventId: candidate.eventId,
+        withinDays: candidate.withinDays,
+      }
+    : null
+}
+
+export function normalizeAutomationRuleSet(value: unknown): AutomationRuleSet | undefined {
+  if (!value || typeof value !== 'object') return undefined
+
+  const candidate = value as Record<string, unknown>
+  const rules = Array.isArray(candidate.rules)
+    ? candidate.rules
+      .map(normalizeAutomationRule)
+      .filter((rule): rule is AutomationRule => rule !== null)
+    : []
+
+  return {
+    match: candidate.match === 'any' ? 'any' : 'all',
+    rules,
+  }
+}
+
+export function getDayPeriod(date: Date): DayPeriod | undefined {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return undefined
+
+  const hour = date.getHours()
+  if (hour >= 6 && hour < 12) return 'morning'
+  if (hour >= 12 && hour < 18) return 'afternoon'
+  return 'night'
+}
 
 function evaluateRule(
   rule: AutomationRule,
@@ -80,6 +166,20 @@ function evaluateRule(
       ruleId,
       status:
         context.weather.condition === rule.condition ? 'matched' : 'notMatched',
+    }
+  }
+
+  if (rule.type === 'dayPeriod') {
+    const periods = normalizeDayPeriods(rule.periods)
+    if (periods.length === 0) {
+      return { ruleId, status: 'unresolved' }
+    }
+
+    return {
+      ruleId,
+      status: periods.includes(getDayPeriod(referenceDate) as DayPeriod)
+        ? 'matched'
+        : 'notMatched',
     }
   }
 

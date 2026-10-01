@@ -18,6 +18,7 @@ import {
   buildTaskArchiveUpdate,
   buildTaskRestoreUpdate,
   buildTaskUpdate,
+  getTaskAuthoringAutomation,
   hydrateTask,
   isTaskArchived,
 } from '../../utils/taskPayload'
@@ -27,7 +28,8 @@ import TaskNatureControl from '../../components/actions/TaskNatureControl'
 import TaskScheduleControl from '../../components/actions/TaskScheduleControl'
 import {
   changeTaskNature,
-  synchronizeUpcomingEventRule,
+  isTaskAuthoringDirty,
+  type TaskAuthoringState,
 } from '../../utils/taskAuthoring'
 import { OptionalField } from '../../types/optionalFields'
 import { buildEventPayload } from '../../utils/eventPayload'
@@ -78,14 +80,11 @@ export default function EditTaskModal({
     task.eventAssociation,
   )
   const [automation, setAutomation] = useState<AutomationRuleSet>(
-    task.automation ?? { match: 'all', rules: [] },
+    getTaskAuthoringAutomation(task),
   )
   const [showAssociatePersonModal, setShowAssociatePersonModal] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const [showConditions, setShowConditions] = useState(
-    (task.automation?.rules.length ?? 0) > 0,
-  )
   const dateControl = useEventDate()
   const {
     allDay,
@@ -112,8 +111,7 @@ export default function EditTaskModal({
     setNature(task.nature)
     setSchedule(task.schedule)
     setEventAssociation(task.eventAssociation)
-    setAutomation(task.automation ?? { match: 'all', rules: [] })
-    setShowConditions((task.automation?.rules.length ?? 0) > 0)
+    setAutomation(getTaskAuthoringAutomation(task))
     setAddingDate(false)
     setSaveError('')
     setShowAssociatePersonModal(false)
@@ -141,9 +139,9 @@ export default function EditTaskModal({
     setSchedule(changeTaskNature(schedule, nextNature))
   }
 
-  const handleEventAssociationChange = (nextAssociation: TaskEventAssociation | undefined) => {
-    setEventAssociation(nextAssociation)
-    setAutomation(current => synchronizeUpcomingEventRule(current, nextAssociation?.eventId))
+  const handleTaskEventChange = (eventId: string | undefined) => {
+    setEventAssociation(eventId ? { eventId } : undefined)
+    setSchedule(current => current?.type === 'eventRelative' ? undefined : current)
   }
 
   const validateEventSchedule = () => {
@@ -284,11 +282,30 @@ export default function EditTaskModal({
     setNature(task.nature)
     setSchedule(task.schedule)
     setEventAssociation(task.eventAssociation)
-    setAutomation(task.automation ?? { match: 'all', rules: [] })
+    setAutomation(getTaskAuthoringAutomation(task))
     setAddingDate(false)
-    setShowConditions((task.automation?.rules.length ?? 0) > 0)
     setSaveError('')
   }
+
+  const currentAuthoring: TaskAuthoringState = {
+    content,
+    nature,
+    actionPlanning,
+    schedule,
+    eventAssociation,
+    automation,
+    addingDate,
+  }
+  const baselineAuthoring: TaskAuthoringState = {
+    content: task.content,
+    nature: task.nature,
+    actionPlanning: task.actionPlanning ?? {},
+    schedule: task.schedule,
+    eventAssociation: task.eventAssociation,
+    automation: getTaskAuthoringAutomation(task),
+    addingDate: false,
+  }
+  const isDraftDirty = isTaskAuthoringDirty(currentAuthoring, baselineAuthoring)
 
   if (!isOpen || !uid) return null
 
@@ -311,18 +328,32 @@ export default function EditTaskModal({
       >
         <div className={styles.content}>
           <div className={styles.toolbar}>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSaving}
-              className={styles.toolbarButton}
-            >
-              Cancelar
-            </button>
+            <div className={styles.toolbarStart}>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSaving}
+                className={styles.toolbarButton}
+              >
+                Cancelar
+              </button>
+              {isDraftDirty && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  disabled={isSaving}
+                  className={styles.toolbarButton}
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
             <h2 id="edit-task-title" className={styles.toolbarTitle}>Editar tarefa</h2>
-            <button type="submit" disabled={isSaving} className={styles.toolbarButton}>
-              {isSaving ? 'Salvando...' : 'Salvar'}
-            </button>
+            <div className={styles.toolbarEnd}>
+              <button type="submit" disabled={isSaving} className={styles.toolbarButton}>
+                {isSaving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
           </div>
 
           <TaskNatureControl value={nature} onChange={handleNatureChange} />
@@ -348,12 +379,17 @@ export default function EditTaskModal({
           )}
 
           <TaskScheduleControl
-            uid={uid}
             nature={nature}
             value={schedule}
             onChange={setSchedule}
-            eventAssociation={eventAssociation}
-            onEventAssociationChange={handleEventAssociationChange}
+          />
+
+          <AutomationRulesEditor
+            uid={uid}
+            value={automation}
+            onChange={setAutomation}
+            mode="task"
+            onTaskEventChange={handleTaskEventChange}
           />
 
           <div className={styles.conversionPanel}>
@@ -409,32 +445,6 @@ export default function EditTaskModal({
                 </div>
               </>
             )}
-          </div>
-
-          <div className={styles.disclosure}>
-            <button
-              type="button"
-              className={styles.disclosureButton}
-              aria-expanded={showConditions}
-              onClick={() => setShowConditions(value => !value)}
-            >
-              <span>Condições favoráveis</span>
-              <span>{showConditions ? 'Ocultar' : 'Adicionar'}</span>
-            </button>
-            {showConditions && (
-              <AutomationRulesEditor
-                uid={uid}
-                value={automation}
-                onChange={setAutomation}
-                associatedEventId={eventAssociation?.eventId ?? null}
-              />
-            )}
-          </div>
-
-          <div className={styles.draftActions}>
-            <button type="button" onClick={handleClear} className={styles.textAction}>
-              Limpar
-            </button>
           </div>
 
           <section className={styles.archivePanel} aria-labelledby="task-archive-title">

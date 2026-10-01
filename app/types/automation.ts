@@ -11,6 +11,8 @@ export type WeekdayName =
 
 export type WeatherCondition = 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'stormy'
 
+export type DayPeriod = 'morning' | 'afternoon' | 'night'
+
 export type AutomationRule =
   | {
       id: string
@@ -21,6 +23,11 @@ export type AutomationRule =
       id: string
       type: 'weather'
       condition: WeatherCondition
+    }
+  | {
+      id: string
+      type: 'dayPeriod'
+      periods: DayPeriod[]
     }
   | {
       id: string

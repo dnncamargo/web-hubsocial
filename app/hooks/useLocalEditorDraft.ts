@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   clearEditorDraft,
   getEditorDraftKey,
@@ -28,31 +28,47 @@ export function useLocalEditorDraft<T>({
   callbacks.current = { getSnapshot, restoreSnapshot, resetState, isValid }
 
   const storageKey = getEditorDraftKey(scope)
+  const [hasDraft, setHasDraft] = useState(false)
 
   useEffect(() => {
-    if (!isOpen || !storageKey) return
+    if (!isOpen || !storageKey) {
+      setHasDraft(false)
+      return
+    }
 
     const draft = readEditorDraft<T>(scope, callbacks.current.isValid)
     if (draft) {
+      setHasDraft(true)
       callbacks.current.restoreSnapshot(draft)
       return
     }
 
+    setHasDraft(false)
     callbacks.current.resetState()
   }, [isOpen, storageKey])
 
   const saveOnDismiss = () => {
-    writeEditorDraft(scope, callbacks.current.getSnapshot())
+    if (writeEditorDraft(scope, callbacks.current.getSnapshot())) {
+      setHasDraft(true)
+    }
   }
 
   const clearDraft = () => {
     clearEditorDraft(scope)
+    setHasDraft(false)
     callbacks.current.resetState()
   }
 
   const consumeAfterSave = () => {
     clearEditorDraft(scope)
+    setHasDraft(false)
   }
 
-  return { saveOnDismiss, clearDraft, consumeAfterSave }
+  return {
+    saveOnDismiss,
+    clearDraft,
+    consumeAfterSave,
+    hasDraft,
+    canClearDraft: hasDraft,
+  }
 }

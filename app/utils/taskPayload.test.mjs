@@ -9,6 +9,7 @@ import {
   buildTaskStatusUpdate,
   buildTaskUpdate,
   deriveTaskNature,
+  getTaskAuthoringAutomation,
   hydrateTask,
   serializeTask,
 } from './taskPayload.ts'
@@ -145,6 +146,15 @@ test('canonical association wins defensively when it conflicts with legacy event
   assert.deepEqual(serializeTask(task), {
     content: 'Conflito',
     status: 0,
+    automation: {
+      match: 'all',
+      rules: [{
+        id: 'task-event-condition',
+        type: 'upcomingEvent',
+        eventId: 'event-canonical',
+        withinDays: 2,
+      }],
+    },
     eventAssociation: { eventId: 'event-canonical' },
     schedule: { type: 'eventRelative', eventId: 'event-canonical', leadDays: 2 },
   })
@@ -221,7 +231,16 @@ test('serializes independent association for punctual and recurring tasks', () =
     content: 'Pontual',
     status: 0,
     eventAssociation: association,
-  }).eventAssociation, association)
+  }), {
+    content: 'Pontual',
+    status: 0,
+    automation: {
+      match: 'all',
+      rules: [{ id: 'task-event-condition', type: 'upcomingEvent', eventId: 'event-1', withinDays: 3 }],
+    },
+    schedule: { type: 'eventRelative', eventId: 'event-1', leadDays: 3 },
+    eventAssociation: association,
+  })
 
   assert.deepEqual(buildTaskPayload({
     content: 'Diária',
@@ -230,6 +249,10 @@ test('serializes independent association for punctual and recurring tasks', () =
     eventAssociation: association,
   }), {
     content: 'Diária',
+    automation: {
+      match: 'all',
+      rules: [{ id: 'task-event-condition', type: 'upcomingEvent', eventId: 'event-1', withinDays: 3 }],
+    },
     status: 0,
     eventAssociation: association,
     schedule: { type: 'daily' },
@@ -274,7 +297,7 @@ test('Event-dependent writers synchronize to the association and never include l
   assert.equal('leadDays' in payload.eventAssociation, false)
 })
 
-test('editing an associated Event updates both materialized consumers without changing their windows', () => {
+test('editing the canonical Event condition updates every materialized consumer', () => {
   const update = buildTaskUpdate({
     content: 'Antes do novo evento',
     actionPlanning: {},
@@ -291,7 +314,7 @@ test('editing an associated Event updates both materialized consumers without ch
 
   assert.deepEqual(update.eventAssociation, { eventId: 'event-b' })
   assert.deepEqual(update.schedule, {
-    type: 'eventRelative', eventId: 'event-b', leadDays: 14,
+    type: 'eventRelative', eventId: 'event-b', leadDays: 3,
   })
   assert.deepEqual(update.automation, {
     match: 'all',
@@ -302,7 +325,7 @@ test('editing an associated Event updates both materialized consumers without ch
   })
 })
 
-test('removing the association removes only Event-dependent capabilities', () => {
+test('removing the Event condition removes only Event-dependent capabilities', () => {
   const update = buildTaskUpdate({
     content: 'Sem Event',
     actionPlanning: { day: '2026-10-01' },
@@ -311,10 +334,9 @@ test('removing the association removes only Event-dependent capabilities', () =>
       rules: [
         { id: 'weekday', type: 'weekday', weekdays: ['monday'] },
         { id: 'weather', type: 'weather', condition: 'rainy' },
-        { id: 'event', type: 'upcomingEvent', eventId: 'event-hidden', withinDays: 3 },
       ],
     },
-    schedule: { type: 'eventRelative', eventId: 'event-hidden', leadDays: 14 },
+    schedule: undefined,
     eventAssociation: undefined,
   })
 
@@ -330,20 +352,98 @@ test('removing the association removes only Event-dependent capabilities', () =>
   assert.equal(update.schedule?.type, undefined)
 })
 
-test('new Task payloads cannot persist Event-dependent capabilities without an association', () => {
+test('incomplete Event conditions cannot persist Event-dependent capabilities', () => {
   const payload = buildTaskPayload({
     content: 'Sem contexto',
     status: 0,
-    schedule: { type: 'eventRelative', eventId: 'event-hidden', leadDays: 14 },
     automation: {
       match: 'all',
-      rules: [{ id: 'event', type: 'upcomingEvent', eventId: 'event-hidden', withinDays: 3 }],
+      rules: [{ id: 'event', type: 'upcomingEvent', eventId: '', withinDays: 3 }],
     },
   })
 
   assert.equal(payload.schedule, undefined)
   assert.equal(payload.eventAssociation, undefined)
   assert.deepEqual(payload.automation, { match: 'all', rules: [] })
+})
+
+test('legacy Event forms hydrate into one authoring condition without read-time migration', () => {
+  const relativeOnly = hydrateTask('relative-only', {
+    content: 'Legacy relative',
+    status: 0,
+    schedule: { type: 'eventRelative', eventId: 'event-a', leadDays: 14 },
+  })
+  const upcomingOnly = hydrateTask('upcoming-only', {
+    content: 'Legacy upcoming',
+    status: 0,
+    automation: {
+      match: 'all',
+      rules: [{ id: 'event', type: 'upcomingEvent', eventId: 'event-a', withinDays: 5 }],
+    },
+  })
+  const divergent = hydrateTask('divergent', {
+    content: 'Legacy divergent',
+    status: 0,
+    schedule: { type: 'eventRelative', eventId: 'event-a', leadDays: 25 },
+    automation: {
+      match: 'all',
+      rules: [{ id: 'event', type: 'upcomingEvent', eventId: 'event-a', withinDays: 3 }],
+    },
+  })
+
+  assert.deepEqual(
+    getTaskAuthoringAutomation(relativeOnly).rules.find(rule => rule.type === 'upcomingEvent'),
+    { id: 'legacy-event-condition', type: 'upcomingEvent', eventId: 'event-a', withinDays: 14 },
+  )
+  assert.equal(
+    getTaskAuthoringAutomation(upcomingOnly).rules.find(rule => rule.type === 'upcomingEvent').withinDays,
+    5,
+  )
+  assert.equal(
+    getTaskAuthoringAutomation(divergent).rules.find(rule => rule.type === 'upcomingEvent').withinDays,
+    3,
+  )
+  assert.equal(divergent.schedule.leadDays, 25)
+})
+
+test('canonical Event condition synchronizes every root consumer and preserves recurrence', () => {
+  const punctual = buildTaskPayload({
+    content: 'Pontual',
+    status: 0,
+    automation: {
+      match: 'all',
+      rules: [{ id: 'event', type: 'upcomingEvent', eventId: 'event-a', withinDays: 3 }],
+    },
+  })
+  const updated = buildTaskUpdate({
+    content: 'Pontual',
+    actionPlanning: {},
+    automation: {
+      match: 'all',
+      rules: [{ id: 'event', type: 'upcomingEvent', eventId: 'event-b', withinDays: 7 }],
+    },
+    eventAssociation: { eventId: 'event-b' },
+  })
+  const recurring = buildTaskPayload({
+    content: 'Recorrente',
+    status: 0,
+    schedule: { type: 'weekly', weekdays: ['monday'] },
+    automation: {
+      match: 'all',
+      rules: [{ id: 'event', type: 'upcomingEvent', eventId: 'event-a', withinDays: 3 }],
+    },
+  })
+
+  assert.deepEqual(punctual.eventAssociation, { eventId: 'event-a' })
+  assert.deepEqual(punctual.schedule, {
+    type: 'eventRelative', eventId: 'event-a', leadDays: 3,
+  })
+  assert.deepEqual(updated.eventAssociation, { eventId: 'event-b' })
+  assert.deepEqual(updated.schedule, {
+    type: 'eventRelative', eventId: 'event-b', leadDays: 7,
+  })
+  assert.equal(updated.automation.rules.find(rule => rule.type === 'upcomingEvent').withinDays, 7)
+  assert.deepEqual(recurring.schedule, { type: 'weekly', weekdays: ['monday'] })
 })
 
 test('round-trips the decided nested hierarchy and association without using ids interchangeably', () => {

@@ -5,6 +5,7 @@ import type {
   AutomationRule,
   AutomationRuleSet,
 } from '../types/automation'
+import { normalizeAutomationRule, normalizeAutomationRuleSet } from './automation.ts'
 import type {
   TaskEventAssociation,
   TaskSchedule,
@@ -31,16 +32,6 @@ import {
 } from './taskSubtasks.ts'
 
 export { deriveTaskNature } from './taskSchedule.ts'
-
-const weekdayNames = new Set([
-  'sunday',
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-])
 
 export interface TaskDocumentData {
   content: string
@@ -113,35 +104,11 @@ function normalizeArchivedAt(value: unknown): Timestamp | undefined {
 }
 
 function isAutomationRule(value: unknown): value is AutomationRule {
-  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.type !== 'string') {
-    return false
-  }
-
-  if (value.type === 'weekday') {
-    return Array.isArray(value.weekdays)
-      && value.weekdays.every(weekday => typeof weekday === 'string' && weekdayNames.has(weekday))
-  }
-
-  if (value.type === 'weather') {
-    return ['sunny', 'cloudy', 'rainy', 'snowy', 'stormy'].includes(String(value.condition))
-  }
-
-  return value.type === 'upcomingEvent'
-    && typeof value.eventId === 'string'
-    && typeof value.withinDays === 'number'
+  return normalizeAutomationRule(value) !== null
 }
 
 function normalizeAutomation(value: unknown): AutomationRuleSet | undefined {
-  if (!isRecord(value)) return undefined
-
-  const rules = Array.isArray(value.rules)
-    ? value.rules.filter(isAutomationRule)
-    : []
-
-  return {
-    match: value.match === 'any' ? 'any' : 'all',
-    rules,
-  }
+  return normalizeAutomationRuleSet(value)
 }
 
 function synchronizeAutomationEvent(
@@ -170,6 +137,70 @@ function normalizeEventAssociation(value: unknown): TaskEventAssociation | undef
   return { eventId: value.eventId.trim() }
 }
 
+const DEFAULT_EVENT_WITHIN_DAYS = 3
+
+function normalizeEventWindow(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined
+  return Math.max(0, Math.min(365, Math.trunc(value)))
+}
+
+function getUpcomingEventRule(
+  automation: AutomationRuleSet | undefined,
+): Extract<AutomationRule, { type: 'upcomingEvent' }> | undefined {
+  const rule = automation?.rules.find(candidate => candidate.type === 'upcomingEvent')
+  if (rule?.type !== 'upcomingEvent' || rule.eventId.trim() === '') return undefined
+  return rule
+}
+
+function removeUpcomingEventRule(
+  automation: AutomationRuleSet | undefined,
+): AutomationRuleSet | undefined {
+  if (!automation) return undefined
+  return {
+    ...automation,
+    rules: automation.rules.filter(rule => rule.type !== 'upcomingEvent'),
+  }
+}
+
+/**
+ * Returns the single Event condition shown by Edit Task, including the
+ * legacy punctual event-relative form when its automation rule is absent.
+ */
+export function getTaskAuthoringAutomation(
+  task: Pick<Task, 'automation' | 'eventAssociation' | 'schedule'>,
+): AutomationRuleSet {
+  const automation = task.automation ?? { match: 'all' as const, rules: [] }
+  const existingRule = getUpcomingEventRule(automation)
+  const explicitEventId = normalizeEventAssociation(task.eventAssociation)?.eventId
+  if (existingRule && (!explicitEventId || existingRule.eventId === explicitEventId)) {
+    return automation
+  }
+
+  const eventId = explicitEventId
+    ?? existingRule?.eventId
+    ?? deriveEventAssociation(task.schedule)?.eventId
+  if (!eventId) return automation
+
+  const leadDays = normalizeEventWindow(existingRule?.withinDays)
+    ?? (task.schedule?.type === 'eventRelative'
+      ? normalizeEventWindow(task.schedule.leadDays)
+      : undefined)
+    ?? DEFAULT_EVENT_WITHIN_DAYS
+
+  return {
+    ...automation,
+    rules: [
+      ...automation.rules.filter(rule => rule.type !== 'upcomingEvent'),
+      {
+        id: 'legacy-event-condition',
+        type: 'upcomingEvent',
+        eventId,
+        withinDays: leadDays,
+      },
+    ],
+  }
+}
+
 function resolveEventAssociation(
   value: unknown,
   schedule: TaskSchedule | undefined,
@@ -183,7 +214,7 @@ function resolveEventAssociation(
 
   const upcomingEvent = automation?.rules.find(rule => rule.type === 'upcomingEvent')
   return upcomingEvent?.type === 'upcomingEvent'
-    ? { eventId: upcomingEvent.eventId }
+    ? normalizeEventAssociation({ eventId: upcomingEvent.eventId })
     : undefined
 }
 
@@ -193,16 +224,6 @@ function normalizeFocusedOnDate(
   status: Task['status'],
 ): string | undefined {
   return nature === 'punctual' && status === 1 && isValidCivilDate(value) ? value : undefined
-}
-
-function serializeEventAssociation(
-  association: TaskEventAssociation | undefined,
-  schedule: TaskSchedule | undefined,
-  automation?: AutomationRuleSet,
-): TaskEventAssociation | undefined {
-  return normalizeEventAssociation(association)
-    ?? deriveEventAssociation(schedule)
-    ?? resolveEventAssociation(undefined, undefined, automation)
 }
 
 export function isTaskArchived(task: Pick<Task, 'archivedAt'>): boolean {
@@ -368,12 +389,14 @@ export function serializeTask(
   task: Task,
   targetDate: string = getCurrentCivilDate(),
 ): TaskDocumentData {
-  const rawSchedule = normalizeTaskSchedule(task.schedule)
-  const eventAssociation = serializeEventAssociation(task.eventAssociation, rawSchedule, task.automation)
-  const schedule = rawSchedule?.type === 'eventRelative' && eventAssociation
-    ? { ...rawSchedule, eventId: eventAssociation.eventId }
-    : rawSchedule
-  const automation = synchronizeAutomationEvent(task.automation, eventAssociation?.eventId)
+  const eventContext = canonicalizeTaskAuthoringEventContext(
+    task.eventAssociation,
+    normalizeTaskSchedule(task.schedule),
+    task.automation,
+  )
+  const eventAssociation = eventContext.eventAssociation
+  const schedule = eventContext.schedule
+  const automation = eventContext.automation
   const nature = deriveTaskNature(schedule)
   const effectiveStatus = getEffectiveTaskStatus(task, targetDate)
 
@@ -405,7 +428,7 @@ export function serializeTask(
   }
 }
 
-function canonicalizeTaskAuthoringEventContext(
+export function canonicalizeTaskAuthoringEventContext(
   association: TaskEventAssociation | undefined,
   schedule: TaskSchedule | undefined,
   automation: AutomationRuleSet | undefined,
@@ -414,17 +437,71 @@ function canonicalizeTaskAuthoringEventContext(
   schedule?: TaskSchedule
   automation?: AutomationRuleSet
 } {
+  const normalizedSchedule = normalizeTaskSchedule(schedule)
+  const upcomingRule = automation?.rules.find(rule => rule.type === 'upcomingEvent')
+  const hasIncompleteUpcomingRule = upcomingRule?.type === 'upcomingEvent'
+    && upcomingRule.eventId.trim() === ''
+  const nonEventSchedule = normalizedSchedule?.type === 'eventRelative'
+    ? undefined
+    : normalizedSchedule
+
+  if (hasIncompleteUpcomingRule) {
+    return {
+      ...(nonEventSchedule ? { schedule: nonEventSchedule } : {}),
+      ...(removeUpcomingEventRule(automation)
+        ? { automation: removeUpcomingEventRule(automation) }
+        : {}),
+    }
+  }
+
+  const visibleRule = getUpcomingEventRule(automation)
   const eventAssociation = normalizeEventAssociation(association)
-  const nextSchedule = eventAssociation && schedule?.type === 'eventRelative'
-    ? { ...schedule, eventId: eventAssociation.eventId }
-    : schedule?.type === 'eventRelative' ? undefined : schedule
+    ?? normalizeEventAssociation(visibleRule
+      ? { eventId: visibleRule.eventId }
+      : undefined)
+    ?? deriveEventAssociation(normalizedSchedule)
+
+  if (!eventAssociation) {
+    return {
+      ...(nonEventSchedule ? { schedule: nonEventSchedule } : {}),
+      ...(removeUpcomingEventRule(automation)
+        ? { automation: removeUpcomingEventRule(automation) }
+        : {}),
+    }
+  }
+
+  const withinDays = normalizeEventWindow(visibleRule?.withinDays)
+    ?? (normalizedSchedule?.type === 'eventRelative'
+      ? normalizeEventWindow(normalizedSchedule.leadDays)
+      : undefined)
+    ?? DEFAULT_EVENT_WITHIN_DAYS
+  const eventRule = {
+    id: visibleRule?.id ?? 'task-event-condition',
+    type: 'upcomingEvent' as const,
+    eventId: eventAssociation.eventId,
+    withinDays,
+  }
+  const baseAutomation = automation ?? { match: 'all' as const, rules: [] }
+  const nextAutomation: AutomationRuleSet = {
+    ...baseAutomation,
+    rules: [
+      ...baseAutomation.rules.filter(rule => rule.type !== 'upcomingEvent'),
+      eventRule,
+    ],
+  }
+  const nextSchedule = normalizedSchedule?.type === 'eventRelative'
+    || normalizedSchedule === undefined
+    ? {
+      type: 'eventRelative' as const,
+      eventId: eventAssociation.eventId,
+      leadDays: withinDays,
+    }
+    : normalizedSchedule
 
   return {
-    ...(eventAssociation ? { eventAssociation } : {}),
-    ...(nextSchedule ? { schedule: nextSchedule } : {}),
-    ...(automation
-      ? { automation: synchronizeAutomationEvent(automation, eventAssociation?.eventId) }
-      : {}),
+    eventAssociation,
+    schedule: nextSchedule,
+    automation: nextAutomation,
   }
 }
 
@@ -432,7 +509,7 @@ export function buildTaskPayload(input: TaskPayloadInput): TaskDocumentData {
   const eventContext = canonicalizeTaskAuthoringEventContext(
     input.eventAssociation,
     input.schedule,
-    input.automation,
+    normalizeAutomation(input.automation),
   )
 
   return serializeTask({
@@ -452,7 +529,7 @@ export function buildTaskUpdate(input: Pick<TaskPayloadInput, 'content' | 'actio
   const eventContext = canonicalizeTaskAuthoringEventContext(
     input.eventAssociation,
     normalizeTaskSchedule(input.schedule),
-    input.automation,
+    normalizeAutomation(input.automation),
   )
   const schedule = eventContext.schedule
   const eventAssociation = eventContext.eventAssociation
