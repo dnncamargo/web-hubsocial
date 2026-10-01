@@ -13,7 +13,7 @@ import { useAuth } from '../../components/auth/AuthProvider'
 import { Task } from '../../utils/interfaces'
 import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
-import { TaskSchedule } from '../../types/tasks'
+import { TaskEventAssociation, TaskNature, TaskSchedule } from '../../types/tasks'
 import {
   buildTaskUpdate,
   hydrateTask,
@@ -67,7 +67,11 @@ export default function EditTaskModal({
   const [actionPlanning, setActionPlanning] = useState<ActionPlanning>(
     task.actionPlanning ?? {},
   )
+  const [nature, setNature] = useState<TaskNature>(task.nature)
   const [schedule, setSchedule] = useState<TaskSchedule | undefined>(task.schedule)
+  const [eventAssociation, setEventAssociation] = useState<TaskEventAssociation | undefined>(
+    task.eventAssociation,
+  )
   const [automation, setAutomation] = useState<AutomationRuleSet>(
     task.automation ?? { match: 'all', rules: [] },
   )
@@ -97,7 +101,9 @@ export default function EditTaskModal({
   useEffect(() => {
     setContent(task.content)
     setActionPlanning(task.actionPlanning ?? {})
+    setNature(task.nature)
     setSchedule(task.schedule)
+    setEventAssociation(task.eventAssociation)
     setAutomation(task.automation ?? { match: 'all', rules: [] })
     setAddingDate(false)
     setSaveError('')
@@ -198,7 +204,7 @@ export default function EditTaskModal({
 
     await updateDoc(
       doc(db, `users/${uid}/tasks-list`, task.id),
-      buildTaskUpdate({ content, actionPlanning, automation, schedule }),
+      buildTaskUpdate({ content, actionPlanning, automation, schedule, eventAssociation }),
     )
   }
 
@@ -222,23 +228,21 @@ export default function EditTaskModal({
       const currentSubtask = subtasks[subtaskIndex]
       const updatedSubtasks = subtasks.map((subtask, index) => (
         index === subtaskIndex
-          ? schedule
-            ? {
-              ...currentSubtask,
+          ? (() => {
+            const {
+              schedule: _schedule,
+              eventAssociation: _eventAssociation,
+              ...withoutScheduleAndAssociation
+            } = currentSubtask
+            return {
+              ...withoutScheduleAndAssociation,
               content: content.trim(),
               actionPlanning,
               automation,
-              schedule,
+              ...(schedule ? { schedule } : {}),
+              ...(eventAssociation ? { eventAssociation } : {}),
             }
-            : (() => {
-              const { schedule: _schedule, ...withoutSchedule } = currentSubtask
-              return {
-                ...withoutSchedule,
-                content: content.trim(),
-                actionPlanning,
-                automation,
-              }
-            })()
+          })()
           : subtask
       ))
 
@@ -387,8 +391,12 @@ export default function EditTaskModal({
 
           <TaskScheduleControl
             uid={uid}
+            nature={nature}
             value={schedule}
+            onNatureChange={setNature}
             onChange={setSchedule}
+            eventAssociation={eventAssociation}
+            onEventAssociationChange={setEventAssociation}
           />
 
           <AutomationRulesEditor

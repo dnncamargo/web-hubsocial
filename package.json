@@ -21,7 +21,7 @@
     "test:drafts": "node --test app/utils/creationDraftLifecycle.test.mjs app/utils/editorDraftStorage.test.mjs",
     "test:theme": "node --test app/utils/theme.test.mjs",
     "test:task-visual": "node --test app/tasks-list/components/taskVisualContract.test.mjs",
-    "test:tasks": "node --test app/utils/taskPayload.test.mjs app/utils/taskSchedule.test.mjs app/utils/actionProjection.test.mjs"
+    "test:tasks": "node --test app/utils/taskPayload.test.mjs app/utils/taskSchedule.test.mjs app/utils/actionProjection.test.mjs app/utils/taskAuthoring.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

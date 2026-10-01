@@ -6,7 +6,6 @@ export type TaskNature = 'punctual' | 'recurring'
 
 export interface TaskEventAssociation {
   eventId: string
-  leadDays: number
 }
 
 export type TaskSchedule =

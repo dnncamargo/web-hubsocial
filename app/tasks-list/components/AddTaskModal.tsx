@@ -7,7 +7,7 @@ import { db } from '../../utils/firebaseConfig'
 import { useAuth } from '../../components/auth/AuthProvider'
 import { ActionPlanning } from '../../types/actions'
 import { AutomationRuleSet } from '../../types/automation'
-import { TaskSchedule } from '../../types/tasks'
+import { TaskEventAssociation, TaskNature, TaskSchedule } from '../../types/tasks'
 import { buildTaskPayload } from '../../utils/taskPayload'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
@@ -29,7 +29,9 @@ export default function AddTaskModal({
   const [content, setContent] = useState('')
   const [adding, setAdding] = useState(false)
   const [actionPlanning, setActionPlanning] = useState<ActionPlanning>({})
+  const [nature, setNature] = useState<TaskNature>('punctual')
   const [schedule, setSchedule] = useState<TaskSchedule | undefined>()
+  const [eventAssociation, setEventAssociation] = useState<TaskEventAssociation | undefined>()
   const [automation, setAutomation] = useState<AutomationRuleSet>({
     match: 'all',
     rules: [],
@@ -71,11 +73,14 @@ export default function AddTaskModal({
         actionPlanning,
         automation,
         schedule,
+        eventAssociation,
       }))
 
       onAdded()
       setActionPlanning({})
+      setNature('punctual')
       setSchedule(undefined)
+      setEventAssociation(undefined)
       setAutomation({ match: 'all', rules: [] })
       onClose()
     } catch (error) {
@@ -89,7 +94,9 @@ export default function AddTaskModal({
   const handleCancel = () => {
     setContent('')
     setActionPlanning({})
+    setNature('punctual')
     setSchedule(undefined)
+    setEventAssociation(undefined)
     setAutomation({ match: 'all', rules: [] })
     onClose()
   }
@@ -133,8 +140,12 @@ export default function AddTaskModal({
 
           <TaskScheduleControl
             uid={uid}
+            nature={nature}
             value={schedule}
+            onNatureChange={setNature}
             onChange={setSchedule}
+            eventAssociation={eventAssociation}
+            onEventAssociationChange={setEventAssociation}
           />
 
           <AutomationRulesEditor

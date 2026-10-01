@@ -73,7 +73,7 @@ test('derives recurring nature only from recurring schedule forms', () => {
   )
 })
 
-test('keeps event association independent while preserving the legacy event-relative wire field', () => {
+test('forward-normalizes legacy event-relative data into independent association', () => {
   const task = hydrateTask('task-event', {
     content: 'Alugar terno',
     status: 0,
@@ -81,19 +81,129 @@ test('keeps event association independent while preserving the legacy event-rela
   })
 
   assert.equal(task.nature, 'punctual')
-  assert.deepEqual(task.eventAssociation, { eventId: 'event-1', leadDays: 14 })
+  assert.deepEqual(task.eventAssociation, { eventId: 'event-1' })
   assert.deepEqual(serializeTask(task).schedule, {
     type: 'eventRelative',
     eventId: 'event-1',
     leadDays: 14,
   })
+  assert.deepEqual(serializeTask(task).eventAssociation, { eventId: 'event-1' })
 })
 
-test('round-trips the decided nested hierarchy while keeping the parent document id out of the payload', () => {
+test('hydrates canonical association without changing recurrence or derived nature', () => {
+  for (const schedule of [
+    undefined,
+    { type: 'daily' },
+    { type: 'weekly', weekdays: ['monday'] },
+    { type: 'monthly', dayOfMonth: 31 },
+  ]) {
+    const task = hydrateTask('task-canonical', {
+      content: 'Tarefa associada',
+      status: 0,
+      ...(schedule ? { schedule } : {}),
+      eventAssociation: { eventId: 'event-1' },
+    })
+
+    assert.deepEqual(task.eventAssociation, { eventId: 'event-1' })
+    assert.deepEqual(task.schedule, schedule)
+    assert.equal(task.nature, schedule?.type === 'daily'
+      || schedule?.type === 'weekly'
+      || schedule?.type === 'monthly' ? 'recurring' : 'punctual')
+  }
+})
+
+test('canonical association wins defensively when it conflicts with legacy event-relative data', () => {
+  const task = hydrateTask('task-conflict', {
+    content: 'Conflito',
+    status: 0,
+    eventAssociation: { eventId: 'event-canonical' },
+    schedule: { type: 'eventRelative', eventId: 'event-legacy', leadDays: 2 },
+  })
+
+  assert.deepEqual(task.eventAssociation, { eventId: 'event-canonical' })
+  assert.deepEqual(task.schedule, {
+    type: 'eventRelative',
+    eventId: 'event-legacy',
+    leadDays: 2,
+  })
+  assert.deepEqual(serializeTask(task), {
+    content: 'Conflito',
+    status: 0,
+    eventAssociation: { eventId: 'event-legacy' },
+    schedule: { type: 'eventRelative', eventId: 'event-legacy', leadDays: 2 },
+  })
+})
+
+test('serializes independent association for punctual and recurring tasks', () => {
+  const association = { eventId: 'event-1' }
+
+  assert.deepEqual(buildTaskPayload({
+    content: 'Pontual',
+    status: 0,
+    eventAssociation: association,
+  }).eventAssociation, association)
+
+  assert.deepEqual(buildTaskPayload({
+    content: 'Diária',
+    status: 0,
+    schedule: { type: 'daily' },
+    eventAssociation: association,
+  }), {
+    content: 'Diária',
+    status: 0,
+    eventAssociation: association,
+    schedule: { type: 'daily' },
+  })
+})
+
+test('removes an association through the update boundary and preserves it when changing frequency', () => {
+  const removed = buildTaskUpdate({
+    content: 'Sem Event',
+    actionPlanning: {},
+    automation: { match: 'all', rules: [] },
+    schedule: { type: 'daily' },
+    eventAssociation: undefined,
+  })
+  const kept = buildTaskUpdate({
+    content: 'Frequência alterada',
+    actionPlanning: {},
+    automation: { match: 'all', rules: [] },
+    schedule: { type: 'monthly', dayOfMonth: 31 },
+    eventAssociation: { eventId: 'event-1' },
+  })
+
+  assert.equal('eventAssociation' in removed, true)
+  assert.deepEqual(kept.eventAssociation, { eventId: 'event-1' })
+  assert.deepEqual(kept.schedule, { type: 'monthly', dayOfMonth: 31 })
+})
+
+test('event-relative writes synchronize the independent association and never include leadDays there', () => {
+  const payload = buildTaskPayload({
+    content: 'Antes do evento',
+    status: 0,
+    schedule: { type: 'eventRelative', eventId: 'event-rule', leadDays: 3 },
+    eventAssociation: { eventId: 'event-other' },
+  })
+
+  assert.deepEqual(payload.eventAssociation, { eventId: 'event-rule' })
+  assert.deepEqual(payload.schedule, {
+    type: 'eventRelative',
+    eventId: 'event-rule',
+    leadDays: 3,
+  })
+  assert.equal('leadDays' in payload.eventAssociation, false)
+})
+
+test('round-trips the decided nested hierarchy and association without using ids interchangeably', () => {
   const task = hydrateTask('parent-1', {
     content: 'Projeto',
     status: 0,
-    subtasks: [{ id: 'child-1', content: 'Etapa', status: 1 }],
+    subtasks: [{
+      id: 'child-1',
+      content: 'Etapa',
+      status: 1,
+      eventAssociation: { eventId: 'event-1' },
+    }],
   })
 
   const payload = serializeTask(task)
@@ -102,6 +212,7 @@ test('round-trips the decided nested hierarchy while keeping the parent document
     id: 'child-1',
     content: 'Etapa',
     status: 1,
+    eventAssociation: { eventId: 'event-1' },
   }])
 })
 

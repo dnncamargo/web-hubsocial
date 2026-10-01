@@ -40,6 +40,7 @@ export interface TaskDocumentData {
   actionPlanning?: ActionPlanning
   automation?: AutomationRuleSet
   schedule?: TaskSchedule
+  eventAssociation?: TaskEventAssociation
 }
 
 export interface TaskNestedDocument {
@@ -54,6 +55,7 @@ export interface TaskNestedDocument {
   actionPlanning?: ActionPlanning
   automation?: AutomationRuleSet
   schedule?: TaskSchedule
+  eventAssociation?: TaskEventAssociation
 }
 
 export interface TaskPayloadInput {
@@ -68,6 +70,7 @@ export interface TaskPayloadInput {
   actionPlanning?: ActionPlanning
   automation?: AutomationRuleSet
   schedule?: TaskSchedule
+  eventAssociation?: TaskEventAssociation
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -117,8 +120,31 @@ function deriveEventAssociation(
 
   return {
     eventId: schedule.eventId,
-    leadDays: schedule.leadDays,
   }
+}
+
+function normalizeEventAssociation(value: unknown): TaskEventAssociation | undefined {
+  if (!isRecord(value) || typeof value.eventId !== 'string' || value.eventId.trim() === '') {
+    return undefined
+  }
+
+  return { eventId: value.eventId.trim() }
+}
+
+function resolveEventAssociation(
+  value: unknown,
+  schedule: TaskSchedule | undefined,
+): TaskEventAssociation | undefined {
+  return normalizeEventAssociation(value) ?? deriveEventAssociation(schedule)
+}
+
+function serializeEventAssociation(
+  association: TaskEventAssociation | undefined,
+  schedule: TaskSchedule | undefined,
+): TaskEventAssociation | undefined {
+  // eventRelative is a temporal rule that necessarily carries its Event
+  // context. Canonical writes keep both contracts synchronized.
+  return deriveEventAssociation(schedule) ?? normalizeEventAssociation(association)
 }
 
 function normalizeSubtask(value: unknown): Task | null {
@@ -146,8 +172,8 @@ function normalizeSubtask(value: unknown): Task | null {
       ? { automation: normalizeAutomation(value.automation) }
       : {}),
     ...(schedule ? { schedule } : {}),
-    ...(deriveEventAssociation(schedule)
-      ? { eventAssociation: deriveEventAssociation(schedule) }
+    ...(resolveEventAssociation(value.eventAssociation, schedule)
+      ? { eventAssociation: resolveEventAssociation(value.eventAssociation, schedule) }
       : {}),
   }
 }
@@ -157,7 +183,7 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
   const subtasks = Array.isArray(data.subtasks)
     ? data.subtasks.map(normalizeSubtask).filter((item): item is Task => item !== null)
     : undefined
-  const eventAssociation = deriveEventAssociation(schedule)
+  const eventAssociation = resolveEventAssociation(data.eventAssociation, schedule)
 
   return {
     id,
@@ -185,6 +211,7 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
 
 function serializeNestedTask(task: Task): TaskNestedDocument {
   const schedule = normalizeTaskSchedule(task.schedule)
+  const eventAssociation = serializeEventAssociation(task.eventAssociation, schedule)
 
   return {
     id: task.id,
@@ -202,6 +229,7 @@ function serializeNestedTask(task: Task): TaskNestedDocument {
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
     ...(task.automation !== undefined ? { automation: task.automation } : {}),
     ...(schedule ? { schedule } : {}),
+    ...(eventAssociation ? { eventAssociation } : {}),
   }
 }
 
@@ -211,6 +239,7 @@ export function serializeTaskSubtask(task: Task): TaskNestedDocument {
 
 export function serializeTask(task: Task): TaskDocumentData {
   const schedule = normalizeTaskSchedule(task.schedule)
+  const eventAssociation = serializeEventAssociation(task.eventAssociation, schedule)
 
   return {
     content: task.content,
@@ -228,6 +257,7 @@ export function serializeTask(task: Task): TaskDocumentData {
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
     ...(task.automation !== undefined ? { automation: task.automation } : {}),
     ...(schedule ? { schedule } : {}),
+    ...(eventAssociation ? { eventAssociation } : {}),
   }
 }
 
@@ -241,14 +271,18 @@ export function buildTaskPayload(input: TaskPayloadInput): TaskDocumentData {
   })
 }
 
-export function buildTaskUpdate(input: Pick<TaskPayloadInput, 'content' | 'actionPlanning' | 'automation' | 'schedule'>): UpdateData<TaskDocumentData> {
+export function buildTaskUpdate(input: Pick<TaskPayloadInput, 'content' | 'actionPlanning' | 'automation' | 'schedule' | 'eventAssociation'>): UpdateData<TaskDocumentData> {
   const schedule = normalizeTaskSchedule(input.schedule)
+  const eventAssociation = serializeEventAssociation(input.eventAssociation, schedule)
 
   return {
     content: input.content.trim(),
     actionPlanning: input.actionPlanning ?? {},
     automation: input.automation ?? { match: 'all', rules: [] },
     ...(schedule ? { schedule } : { schedule: deleteField() }),
+    ...(eventAssociation
+      ? { eventAssociation }
+      : { eventAssociation: deleteField() }),
   }
 }
 

@@ -227,10 +227,21 @@ determine when the Task becomes relevant or highlighted. This relationship is
 not itself Task recurrence and does not automatically put the Task into
 Calendar.
 
-Only the explicit Task → Event conversion creates an Event. The exact
-persisted representation of an association and its lead time is deferred to a
-future schema decision; legacy Event-relative schedule data must be treated as
-migration input rather than as the final product model.
+Only the explicit Task → Event conversion creates an Event. The canonical
+association wire is independent from recurrence:
+
+```ts
+eventAssociation?: {
+  eventId: string
+}
+```
+
+`eventAssociation` represents context only and does not contain `leadDays`.
+The legacy `eventRelative` schedule remains a separate punctual temporal rule
+whose `eventId` and `leadDays` determine its effective civil date. Canonical
+writes persist both fields for an Event-relative Task and synchronize their
+Event ids. Removing an Event-relative rule may preserve an independent
+association; removing the association deletes only `eventAssociation`.
 
 ## 10. Task structure
 
@@ -279,17 +290,21 @@ Task.
 
 The current persistence foundation keeps the existing `tasks-list` wire
 collection and its decided fields: `content`, numeric `status`, `order`,
-`createdAt`, hierarchy, legacy planning, automation, daily execution, and
-legacy `schedule` data. Readers hydrate the Firestore document id separately
+`createdAt`, hierarchy, legacy planning, automation, daily execution, legacy
+`schedule` data, and canonical `eventAssociation`. Readers hydrate the
+Firestore document id separately
 from document data, and writers use an explicit whitelist, so the top-level
 runtime `id` is never written as a document field.
 
 `nature` is currently a domain-only value derived in memory: daily, weekly,
 and monthly schedules are `recurring`; no schedule and legacy
-event-relative schedules are `punctual`. Legacy event-relative data also
-hydrates to an independent event association for consumers that need that
-meaning. It is serialized back in its existing legacy form until the future
-schema decision described below.
+event-relative schedules are `punctual`. Canonical `eventAssociation` takes
+precedence during hydration. If absent, valid legacy event-relative data
+derives the runtime association without mutating the source document. If both
+are present but disagree, hydration preserves the conflict defensively; a
+later canonical write synchronizes the association to the event-relative rule.
+Legacy event-relative data therefore round-trips with forward normalization,
+without a bulk migration.
 
 Nested subtask ids remain part of the existing decided hierarchy wire format;
 they are not the top-level Firestore document id.
@@ -340,7 +355,7 @@ invented by this checkpoint:
 - monthly calendar positions such as the last Thursday of a month;
 - no-fixed-day monthly recurrence;
 - an absolute-date punctual schedule; and
-- the future canonical Event association and migration fields.
+- migration markers and backfill fields.
 
 Persisted Actions, Calendar integration, and the remaining hierarchy UI remain
 future work.
@@ -349,7 +364,9 @@ future work.
 
 The existing `tasks-list` schedule wire is preserved. Event-relative schedules
 continue to round-trip in their legacy shape and hydrate to an independent
-Event association. Flexible weekly schedules continue to project at the week
+Event association. New and edited documents also persist the canonical
+`eventAssociation` field; an Event-relative write emits both contracts with
+the same Event id. Flexible weekly schedules continue to project at the week
 horizon without creating seven occurrences. No historical migration is
 required by this checkpoint.
 
@@ -393,13 +410,12 @@ projection layer. It does not replace recurrence or create a parallel Action
 model. Existing weather/automation evaluation remains a post-projection
 highlighting step; unavailable weather does not remove the base Action.
 
-This checkpoint freezes product semantics, not persistence shape. Do not yet
-invent or freeze exact TypeScript or Firestore representations for:
+This checkpoint freezes product semantics and the decided association wire.
+Do not yet invent or freeze exact TypeScript or Firestore representations for:
 
 - Task nature;
 - monthly calendar-position recurrence;
-- no-fixed-day monthly recurrence;
-- independent Event association; or
+- no-fixed-day monthly recurrence; or
 - migration fields and backfill markers.
 
 Those representations require a separate `AUDIT → EVIDENCE → DECISION`
