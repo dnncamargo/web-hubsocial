@@ -502,11 +502,27 @@ recurrence engine, not by `focusedOnDate`.
 Calendar is an Event-only projection. It represents explicit temporal Event
 documents, not everything relevant in Today or Actions.
 
-Tasks are never projected directly into Calendar. This applies to root Tasks,
+Tasks are never projected directly into the Calendar. This applies to root Tasks,
 Supertasks, Subtasks, action-planning windows, recurrence, event-relative
 dates, rollover, and favorable-condition matches.
 
-Only explicit root Task → Event conversion creates an Event and makes the new
+This exclusion also covers legacy `actionPlanning` windows, `eventRelative`
+effective dates, `eventAssociation` context, rollover and favorable-condition
+matches, and root Tasks, Supertasks, and Subtasks. Task-to-Calendar integration
+is intentionally limited to explicit Task → Event conversion.
+
+Canonical exclusion summary:
+
+- legacy `actionPlanning` windows;
+- `eventRelative` effective dates;
+- `eventAssociation` context;
+- rollover and favorable-condition matches; and
+- root Tasks, Supertasks, and Subtasks.
+
+Task-to-Calendar integration is intentionally limited to explicit Task → Event
+conversion.
+
+Only explicit Task → Event conversion creates an Event and makes the new
 Event eligible for Event/Calendar surfaces. The original root Task is not
 projected alongside it. A Subtask must be promoted before this conversion is
 available.
