@@ -1,58 +1,48 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { motion } from 'motion/react'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import {
-  ArrowUpLeft,
-  CircleCheck,
-  CirclePlay,
-  Flag,
-  GripVertical,
-  ListPlus,
-  MoreHorizontal,
-  SquarePen,
-  Trash2,
-} from 'lucide-react'
-import { Task } from '../../utils/interfaces'
-import { useAuth } from '../../components/auth/AuthProvider'
-import styles from './TaskCard.module.css'
+import { useState } from "react";
+import { motion } from "motion/react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ArrowUpLeft, CircleCheck, CirclePlay, Flag, GripVertical, ListPlus, MoreHorizontal, SquarePen, Trash2 } from "lucide-react";
+import { Task } from "../../utils/interfaces";
+import { useAuth } from "../../components/auth/AuthProvider";
+import styles from "./TaskCard.module.css";
 
 interface TaskCardProps {
-  task: Task
-  onEditTask: (task: Task, parentTaskId?: string | null) => void
-  onPromoteSubtask: (task: Task) => void
-  onCreateSubtask: () => void
-  onStatusSwitch: (status: 0 | 1 | 2) => void
-  onToggleSubtask?: (completed: boolean) => void
-  subtaskCompleted?: boolean
-  parentTaskId?: string | null
-  onDelete: () => void
-  refreshTasks: () => void
-  archived?: boolean
+  task: Task;
+  onEditTask: (task: Task, parentTaskId?: string | null) => void;
+  onPromoteSubtask: (task: Task) => void;
+  onCreateSubtask: () => void;
+  onStatusSwitch: (status: 0 | 1 | 2) => void;
+  onToggleSubtask?: (completed: boolean) => void;
+  subtaskCompleted?: boolean;
+  parentTaskId?: string | null;
+  onDelete: () => void;
+  refreshTasks: () => void;
+  archived?: boolean;
 }
 
 const statusMeta = {
   0: {
-    label: 'Não iniciada',
+    label: "Não iniciada",
     icon: Flag,
     iconClassName: styles.statusPending,
     rowClassName: styles.rowStatusPending,
   },
   1: {
-    label: 'Em foco',
+    label: "Em foco",
     icon: CirclePlay,
     iconClassName: styles.statusProgress,
     rowClassName: styles.rowStatusProgress,
   },
   2: {
-    label: 'Concluída',
+    label: "Concluída",
     icon: CircleCheck,
     iconClassName: styles.statusDone,
     rowClassName: styles.rowStatusDone,
   },
-} as const
+} as const;
 
 export default function TaskCard({
   task,
@@ -67,86 +57,73 @@ export default function TaskCard({
   refreshTasks,
   archived = false,
 }: TaskCardProps) {
-  const { user } = useAuth()
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    setActivatorNodeRef,
-    isDragging,
-  } = useSortable({ id: task.id, disabled: archived })
+  const { user } = useAuth();
+  const { attributes, listeners, setNodeRef, transform, transition, setActivatorNodeRef, isDragging } = useSortable({ id: task.id, disabled: archived });
 
-  const [x, setX] = useState(0)
-  const [showActionsOn, setShowActionsOn] = useState<'left' | 'right' | null>(null)
+  const [x, setX] = useState(0);
+  const [showActionsOn, setShowActionsOn] = useState<"left" | "right" | null>(null);
 
-  const isSubtask = Boolean(parentTaskId)
-  const isSupertask = !isSubtask && (task.subtasks?.length ?? 0) > 0
-  const isCompleted = isSubtask ? subtaskCompleted : task.status === 2
-  const visibleStatus = isSubtask ? (isCompleted ? 2 : 0) : task.status
-  const currentStatus = statusMeta[visibleStatus]
-  const CurrentStatusIcon = currentStatus.icon
-  const threshold = 84
-  const deleteSwipe = 160
+  const isSubtask = Boolean(parentTaskId);
+  const isSupertask = !isSubtask && (task.subtasks?.length ?? 0) > 0;
+  const isCompleted = isSubtask ? subtaskCompleted : task.status === 2;
+  const visibleStatus = isSubtask ? (isCompleted ? 2 : 0) : task.status;
+  const currentStatus = statusMeta[visibleStatus];
+  const CurrentStatusIcon = currentStatus.icon;
+  const threshold = 84;
+  const deleteSwipe = 160;
 
   const handleResetPosition = () => {
-    setX(0)
-    setShowActionsOn(null)
-  }
+    setX(0);
+    setShowActionsOn(null);
+  };
 
   const showStatusActions = () => {
-    if (isSubtask || archived) return
-    setX(threshold)
-    setShowActionsOn('left')
-  }
+    if (isSubtask || archived) return;
+    setX(threshold);
+    setShowActionsOn("left");
+  };
 
   const showTaskActions = () => {
-    setX(-threshold)
-    setShowActionsOn('right')
-  }
+    setX(-threshold);
+    setShowActionsOn("right");
+  };
 
   const promoteSubtask = async () => {
-    if (!user) return
-    await onPromoteSubtask(task)
-    refreshTasks()
-    handleResetPosition()
-  }
+    if (!user) return;
+    await onPromoteSubtask(task);
+    refreshTasks();
+    handleResetPosition();
+  };
 
   const editTask = () => {
-    if (!user) return
-    onEditTask(task, parentTaskId)
-    handleResetPosition()
-  }
+    if (!user) return;
+    onEditTask(task, parentTaskId);
+    handleResetPosition();
+  };
 
   const deleteTask = () => {
-    onDelete()
-    handleResetPosition()
-  }
+    onDelete();
+    handleResetPosition();
+  };
 
   const sortableStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
-  const rowClass = [
-    styles.row,
-    currentStatus.rowClassName,
-    isSubtask ? styles.subtaskRow : '',
-    archived ? styles.archivedRow : '',
-    isDragging ? styles.rowDragging : '',
-  ].filter(Boolean).join(' ')
+  const rowClass = [styles.row, currentStatus.rowClassName, isSubtask ? styles.subtaskRow : "", archived ? styles.archivedRow : "", isDragging ? styles.rowDragging : ""].filter(Boolean).join(" ");
 
   return (
     <div ref={setNodeRef} style={sortableStyle} className={styles.container}>
       <div className={styles.actionLayer}>
         <div className={styles.actionGroup}>
-          {showActionsOn === 'left' && !isSubtask && (
+          {showActionsOn === "left" &&
+            !isSubtask &&
             ([0, 1, 2] as const)
-              .filter(status => status !== task.status && (!isSupertask || status !== 1))
-              .map(status => {
-                const meta = statusMeta[status]
-                const StatusIcon = meta.icon
+              .filter((status) => status !== task.status && (!isSupertask || status !== 1))
+              .map((status) => {
+                const meta = statusMeta[status];
+                const StatusIcon = meta.icon;
 
                 return (
                   <button
@@ -154,33 +131,33 @@ export default function TaskCard({
                     type="button"
                     className={styles.actionButton}
                     onClick={() => {
-                      onStatusSwitch(status)
-                      handleResetPosition()
+                      onStatusSwitch(status);
+                      handleResetPosition();
                     }}
                     aria-label={`Mover para ${meta.label}`}
                     title={`Mover para ${meta.label}`}
                   >
-                    <StatusIcon
-                      className={`${styles.actionIcon} ${meta.iconClassName}`}
-                      aria-hidden="true"
-                    />
+                    <StatusIcon className={`${styles.actionIcon} ${meta.iconClassName}`} aria-hidden="true" />
                   </button>
-                )
-              })
-          )}
+                );
+              })}
         </div>
 
         <div className={styles.actionGroup}>
-          {showActionsOn === 'right' && (
+          {showActionsOn === "right" && (
             <>
+              <button
+                type="button"
+                className={`${styles.actionButton} ${styles.actionButtonDanger}`}
+                onClick={deleteTask}
+                aria-label={isSubtask ? "Excluir subtask" : "Excluir tarefa"}
+                title={isSubtask ? "Excluir subtask" : "Excluir tarefa"}
+              >
+                <Trash2 className={styles.actionIcon} aria-hidden="true" />
+              </button>
+
               {isSubtask && !archived ? (
-                <button
-                  type="button"
-                  className={styles.actionButton}
-                  onClick={promoteSubtask}
-                  aria-label="Promover subtarefa"
-                  title="Promover subtarefa"
-                >
+                <button type="button" className={styles.actionButton} onClick={promoteSubtask} aria-label="Promover subtarefa" title="Promover subtarefa">
                   <ArrowUpLeft className={styles.actionIcon} aria-hidden="true" />
                 </button>
               ) : !archived ? (
@@ -188,8 +165,8 @@ export default function TaskCard({
                   type="button"
                   className={styles.actionButton}
                   onClick={() => {
-                    onCreateSubtask()
-                    handleResetPosition()
+                    onCreateSubtask();
+                    handleResetPosition();
                   }}
                   aria-label="Criar subtask"
                   title="Criar subtask"
@@ -202,20 +179,10 @@ export default function TaskCard({
                 type="button"
                 className={styles.actionButton}
                 onClick={editTask}
-                aria-label={isSubtask ? 'Editar subtask' : 'Editar tarefa'}
-                title={isSubtask ? 'Editar subtask' : 'Editar tarefa'}
+                aria-label={isSubtask ? "Editar subtask" : "Editar tarefa"}
+                title={isSubtask ? "Editar subtask" : "Editar tarefa"}
               >
                 <SquarePen className={styles.actionIcon} aria-hidden="true" />
-              </button>
-
-              <button
-                type="button"
-                className={`${styles.actionButton} ${styles.actionButtonDanger}`}
-                onClick={deleteTask}
-                aria-label={isSubtask ? 'Excluir subtask' : 'Excluir tarefa'}
-                title={isSubtask ? 'Excluir subtask' : 'Excluir tarefa'}
-              >
-                <Trash2 className={styles.actionIcon} aria-hidden="true" />
               </button>
             </>
           )}
@@ -228,23 +195,20 @@ export default function TaskCard({
         dragConstraints={{ left: -deleteSwipe, right: deleteSwipe }}
         animate={{ x }}
         onDrag={(_, info) => {
-          const limitedX = Math.max(
-            -deleteSwipe,
-            Math.min(deleteSwipe, info.offset.x),
-          )
-          setX(limitedX)
+          const limitedX = Math.max(-deleteSwipe, Math.min(deleteSwipe, info.offset.x));
+          setX(limitedX);
         }}
         onDragEnd={(_, info) => {
           if (info.offset.x >= deleteSwipe) {
-            deleteTask()
-            return
+            deleteTask();
+            return;
           }
 
-          handleResetPosition()
+          handleResetPosition();
         }}
         className={rowClass}
         onClick={() => {
-          if (showActionsOn !== null) handleResetPosition()
+          if (showActionsOn !== null) handleResetPosition();
         }}
       >
         <button
@@ -267,42 +231,32 @@ export default function TaskCard({
             checked={isCompleted}
             disabled={archived}
             onChange={(event) => {
-              event.stopPropagation()
-              onToggleSubtask?.(event.target.checked)
+              event.stopPropagation();
+              onToggleSubtask?.(event.target.checked);
             }}
             onClick={(event) => event.stopPropagation()}
-            aria-label={isCompleted ? 'Subtask concluída' : 'Subtask não feita'}
+            aria-label={isCompleted ? "Subtask concluída" : "Subtask não feita"}
           />
+        ) : archived ? (
+          <span className={`${styles.statusButton} ${currentStatus.iconClassName}`} aria-label={`Status preservado: ${currentStatus.label}`} title={`Status preservado: ${currentStatus.label}`}>
+            <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
+          </span>
         ) : (
-          archived ? (
-            <span
-              className={`${styles.statusButton} ${currentStatus.iconClassName}`}
-              aria-label={`Status preservado: ${currentStatus.label}`}
-              title={`Status preservado: ${currentStatus.label}`}
-            >
-              <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
-            </span>
-          ) : (
-            <button
-              type="button"
-              className={`${styles.statusButton} ${currentStatus.iconClassName}`}
-              onClick={(event) => {
-                event.stopPropagation()
-                showStatusActions()
-              }}
-              aria-label={`Status: ${currentStatus.label}. Alterar status`}
-              title={currentStatus.label}
-            >
-              <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
-            </button>
-          )
+          <button
+            type="button"
+            className={`${styles.statusButton} ${currentStatus.iconClassName}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              showStatusActions();
+            }}
+            aria-label={`Status: ${currentStatus.label}. Alterar status`}
+            title={currentStatus.label}
+          >
+            <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
+          </button>
         )}
 
-        <span
-          className={isCompleted
-            ? `${styles.content} ${styles.contentCompleted}`
-            : styles.content}
-        >
+        <span className={isCompleted ? `${styles.content} ${styles.contentCompleted}` : styles.content}>
           {task.content}
           {isSubtask && <span className={styles.subtaskLabel}>Subtask</span>}
           {archived && <span className={styles.archivedLabel}>Arquivada</span>}
@@ -312,8 +266,8 @@ export default function TaskCard({
           type="button"
           className={styles.moreButton}
           onClick={(event) => {
-            event.stopPropagation()
-            showTaskActions()
+            event.stopPropagation();
+            showTaskActions();
           }}
           aria-label="Ações da tarefa"
           title="Ações"
@@ -322,5 +276,5 @@ export default function TaskCard({
         </button>
       </motion.div>
     </div>
-  )
+  );
 }

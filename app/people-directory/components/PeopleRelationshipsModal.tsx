@@ -44,7 +44,7 @@ export function PeopleRelationshipsModal({
         </div>
 
         <div className={styles.body}>
-          <div className={styles.relationshipGrid}>
+          <div className={`${styles.relationshipGrid} ${styles.managementRelationshipGrid}`}>
           {availableRelationships.map((rel) => (
             <div key={rel} className={styles.choiceWithColor}>
               <button

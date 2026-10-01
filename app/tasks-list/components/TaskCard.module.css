@@ -93,7 +93,12 @@
 }
 
 .subtaskRow {
+  grid-template-columns: 1.5rem 1.8rem minmax(0, 1fr) auto;
   background: var(--color-surface-muted);
+}
+
+.subtaskRow .subtaskCheckbox {
+  justify-self: end;
 }
 
 .archivedRow {

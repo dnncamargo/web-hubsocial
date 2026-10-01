@@ -1,18 +1,7 @@
 'use client';
 
 import styles from './PersonDialogs.module.css';
-
-export interface PersonFilter {
-  enabled: boolean;
-  hasPhone: boolean;
-  hasEmail: boolean;
-  hasBirthday: boolean;
-  hasAddressByCep: boolean;
-  hasNote: boolean;
-  isFavorite: boolean;
-  hasContactFrequency: boolean;
-  selectedRelationships: string[];
-}
+import type { PersonFilter } from '../utils/personFilters';
 
 interface FilterPersonModalProps {
   isOpen: boolean;
@@ -44,7 +33,7 @@ export default function FilterPersonModal({
       }}
     >
       <div
-        className={styles.dialog}
+        className={`${styles.dialog} ${styles.filterDialog}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="people-filters-title"
@@ -154,7 +143,7 @@ export default function FilterPersonModal({
           </label>
 
           {/* Tipos de relacionamento */}
-          <div className={styles.relationships}>
+          <div className={styles.filterRelationshipSection}>
             <p className={styles.sectionLabel}>Tipo de relacionamento</p>
             <div className={styles.relationshipGrid}>
               {availableRelationships.map((rel) => {

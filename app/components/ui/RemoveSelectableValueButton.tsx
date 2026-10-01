@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react'
+import { X } from 'lucide-react'
 import styles from './RemoveSelectableValueButton.module.css'
 
 type RemoveSelectableValueButtonProps = {
@@ -31,7 +31,7 @@ export default function RemoveSelectableValueButton({
         if (confirmed) await onRemove()
       }}
     >
-      <Trash2 className={styles.icon} aria-hidden="true" />
+      <X className={styles.icon} aria-hidden="true" />
     </button>
   )
 }

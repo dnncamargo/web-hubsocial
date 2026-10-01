@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   appendSelectableValue,
   buildSelectableSettingUpdate,
+  normalizeSelectableSelection,
   normalizeSelectableValues,
   removeSelectableValue,
 } from './selectableStringSetting.ts'
@@ -57,4 +58,32 @@ test('removing a setting value does not transform historical entity data', () =>
 
   assert.deepEqual(historicalEvent, { categories: ['Trabalho'] })
   assert.deepEqual(historicalPerson, { relationships: ['Cliente'] })
+})
+
+test('normalizes all known selected values to an unrestricted empty selection', () => {
+  assert.deepEqual(
+    normalizeSelectableSelection(['Trabalho', 'Lazer'], ['Trabalho', 'Lazer']),
+    [],
+  )
+})
+
+test('preserves a proper known subset', () => {
+  assert.deepEqual(
+    normalizeSelectableSelection(['Trabalho'], ['Trabalho', 'Lazer']),
+    ['Trabalho'],
+  )
+})
+
+test('removes unknown values when a known list exists', () => {
+  assert.deepEqual(
+    normalizeSelectableSelection(['Trabalho', 'Inexistente'], ['Trabalho', 'Lazer']),
+    ['Trabalho'],
+  )
+})
+
+test('compares known selections by value rather than only by length', () => {
+  assert.deepEqual(
+    normalizeSelectableSelection(['Trabalho', 'Inexistente'], ['Trabalho', 'Lazer']),
+    ['Trabalho'],
+  )
 })

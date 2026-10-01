@@ -88,8 +88,7 @@
 .subtasks {
   display: grid;
   gap: 1px;
-  margin-left: var(--space-6);
-  border-left: 1px solid var(--color-border);
+  margin-left: 0;
   background: var(--color-border);
 }
 
