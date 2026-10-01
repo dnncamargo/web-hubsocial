@@ -8,7 +8,7 @@ import type {
 import { evaluateAutomation } from './automation.ts'
 import type { AutomationEventContext } from './automation.ts'
 import type { AutomationRuleSet, WeatherCondition } from '../types/automation.ts'
-import type { Task } from './interfaces.ts'
+import type { Event, Task } from './interfaces.ts'
 import {
   deriveTaskScheduleOccurrence,
   getTaskEffectiveDate,
@@ -23,6 +23,40 @@ import { isTaskArchived } from './taskPayload.ts'
 export interface PlannedActionSource {
   item: Omit<ActionProjectionItem, 'automation'>
   automation?: AutomationRuleSet
+}
+
+export function toEventActionSource(event: Event): PlannedActionSource {
+  return {
+    item: {
+      key: `event:${event.id}`,
+      sourceType: 'event',
+      sourceId: event.id,
+      title: event.title,
+      completed: event.status === 1,
+      date: event.startDate,
+      categories: event.categories,
+      ...(!event.allDay && event.startTime ? { time: event.startTime } : {}),
+    },
+    automation: event.automation,
+  }
+}
+
+export function projectEventSourcesForDay(
+  events: readonly Event[],
+  currentCivilDate: string,
+): PlannedActionSource[] {
+  const eligibleEvents = new Map<string, Event>()
+
+  for (const event of events) {
+    if (
+      event.startDate === currentCivilDate
+      || event.actionPlanning?.day === currentCivilDate
+    ) {
+      eligibleEvents.set(event.id, event)
+    }
+  }
+
+  return Array.from(eligibleEvents.values(), toEventActionSource)
 }
 
 export type ActionSourcesByHorizon = ReadonlyArray<

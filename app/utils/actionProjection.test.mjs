@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   hasWeatherRules,
+  projectEventSourcesForDay,
   projectActionsForDate,
   projectActionSources,
 } from './actionProjection.ts'
@@ -152,6 +153,78 @@ function task(id, schedule, extra = {}) {
 function taskActions(tasks, targetDate, events = []) {
   return projectActionsForDate(tasks, targetDate, { events })
 }
+
+function event(id, extra = {}) {
+  return {
+    id,
+    title: id,
+    allDay: true,
+    startDate: '2026-10-08',
+    endDate: '2026-10-08',
+    status: 0,
+    categories: [],
+    ...extra,
+  }
+}
+
+function eventProjection(events, currentCivilDate = '2026-10-08') {
+  return projectActionSources(
+    [['day', projectEventSourcesForDay(events, currentCivilDate)], ['week', []], ['month', []]],
+    { referenceDate, events: [] },
+  ).day
+}
+
+test('projects all-day and timed Events into today using civil date eligibility', () => {
+  const timed = event('timed-today', {
+    title: 'Consulta às 14:30',
+    allDay: false,
+    startTime: '14:30',
+    categories: ['saúde'],
+    automation: { match: 'all', rules: [] },
+  })
+  const allDay = event('all-day-today', {
+    title: 'Evento de dia inteiro',
+    startTime: '',
+  })
+  const completed = event('completed-today', { status: 1 })
+  const future = event('future-event', { startDate: '2026-10-09', endDate: '2026-10-09' })
+  const manuallyPlanned = event('planned-future', {
+    startDate: '2026-10-09',
+    endDate: '2026-10-09',
+    actionPlanning: { day: '2026-10-08' },
+  })
+
+  const items = eventProjection([timed, allDay, completed, future, manuallyPlanned])
+
+  assert.deepEqual(
+    items.map(item => item.sourceId),
+    ['timed-today', 'completed-today', 'all-day-today', 'planned-future'],
+  )
+  assert.equal(items.find(item => item.sourceId === 'all-day-today').sourceType, 'event')
+  assert.equal(items.find(item => item.sourceId === 'all-day-today').date, '2026-10-08')
+  assert.equal('time' in items.find(item => item.sourceId === 'all-day-today'), false)
+
+  const timedItem = items.find(item => item.sourceId === 'timed-today')
+  assert.equal(timedItem.title, 'Consulta às 14:30')
+  assert.equal(timedItem.date, '2026-10-08')
+  assert.equal(timedItem.time, '14:30')
+  assert.deepEqual(timedItem.categories, ['saúde'])
+  assert.deepEqual(timedItem.automation, {
+    status: 'noConditions',
+    highlighted: false,
+    rules: [],
+  })
+  assert.equal(items.find(item => item.sourceId === 'completed-today').completed, true)
+  assert.equal(items.some(item => item.sourceId === 'future-event'), false)
+})
+
+test('deduplicates an Event that starts today and is manually planned for today', () => {
+  const today = event('same-event', {
+    actionPlanning: { day: '2026-10-08' },
+  })
+
+  assert.equal(eventProjection([today, today]).filter(item => item.sourceId === 'same-event').length, 1)
+})
 
 test('projects daily execution, suppresses the completed date, and reprojects the next day', () => {
   const daily = task('daily', { type: 'daily' })
