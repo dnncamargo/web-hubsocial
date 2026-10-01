@@ -210,7 +210,18 @@ from operational projections and recurring archived Tasks do not generate
 operational occurrences. An in-focus root Task has priority for the day
 projection without mutating its recurrence or legacy planning metadata, and a
 root Task must not appear twice across the visible action sections. Subtasks
-never generate independent Actions.
+never generate independent Actions, including legacy rich Subtasks with their
+own schedule, planning, automation, Event association, or nested descendants.
+Projection evaluates root conditions once and emits at most one Action per
+root. A root Action's state comes from `getEffectiveTaskStatus(...)`, so a
+Supertask Action reflects the occurrence-scoped Subtask aggregate rather than
+the persisted parent status.
+
+Action completion for a simple root uses the canonical root status writer. A
+Supertask Action is a bulk semantic operation and must update the current
+occurrence's Subtasks; writing only the derived parent status is invalid. The
+current Action surface is intentionally gated until a confirmation-capable UI
+is added.
 
 Daily execution is distinct from Task lifecycle completion. Completing an
 occurrence must not end a recurring Task. A completed Task remains persistent

@@ -188,6 +188,19 @@ test('recurring Supertask bulk commands affect only the current occurrence', () 
   assert.equal(update.subtasks.every(item => item.status === 2), true)
 })
 
+test('Supertask bulk commands update children instead of only the parent', () => {
+  const parent = task('punctual-parent', undefined, {
+    subtasks: [child('one'), child('two')],
+  })
+  const complete = buildSupertaskStatusUpdate(parent, 2, '2026-10-01')
+  const reopen = buildSupertaskStatusUpdate(parent, 0, '2026-10-01')
+
+  assert.equal(complete.status, 2)
+  assert.deepEqual(complete.subtasks.map(item => item.status), [2, 2])
+  assert.equal(reopen.status, 0)
+  assert.deepEqual(reopen.subtasks.map(item => item.status), [0, 0])
+})
+
 test('archived recurring tasks preserve status and skip temporal reconciliation', () => {
   const archived = hydrateTask('archived', {
     content: 'Archived',

@@ -642,6 +642,24 @@ other read paths do not write. Archived Tasks are excluded from operational
 projection and temporal reconciliation, preserving their status and markers
 until restore.
 
+The implemented Action projection is root-only: `projectActionsForDate(...)`
+receives only root Tasks, excludes archived roots, and produces at most one
+Projected Action per root. A Subtask's legacy schedule, planning, automation,
+Event association, event-relative schedule, and nested descendants remain
+preserved in the embedded wire but are inert while the item remains a
+Subtask. Conditions are evaluated once for the root Action. The root Action's
+operational state is derived from `getEffectiveTaskStatus(...)`, including the
+occurrence-scoped aggregate for Supertasks. Recurring completion therefore
+does not block projection after the next real occurrence boundary.
+
+Completing a simple root Action uses the canonical root status writer. A
+Supertask Action has bulk semantics: completing or reopening it must update
+the current occurrence's Subtasks through the canonical bulk helper rather
+than writing only the derived parent status. The existing Action surface does
+not yet provide the required confirmation UI, so that mutation remains
+explicitly gated until the authoring/UI checkpoint; no silent bulk completion
+is performed.
+
 Date-only values use `YYYY-MM-DD` civil-date semantics and are never shifted
 through UTC. Invalid legacy schedules or unknown lifecycle values are hydrated
 defensively rather than exposed as executable canonical rules.

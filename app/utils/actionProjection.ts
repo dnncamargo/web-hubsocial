@@ -17,7 +17,6 @@ import {
 } from './taskSchedule.ts'
 import { getActionPeriodKeys } from './actionPlanning.ts'
 import { parseCivilDate } from './datePresentation.ts'
-import { getDirectTaskEntries } from './taskHierarchy.ts'
 import { getEffectiveTaskStatus } from './taskSubtasks.ts'
 import { isTaskArchived } from './taskPayload.ts'
 
@@ -38,7 +37,6 @@ export interface ActionProjectionContext {
 
 export interface ProjectedTaskAction {
   taskId: string
-  parentTaskId?: string
   horizon: ActionHorizon
   source: ActionSource
   completionMode: ActionCompletionMode
@@ -53,7 +51,6 @@ type TaskActionCandidate = ProjectedTaskAction & { priority: number }
 
 function getTaskScheduleCandidate(
   task: Task,
-  parentTaskId: string | undefined,
   targetDate: string,
   targetDateValue: Date,
   events: Array<{ id: string; startDate: string }>,
@@ -67,7 +64,6 @@ function getTaskScheduleCandidate(
     if (effectiveDate === targetDate) {
       return {
         taskId: task.id,
-        ...(parentTaskId ? { parentTaskId } : {}),
         horizon: 'day',
         source: 'eventRelative',
         completionMode: 'lifecycle',
@@ -79,7 +75,6 @@ function getTaskScheduleCandidate(
     return effectiveDate < targetDate
       ? {
         taskId: task.id,
-        ...(parentTaskId ? { parentTaskId } : {}),
         horizon: 'day',
         source: 'rollover',
         completionMode: 'lifecycle',
@@ -104,7 +99,6 @@ function getTaskScheduleCandidate(
 
   return {
     taskId: task.id,
-    ...(parentTaskId ? { parentTaskId } : {}),
     horizon: occurrence.horizon,
     source: 'recurring',
     completionMode: 'daily',
@@ -115,7 +109,6 @@ function getTaskScheduleCandidate(
 
 function getTaskPlanningCandidate(
   task: Task,
-  parentTaskId: string | undefined,
   targetDate: string,
   targetDateValue: Date,
 ): TaskActionCandidate | null {
@@ -130,7 +123,6 @@ function getTaskPlanningCandidate(
   if (planning.day === targetDate) {
     return {
       taskId: task.id,
-      ...(parentTaskId ? { parentTaskId } : {}),
       horizon: 'day',
       source: 'planned',
       completionMode,
@@ -142,7 +134,6 @@ function getTaskPlanningCandidate(
   if (planning.week === periods.week) {
     return {
       taskId: task.id,
-      ...(parentTaskId ? { parentTaskId } : {}),
       horizon: 'week',
       source: 'planned',
       completionMode,
@@ -153,7 +144,6 @@ function getTaskPlanningCandidate(
   if (planning.month === periods.month) {
     return {
       taskId: task.id,
-      ...(parentTaskId ? { parentTaskId } : {}),
       horizon: 'month',
       source: 'planned',
       completionMode,
@@ -167,7 +157,6 @@ function getTaskPlanningCandidate(
     && planning.day < targetDate) {
     return {
       taskId: task.id,
-      ...(parentTaskId ? { parentTaskId } : {}),
       horizon: 'day',
       source: 'rollover',
       completionMode: 'lifecycle',
@@ -194,55 +183,51 @@ export function projectActionsForDate(
 
   const events = context.events ?? []
 
-  return getDirectTaskEntries(tasks).flatMap(({ task, parentTaskId }) => {
-    const parentTask = parentTaskId
-      ? tasks.find(candidate => candidate.id === parentTaskId)
-      : undefined
-    if (isTaskArchived(task) || (parentTask && isTaskArchived(parentTask))) return []
+  return tasks
+    .filter(task => task.parentTaskId === undefined || task.parentTaskId === null)
+    .flatMap(task => {
+      if (isTaskArchived(task)) return []
 
-    const effectiveTask = {
-      ...task,
-      status: getEffectiveTaskStatus(task, targetDate),
-    }
-    if (effectiveTask.status === 2) return []
+      const effectiveTask = {
+        ...task,
+        status: getEffectiveTaskStatus(task, targetDate),
+      }
+      if (effectiveTask.status === 2) return []
 
-    const scheduleCandidate = getTaskScheduleCandidate(
-      effectiveTask,
-      parentTaskId,
-      targetDate,
-      targetDateValue,
-      events,
-    )
-    if (scheduleCandidate && 'suppressed' in scheduleCandidate) return []
+      const scheduleCandidate = getTaskScheduleCandidate(
+        effectiveTask,
+        targetDate,
+        targetDateValue,
+        events,
+      )
+      if (scheduleCandidate && 'suppressed' in scheduleCandidate) return []
 
-    const candidates: TaskActionCandidate[] = []
-    if (scheduleCandidate) candidates.push(scheduleCandidate)
+      const candidates: TaskActionCandidate[] = []
+      if (scheduleCandidate) candidates.push(scheduleCandidate)
 
-    const planningCandidate = getTaskPlanningCandidate(
-      effectiveTask,
-      parentTaskId,
-      targetDate,
-      targetDateValue,
-    )
-    if (planningCandidate) candidates.push(planningCandidate)
+      const planningCandidate = getTaskPlanningCandidate(
+        effectiveTask,
+        targetDate,
+        targetDateValue,
+      )
+      if (planningCandidate) candidates.push(planningCandidate)
 
-    if (effectiveTask.status === 1) {
-      candidates.push({
-        taskId: task.id,
-        ...(parentTaskId ? { parentTaskId } : {}),
-        horizon: 'day',
-        source: 'status',
-        completionMode: getTaskNature(effectiveTask) === 'recurring' ? 'daily' : 'lifecycle',
-        priority: 40,
-      })
-    }
+      if (effectiveTask.status === 1) {
+        candidates.push({
+          taskId: task.id,
+          horizon: 'day',
+          source: 'status',
+          completionMode: getTaskNature(effectiveTask) === 'recurring' ? 'daily' : 'lifecycle',
+          priority: 40,
+        })
+      }
 
-    if (candidates.length === 0) return []
+      if (candidates.length === 0) return []
 
-    const [selected] = candidates.sort((left, right) => right.priority - left.priority)
-    const { priority: _priority, ...action } = selected
-    return [action]
-  })
+      const [selected] = candidates.sort((left, right) => right.priority - left.priority)
+      const { priority: _priority, ...action } = selected
+      return [action]
+    })
 }
 
 export function hasWeatherRules(

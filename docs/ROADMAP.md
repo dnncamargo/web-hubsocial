@@ -577,13 +577,14 @@ migration.
   `lastFocusedOccurrenceDate` occurrence markers;
 - effective status classification and boundary-aware reconciliation;
 - occurrence-scoped aggregate status and confirmed bulk-status primitives; and
-- defensive legacy rich-Subtask round-trip.
+- defensive legacy rich-Subtask round-trip; and
+- root-only Projected Actions and projection simplification.
 
 #### TO IMPLEMENT
 
 - direct create, edit, and promote UI flows;
-- root-only Projected Actions and projection simplification; and
-- archive filter and dedicated archived section in the UI.
+- archive filter and dedicated archived section in the UI; and
+- Supertask Action bulk-confirmation UI and its Action mutation wiring.
 
 #### LEGACY COMPATIBILITY
 
