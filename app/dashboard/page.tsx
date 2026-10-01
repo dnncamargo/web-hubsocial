@@ -16,8 +16,10 @@ import { getActionPeriodKeys } from '../utils/actionPlanning';
 import {
   hasWeatherRules,
   PlannedActionSource,
+  projectEventSourcesForDay,
   projectActionsForDate,
   projectActionSources,
+  toEventActionSource,
 } from '../utils/actionProjection';
 import {
   TaskScheduleEventContext,
@@ -116,7 +118,7 @@ export default function Dashboard(): JSX.Element {
 
   const fetchPlannedActions = async (
     weatherOverride?: WeatherSnapshot | null,
-    currentCivilDate: string = format(new Date(), 'yyyy-MM-dd'),
+    currentCivilDate: string = civilDate,
   ): Promise<void> => {
     if (!uid) return
 
@@ -129,29 +131,20 @@ export default function Dashboard(): JSX.Element {
       Promise.all(
         horizons.map(async (horizon) => {
           const periods = getActionPeriodKeys(referenceDate)
-          const eventSnapshot = await getDocs(
-            query(
-              collection(db, `users/${uid}/events-history`),
-              where(`actionPlanning.${horizon}`, '==', periods[horizon]),
-            ),
+          const eventCollection = collection(db, `users/${uid}/events-history`)
+          const eventQueries = horizon === 'day'
+            ? [
+              query(eventCollection, where('startDate', '==', currentCivilDate)),
+              query(eventCollection, where('actionPlanning.day', '==', currentCivilDate)),
+            ]
+            : [query(eventCollection, where(`actionPlanning.${horizon}`, '==', periods[horizon]))]
+          const eventSnapshots = await Promise.all(eventQueries.map(eventQuery => getDocs(eventQuery)))
+          const events = eventSnapshots.flatMap(snapshot =>
+            snapshot.docs.map(document => ({ id: document.id, ...document.data() }) as Event),
           )
-
-          const eventActions: PlannedActionSource[] = eventSnapshot.docs.map((snapshot) => {
-            const event = { id: snapshot.id, ...snapshot.data() } as Event
-            return {
-              item: {
-                key: `event:${event.id}`,
-                sourceType: 'event',
-                sourceId: event.id,
-                title: event.title,
-                completed: event.status === 1,
-                date: event.startDate,
-                categories: event.categories,
-                ...(event.startTime ? { time: event.startTime } : {}),
-              },
-              automation: event.automation,
-            }
-          })
+          const eventActions: PlannedActionSource[] = horizon === 'day'
+            ? projectEventSourcesForDay(events, currentCivilDate)
+            : events.map(toEventActionSource)
 
           return [horizon, eventActions] as const
         }),
