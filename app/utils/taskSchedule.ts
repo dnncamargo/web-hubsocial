@@ -257,23 +257,41 @@ export function isTaskOccurrenceCompletedForDate(
   targetDate: TaskScheduleDateInput,
   occurrenceDate?: TaskScheduleDateInput,
 ): boolean {
+  return isTaskOccurrenceMarkerCurrent(
+    task,
+    task.lastActionCompletedDate,
+    targetDate,
+    occurrenceDate,
+  )
+}
+
+/**
+ * Checks whether an arbitrary civil-date marker still belongs to the target
+ * occurrence. Completion and focus use the same recurrence boundary rules.
+ */
+export function isTaskOccurrenceMarkerCurrent(
+  task: Pick<Task, 'schedule'>,
+  marker: string | undefined,
+  targetDate: TaskScheduleDateInput,
+  occurrenceDate?: TaskScheduleDateInput,
+): boolean {
   const targetKey = toCivilDateKey(targetDate)
-  const completionKey = task.lastActionCompletedDate
-    ? toCivilDateKey(task.lastActionCompletedDate)
-    : null
+  const markerKey = marker ? toCivilDateKey(marker) : null
   const schedule = normalizeTaskSchedule(task.schedule)
 
-  if (!targetKey || !completionKey || !schedule || completionKey > targetKey) {
+  if (!targetKey || !markerKey || !schedule || markerKey > targetKey) {
     return false
   }
 
   if (schedule.type === 'weekly'
     && (!schedule.weekdays || schedule.weekdays.length === 0)) {
-    return isSameTaskWeek(completionKey, targetKey)
+    return isSameTaskWeek(markerKey, targetKey)
   }
 
-  const occurrenceKey = occurrenceDate ? toCivilDateKey(occurrenceDate) : targetKey
-  return occurrenceKey !== null && completionKey === occurrenceKey
+  const occurrenceKey = occurrenceDate
+    ? toCivilDateKey(occurrenceDate)
+    : getTaskOccurrenceDateForDate(task, targetKey)
+  return occurrenceKey !== null && markerKey === occurrenceKey
 }
 
 function getOccurrenceOnOrAfter(

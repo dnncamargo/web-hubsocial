@@ -262,8 +262,8 @@ test('punctual planning distinguishes today, future, rollover, and no planning',
 
 test('completed Tasks never project, including recurring Tasks', () => {
   const tasks = [
-    { ...task('daily-done', { type: 'daily' }), status: 2 },
-    { ...task('flexible-done', { type: 'weekly' }), status: 2 },
+    { ...task('daily-done', { type: 'daily' }), status: 2, lastActionCompletedDate: '2026-10-08' },
+    { ...task('flexible-done', { type: 'weekly' }), status: 2, lastActionCompletedDate: '2026-10-08' },
   ]
 
   assert.deepEqual(taskActions(tasks, '2026-10-08'), [])
@@ -286,6 +286,7 @@ test('event-relative Tasks use resolved Event context and roll over only after t
 test('one Task produces one projected Action even when multiple rules match', () => {
   const duplicateCandidate = task('one', { type: 'daily' }, {
     status: 1,
+    lastFocusedOccurrenceDate: '2026-10-08',
     actionPlanning: { day: '2026-10-08' },
   })
   const actions = taskActions([duplicateCandidate], '2026-10-08')
@@ -314,12 +315,6 @@ test('projects a direct subtask independently from its Supertask', () => {
   })
 
   assert.deepEqual(taskActions([root], '2026-10-08'), [
-    {
-      taskId: 'root',
-      horizon: 'day',
-      source: 'status',
-      completionMode: 'lifecycle',
-    },
     {
       taskId: 'child',
       parentTaskId: 'root',
@@ -362,19 +357,23 @@ test('parent and subtask conditions are evaluated independently after projection
 
   assert.deepEqual(
     projection.day.map((item) => [item.sourceId, item.automation.status]),
-    [['root', 'matched'], ['child', 'noConditions']],
+    [['child', 'noConditions']],
   )
 })
 
 test('projects multiple direct subtasks with distinct identities and suppresses completed children only', () => {
   const root = task('root')
   const first = task('first', { type: 'daily' }, { parentTaskId: 'root' })
-  const second = task('second', { type: 'daily' }, { parentTaskId: 'root', status: 2 })
+  const second = task('second', { type: 'daily' }, {
+    parentTaskId: 'root',
+    status: 2,
+    lastActionCompletedDate: '2026-10-08',
+  })
   const actions = taskActions([{ ...root, subtasks: [first, second] }], '2026-10-08')
 
-  assert.equal(actions.length, 1)
-  assert.equal(actions[0].taskId, 'first')
-  assert.equal(actions[0].parentTaskId, 'root')
+  assert.equal(actions.length, 2)
+  assert.deepEqual(actions.map(action => action.taskId), ['root', 'first'])
+  assert.equal(actions[1].parentTaskId, 'root')
 })
 
 test('weekly flexible subtask uses its own completion window', () => {

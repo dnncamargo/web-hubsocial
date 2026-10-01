@@ -18,6 +18,7 @@ import {
   hydrateTask,
 } from '../utils/taskPayload'
 import { reconcileTaskFocusTree } from '../utils/taskFocus'
+import { getEffectiveTaskStatus } from '../utils/taskSubtasks'
 import styles from './TasksList.module.css'
 
 export default function TasksList() {
@@ -56,7 +57,7 @@ export default function TasksList() {
 
     const querySnapshot = await getDocs(tasksQuery)
     const fetchedTasks = querySnapshot.docs.map(snapshot =>
-      hydrateTask(snapshot.id, snapshot.data()),
+      hydrateTask(snapshot.id, snapshot.data(), civilDate),
     )
     const reconciledTasks = reconcileTaskFocusTree(fetchedTasks, civilDate)
 
@@ -97,6 +98,10 @@ export default function TasksList() {
     { label: 'Em foco', status: 1 as const },
     { label: 'Concluídas', status: 2 as const },
   ]
+  const effectiveTasks = tasks.map(task => ({
+    ...task,
+    status: getEffectiveTaskStatus(task, civilDate),
+  }))
 
   return (
     <ProtectedRoute>
@@ -128,7 +133,7 @@ export default function TasksList() {
                 key={status}
                 section={label}
                 status={status}
-                tasks={tasks.filter(task => task.status === status)}
+                tasks={effectiveTasks.filter(task => task.status === status)}
                 onEditTask={openEditTaskModal}
                 refreshTasks={fetchTasks}
                 updateTasksLocally={(updatedTasks) =>

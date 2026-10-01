@@ -619,10 +619,33 @@ defensively round-trippable when an embedded update is made.
 
 No bulk migration is performed.
 
+The implemented root occurrence markers are:
+
+```ts
+lastActionCompletedDate?: string   // completion of the current occurrence
+lastFocusedOccurrenceDate?: string // Em foco for the current occurrence
+```
+
+Both values are civil dates and are interpreted through the same recurrence
+boundaries. `lastActionCompletedDate` is reused as the canonical completion
+marker for a recurring root Task; `lastFocusedOccurrenceDate` is distinct
+because `focusedOnDate` remains the punctual-only daily focus field. A
+recurring root status without a marker for its current occurrence is
+effective `Não iniciada`, rather than being treated as terminal.
+
+The pure effective-status boundary is `getEffectiveTaskStatus(task,
+targetDate)`. It preserves archived status for inspection, derives a
+Supertask from occurrence-scoped Subtasks, and otherwise resolves recurring
+root status against the current occurrence. Reconciliation uses the same
+boundary and writes only when persisted status has become stale; hydration and
+other read paths do not write. Archived Tasks are excluded from operational
+projection and temporal reconciliation, preserving their status and markers
+until restore.
+
 Date-only values use `YYYY-MM-DD` civil-date semantics and are never shifted
 through UTC. Invalid legacy schedules or unknown lifecycle values are hydrated
 defensively rather than exposed as executable canonical rules.
 
-This documentation checkpoint changes product semantics only. Production
-behavior remains unchanged until a later implementation checkpoint audits the
-current contracts and implements the smallest compatible slices.
+No generic midnight reset or occurrence collection is introduced. The
+recurrence engine proves the next real boundary for daily, selected-weekday,
+flexible-week, and clamped-monthly schedules.

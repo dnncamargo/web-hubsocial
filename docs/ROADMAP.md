@@ -573,6 +573,9 @@ migration.
 - root `archivedAt?: Timestamp` archive/restore updates;
 - binary Subtask status interpretation and minimal factory;
 - `lastCompletedOccurrenceDate?: YYYY-MM-DD` for recurring Subtasks;
+- recurring root status integration using `lastActionCompletedDate` and
+  `lastFocusedOccurrenceDate` occurrence markers;
+- effective status classification and boundary-aware reconciliation;
 - occurrence-scoped aggregate status and confirmed bulk-status primitives; and
 - defensive legacy rich-Subtask round-trip.
 
@@ -599,10 +602,9 @@ Deferred roadmap items that do not belong to this work area remain deferred in
 their existing roadmap sections. They must not be pulled into the Subtask or
 archive implementation merely because they touch the same screens.
 
-The exact archive wire (prefer an optional `archivedAt`-equivalent marker),
-the occurrence-scoped Subtask completion wire, and any compatibility
-transformation remain implementation-audit decisions. No retroactive
-occurrence backfill is part of this work area.
+No retroactive occurrence backfill is part of this work area. Recurring status
+integration uses civil-date markers and the existing recurrence engine; it does
+not create occurrence documents.
 
 ---
 

@@ -298,6 +298,14 @@ operational status. The occurrence-scoped Subtask wire is
 existing recurrence engine's boundaries. No occurrence document or generated
 occurrence identifier is introduced, and no bulk migration is performed.
 
+Recurring root status uses the existing root completion marker
+`lastActionCompletedDate?: string` plus the separate civil-date marker
+`lastFocusedOccurrenceDate?: string` for `Em foco`. Both are evaluated by the
+same occurrence-window helper. `getEffectiveTaskStatus(...)` is the read-safe
+boundary for status consumers; reconciliation may persist a stale effective
+status only after that derivation proves a new occurrence boundary. Archive
+freezes this operational reconciliation while preserving status and markers.
+
 New Subtasks are binary and deliberately lack root-Task capabilities such as
 nature, schedule, recurrence, planning, focus date, Event association,
 automation, conditions, and independent Actions. Hydration must preserve

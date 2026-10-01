@@ -2,6 +2,10 @@ import type { Task } from './interfaces.ts'
 import type { TaskStatus } from '../types/tasks.ts'
 import { formatLocalDate } from './dateHelpers.ts'
 import { parseCivilDate } from './datePresentation.ts'
+import {
+  getTaskOccurrenceDateForDate,
+} from './taskSchedule.ts'
+import { getEffectiveTaskStatus } from './taskSubtasks.ts'
 
 export function getCurrentCivilDate(date: Date = new Date()): string {
   return formatLocalDate(date)
@@ -18,10 +22,27 @@ export function applyTaskStatusTransition(
 ): Task {
   const nextTask: Task = { ...task, status }
 
-  if (task.nature === 'punctual' && status === 1 && isValidCivilDate(currentCivilDate)) {
+  if (task.nature === 'recurring') {
+    const occurrenceDate = getTaskOccurrenceDateForDate(task, currentCivilDate)
+    const marker = occurrenceDate ?? currentCivilDate
+
+    if (status === 1) {
+      nextTask.lastFocusedOccurrenceDate = marker
+      delete nextTask.lastActionCompletedDate
+    } else if (status === 2) {
+      nextTask.lastActionCompletedDate = marker
+      delete nextTask.lastFocusedOccurrenceDate
+    } else {
+      delete nextTask.lastFocusedOccurrenceDate
+      delete nextTask.lastActionCompletedDate
+    }
+    delete nextTask.focusedOnDate
+  } else if (status === 1 && isValidCivilDate(currentCivilDate)) {
     nextTask.focusedOnDate = currentCivilDate
+    delete nextTask.lastFocusedOccurrenceDate
   } else {
     delete nextTask.focusedOnDate
+    delete nextTask.lastFocusedOccurrenceDate
   }
 
   return nextTask
@@ -30,6 +51,30 @@ export function applyTaskStatusTransition(
 export interface TaskFocusReconciliation {
   task: Task
   changed: boolean
+}
+
+export function reconcileTaskOperationalStatus(
+  task: Task,
+  currentCivilDate: string,
+): TaskFocusReconciliation {
+  if (task.archivedAt !== undefined || !isValidCivilDate(currentCivilDate)) {
+    return { task, changed: false }
+  }
+
+  if (task.nature === 'punctual' && (task.subtasks?.length ?? 0) === 0) {
+    return reconcilePunctualTaskFocus(task, currentCivilDate)
+  }
+
+  const effectiveStatus = getEffectiveTaskStatus(task, currentCivilDate)
+  const persistedStatus = task.persistedStatus ?? task.status
+  const changed = task.status !== effectiveStatus || persistedStatus !== effectiveStatus
+
+  if (!changed) return { task, changed: false }
+
+  return {
+    task: { ...task, status: effectiveStatus },
+    changed: true,
+  }
 }
 
 export function reconcilePunctualTaskFocus(
@@ -79,13 +124,17 @@ export function reconcileTaskFocusTree(
   currentCivilDate: string,
 ): Task[] {
   return tasks.map(task => {
-    const rootReconciliation = reconcilePunctualTaskFocus(task, currentCivilDate)
+    const rootReconciliation = reconcileTaskOperationalStatus(task, currentCivilDate)
     const rootTask = rootReconciliation.task
     const subtasks = rootTask.subtasks
 
     if (!subtasks) {
       return rootTask
     }
+
+    // A recurring Supertask is governed by occurrence-scoped child markers;
+    // changing the civil date must never reset every child in a loop.
+    if (rootTask.nature === 'recurring') return rootTask
 
     let nextSubtasks: Task[] | undefined
     subtasks.forEach((subtask, index) => {
@@ -96,6 +145,12 @@ export function reconcileTaskFocusTree(
       }
     })
 
-    return nextSubtasks ? { ...rootTask, subtasks: nextSubtasks } : rootTask
+    if (!nextSubtasks) return rootTask
+
+    const nextRoot = { ...rootTask, subtasks: nextSubtasks }
+    return {
+      ...nextRoot,
+      status: getEffectiveTaskStatus(nextRoot, currentCivilDate),
+    }
   })
 }

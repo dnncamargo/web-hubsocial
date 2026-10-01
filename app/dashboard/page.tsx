@@ -30,11 +30,11 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import useCivilDate from '../hooks/useCivilDate'
 import { formatDateTime } from '../utils/datePresentation'
 import {
-  buildTaskDailyCompletionUpdate,
   buildNestedTaskDailyCompletionUpdate,
   buildNestedTaskStatusUpdate,
   buildTaskFocusReconciliationUpdate,
-  buildTaskStatusUpdate,
+  buildTaskStatusUpdateForTask,
+  buildSupertaskStatusUpdate,
   hydrateTask,
 } from '../utils/taskPayload'
 import { reconcileTaskFocusTree } from '../utils/taskFocus'
@@ -159,7 +159,7 @@ export default function Dashboard(): JSX.Element {
     ])
 
     const fetchedTasks = taskSnapshot.docs.map(snapshot =>
-      hydrateTask(snapshot.id, snapshot.data()),
+      hydrateTask(snapshot.id, snapshot.data(), currentCivilDate),
     )
     const tasks = reconcileTaskFocusTree(fetchedTasks, currentCivilDate)
 
@@ -422,12 +422,20 @@ export default function Dashboard(): JSX.Element {
         if (!taskUpdate) return
         await updateDoc(parentReference, taskUpdate)
       } else {
-        const taskUpdate = item.completionMode === 'daily'
-          ? buildTaskDailyCompletionUpdate(item.date ?? format(new Date(), 'yyyy-MM-dd'))
-          : buildTaskStatusUpdate(2)
+        const taskReference = doc(db, `users/${uid}/tasks-list`, item.sourceId)
+        const taskSnapshot = await getDoc(taskReference)
+        if (!taskSnapshot.exists()) return
+
+        const rootTask = hydrateTask(taskSnapshot.id, taskSnapshot.data())
+        const targetDate = item.date ?? format(new Date(), 'yyyy-MM-dd')
+        const taskUpdate = rootTask.subtasks?.length
+          ? buildSupertaskStatusUpdate(rootTask, 2, targetDate)
+          : buildTaskStatusUpdateForTask(rootTask, 2, targetDate)
+
+        if (!taskUpdate) return
 
         await updateDoc(
-          doc(db, `users/${uid}/tasks-list`, item.sourceId),
+          taskReference,
           taskUpdate,
         )
       }

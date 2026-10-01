@@ -63,7 +63,7 @@ test('archive hydration preserves status, recurrence, planning, Event, condition
   const roundTrip = serializeTask(hydrated)
 
   assert.equal(isTaskArchived(hydrated), true)
-  assert.equal(hydrated.status, 0)
+  assert.equal(hydrated.status, 1)
   assert.deepEqual(hydrated.schedule, source.schedule)
   assert.deepEqual(hydrated.actionPlanning, source.actionPlanning)
   assert.deepEqual(hydrated.automation, source.automation)

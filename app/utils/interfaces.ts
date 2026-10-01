@@ -55,6 +55,7 @@ export interface Task {
   parentTaskId?: string | null
   createdAt?: Date | Timestamp;
   lastActionCompletedDate?: string;
+  lastFocusedOccurrenceDate?: string;
   lastCompletedOccurrenceDate?: string;
   archivedAt?: Timestamp;
   focusedOnDate?: string;
@@ -65,6 +66,8 @@ export interface Task {
   hierarchyIssues?: TaskHierarchyIssue[];
   /** Raw legacy child status retained only to preserve an untouched round-trip. */
   legacySubtaskStatus?: 1;
+  /** Raw persisted status retained so reconciliation can converge without read-time writes. */
+  persistedStatus?: TaskStatus;
 }
 
 export interface EventSuggestion {

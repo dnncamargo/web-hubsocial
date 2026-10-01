@@ -2,7 +2,7 @@ import type { SubtaskStatus, TaskStatus } from '../types/tasks.ts'
 import type { Task } from './interfaces.ts'
 import {
   getTaskOccurrenceDateForDate,
-  isTaskOccurrenceCompletedForDate,
+  isTaskOccurrenceMarkerCurrent,
 } from './taskSchedule.ts'
 import { updateSubtask } from './taskHierarchy.ts'
 
@@ -51,14 +51,57 @@ export function isSubtaskCompletedForOccurrence(
   const marker = subtask.lastCompletedOccurrenceDate
   if (!marker) return false
 
-  return isTaskOccurrenceCompletedForDate(
-    {
-      schedule: parentTask.schedule,
-      lastActionCompletedDate: marker,
-    },
+  return isTaskOccurrenceMarkerCurrent(
+    parentTask,
+    marker,
     targetDate,
     getTaskOccurrenceDateForDate(parentTask, targetDate) ?? undefined,
   )
+}
+
+export function getEffectiveTaskStatus(
+  task: Pick<
+    Task,
+    | 'status'
+    | 'nature'
+    | 'schedule'
+    | 'subtasks'
+    | 'archivedAt'
+    | 'lastActionCompletedDate'
+    | 'lastFocusedOccurrenceDate'
+  >,
+  targetDate: string,
+): TaskStatus {
+  // Archive is orthogonal to status. Keep the stored value inspectable while
+  // operational consumers exclude the task through isTaskArchived().
+  if (task.archivedAt) return task.status
+
+  const subtasks = Array.isArray(task.subtasks) ? task.subtasks : []
+  if (subtasks.length > 0) return deriveSupertaskStatus(task, targetDate)
+  if (task.nature !== 'recurring') return task.status
+
+  const occurrenceDate = getTaskOccurrenceDateForDate(task, targetDate)
+  if (!occurrenceDate) return 0
+
+  if (task.status === 2) {
+    return isTaskOccurrenceMarkerCurrent(
+      task,
+      task.lastActionCompletedDate,
+      targetDate,
+      occurrenceDate,
+    ) ? 2 : 0
+  }
+
+  if (task.status === 1) {
+    return isTaskOccurrenceMarkerCurrent(
+      task,
+      task.lastFocusedOccurrenceDate,
+      targetDate,
+      occurrenceDate,
+    ) ? 1 : 0
+  }
+
+  return 0
 }
 
 export function deriveSupertaskStatus(

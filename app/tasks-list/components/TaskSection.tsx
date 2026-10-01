@@ -4,7 +4,6 @@ import { useAuth } from '../../components/auth/AuthProvider'
 import {
   updateDoc,
   doc,
-  setDoc,
   deleteDoc,
   runTransaction,
 } from 'firebase/firestore'
@@ -24,20 +23,18 @@ import {
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { Task } from '../../utils/interfaces'
 import {
-  buildTaskDailyCompletionUpdate,
-  buildTaskStatusUpdate,
+  buildTaskStatusUpdateForTask,
+  buildSupertaskStatusUpdate,
   hydrateTask,
   serializeTask,
 } from '../../utils/taskPayload'
 import {
-  applyTaskStatusTransition,
   getCurrentCivilDate,
 } from '../../utils/taskFocus'
 import {
   attachSubtask,
   promoteSubtask,
   removeSubtask,
-  updateAllSubtasks,
 } from '../../utils/taskHierarchy'
 import TaskCard from './TaskCard'
 import styles from './TaskSection.module.css'
@@ -69,16 +66,6 @@ export default function TaskSection({
       },
     }),
   )
-
-  const resetDailyCompletion = (
-    task: Task,
-    newStatus: 0 | 1 | 2,
-    currentCivilDate: string,
-  ): Task => {
-    const updatedTask = applyTaskStatusTransition(task, newStatus, currentCivilDate)
-    delete updatedTask.lastActionCompletedDate
-    return updatedTask
-  }
 
   const handlePromoteSubtask = async (subtask: Task, parentTaskId: string): Promise<boolean> => {
     if (!uid) return false
@@ -158,26 +145,26 @@ export default function TaskSection({
     const isSubtask = Boolean(task.parentTaskId)
 
     if (!isParent && !isSubtask) {
-      await setDoc(
+      await updateDoc(
         doc(db, `users/${uid}/tasks-list`, task.id),
-        serializeTask(resetDailyCompletion(task, newStatus, currentCivilDate)),
+        buildTaskStatusUpdateForTask(task, newStatus, currentCivilDate),
       )
       refreshTasks()
       return
     }
 
     if (isParent) {
+      if (newStatus === 1) return
+
       const confirmed = window.confirm(
         'Esta tarefa possui subtarefas.\n\nDeseja alterar o status de todas elas para refletir essa mudança?',
       )
       if (!confirmed) return
 
-      const updatedTask = updateAllSubtasks(
-        resetDailyCompletion(task, newStatus, currentCivilDate),
-        subtask => resetDailyCompletion(subtask, newStatus, currentCivilDate),
-      )
-
-      await setDoc(doc(db, `users/${uid}/tasks-list`, task.id), serializeTask(updatedTask))
+      const update = buildSupertaskStatusUpdate(task, newStatus, currentCivilDate)
+      if (update) {
+        await updateDoc(doc(db, `users/${uid}/tasks-list`, task.id), update)
+      }
       refreshTasks()
       return
     }
@@ -193,24 +180,20 @@ export default function TaskSection({
       )
 
       if (updateParent) {
-        const updatedParent = updateAllSubtasks(
-          resetDailyCompletion(parentTask, newStatus, currentCivilDate),
-          subtask => resetDailyCompletion(subtask, newStatus, currentCivilDate),
-        )
+        if (newStatus === 1) return
 
-        await setDoc(
-          doc(db, `users/${uid}/tasks-list`, updatedParent.id),
-          serializeTask(updatedParent),
-        )
+        const update = buildSupertaskStatusUpdate(parentTask, newStatus, currentCivilDate)
+        if (update) {
+          await updateDoc(
+            doc(db, `users/${uid}/tasks-list`, parentTask.id),
+            update,
+          )
+        }
       } else {
         if (await handlePromoteSubtask(task, parentTask.id)) {
-          const promotedTask = resetDailyCompletion(task, newStatus, currentCivilDate)
           await updateDoc(
             doc(db, `users/${uid}/tasks-list`, task.id),
-            {
-              ...buildTaskStatusUpdate(promotedTask.status, promotedTask.focusedOnDate),
-              ...buildTaskDailyCompletionUpdate(null),
-            },
+            buildTaskStatusUpdateForTask(task, newStatus, currentCivilDate),
           )
         }
       }

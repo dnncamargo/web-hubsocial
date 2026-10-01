@@ -18,6 +18,8 @@ import {
 import { getActionPeriodKeys } from './actionPlanning.ts'
 import { parseCivilDate } from './datePresentation.ts'
 import { getDirectTaskEntries } from './taskHierarchy.ts'
+import { getEffectiveTaskStatus } from './taskSubtasks.ts'
+import { isTaskArchived } from './taskPayload.ts'
 
 export interface PlannedActionSource {
   item: Omit<ActionProjectionItem, 'automation'>
@@ -193,10 +195,19 @@ export function projectActionsForDate(
   const events = context.events ?? []
 
   return getDirectTaskEntries(tasks).flatMap(({ task, parentTaskId }) => {
-    if (task.status === 2) return []
+    const parentTask = parentTaskId
+      ? tasks.find(candidate => candidate.id === parentTaskId)
+      : undefined
+    if (isTaskArchived(task) || (parentTask && isTaskArchived(parentTask))) return []
+
+    const effectiveTask = {
+      ...task,
+      status: getEffectiveTaskStatus(task, targetDate),
+    }
+    if (effectiveTask.status === 2) return []
 
     const scheduleCandidate = getTaskScheduleCandidate(
-      task,
+      effectiveTask,
       parentTaskId,
       targetDate,
       targetDateValue,
@@ -208,20 +219,20 @@ export function projectActionsForDate(
     if (scheduleCandidate) candidates.push(scheduleCandidate)
 
     const planningCandidate = getTaskPlanningCandidate(
-      task,
+      effectiveTask,
       parentTaskId,
       targetDate,
       targetDateValue,
     )
     if (planningCandidate) candidates.push(planningCandidate)
 
-    if (task.status === 1) {
+    if (effectiveTask.status === 1) {
       candidates.push({
         taskId: task.id,
         ...(parentTaskId ? { parentTaskId } : {}),
         horizon: 'day',
         source: 'status',
-        completionMode: getTaskNature(task) === 'recurring' ? 'daily' : 'lifecycle',
+        completionMode: getTaskNature(effectiveTask) === 'recurring' ? 'daily' : 'lifecycle',
         priority: 40,
       })
     }

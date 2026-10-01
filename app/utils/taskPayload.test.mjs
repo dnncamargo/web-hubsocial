@@ -336,7 +336,7 @@ test('focus reconciliation emits only the changed root fields and canonical nest
   }
   const update = buildTaskFocusReconciliationUpdate(current, reconciled)
 
-  assert.equal('status' in update, false)
+  assert.equal(update.status, 0)
   assert.equal('focusedOnDate' in update, true)
   assert.equal('content' in update, false)
   assert.equal(update?.subtasks?.[0].status, 0)
