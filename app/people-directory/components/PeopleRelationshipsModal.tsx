@@ -26,7 +26,13 @@ export function PeopleRelationshipsModal({
   setRelationshipColor,
 }: PeopleRelationshipsModalProps) {
   return (
-    <div className={styles.overlay} role="presentation">
+    <div
+      className={styles.overlay}
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
       <div
         className={styles.dialog}
         role="dialog"

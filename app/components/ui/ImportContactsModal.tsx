@@ -106,7 +106,12 @@ export default function ImportContactsPage({ isOpen, onClose }: ImportContactsMo
 
 
   return (
-    <div className={styles.overlay}>
+    <div
+      className={styles.overlay}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
       <div className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="import-contacts-title">
         <header className={styles.header}>
           <h2 id="import-contacts-title" className={styles.title}>Importar contatos</h2>

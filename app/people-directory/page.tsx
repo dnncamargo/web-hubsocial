@@ -269,7 +269,13 @@ const PeopleDirectory = () => {
         />
 
         {showSearchModal && (
-          <div className={styles.searchOverlay} role="presentation">
+          <div
+            className={styles.searchOverlay}
+            role="presentation"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setShowSearchModal(false)
+            }}
+          >
             <div
               className={styles.searchDialog}
               role="dialog"

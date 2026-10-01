@@ -26,7 +26,12 @@ export function EventCategoriesModal({
   setCategoryColor,
 }: EventCategoriesModalProps) {
   return (
-    <div className={styles.overlay}>
+    <div
+      className={styles.overlay}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
       <section
         className={styles.dialog}
         role="dialog"

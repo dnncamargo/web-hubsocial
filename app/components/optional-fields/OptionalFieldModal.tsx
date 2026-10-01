@@ -15,7 +15,12 @@ export function OptionalFieldModal({ availableFieldOptions, onClose, onAddOption
   };
 
   return (
-    <div className={styles.modalOverlay}>
+    <div
+      className={styles.modalOverlay}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
       <div
         className={styles.modal}
         role="dialog"

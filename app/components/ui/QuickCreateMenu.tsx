@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { Plus } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
+import { useOutsideDismiss } from '../../hooks/useOutsideDismiss'
 import styles from './QuickCreateMenu.module.css'
 
 type QuickCreateVariant = 'desktop' | 'mobile'
@@ -29,21 +30,14 @@ export default function QuickCreateMenu({ variant }: QuickCreateMenuProps) {
   }, [pathname])
 
   useEffect(() => {
-    if (!isOpen) return
-
-    menuItemRefs.current[0]?.focus()
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-    }
+    if (isOpen) menuItemRefs.current[0]?.focus()
   }, [isOpen])
+
+  useOutsideDismiss({
+    open: isOpen,
+    insideRefs: [rootRef],
+    onDismiss: () => setIsOpen(false),
+  })
 
   const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const currentIndex = menuItemRefs.current.findIndex(
