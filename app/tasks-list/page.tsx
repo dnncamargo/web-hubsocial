@@ -13,6 +13,7 @@ import useCivilDate from '../hooks/useCivilDate'
 import AddTaskModal from './components/AddTaskModal'
 import TaskSection from './components/TaskSection'
 import EditTaskModal from './components/EditTaskModal'
+import SubtaskModal from './components/SubtaskModal'
 import {
   buildTaskFocusReconciliationUpdate,
   hydrateTask,
@@ -30,7 +31,10 @@ export default function TasksList() {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-  const [selectedTaskParentId, setSelectedTaskParentId] = useState<string | null>(null)
+  const [subtaskEditor, setSubtaskEditor] = useState<{
+    parent: Task
+    subtask?: Task
+  } | null>(null)
 
   useEffect(() => {
     if (uid) {
@@ -88,9 +92,23 @@ export default function TasksList() {
   }
 
   const openEditTaskModal = (task: Task, parentTaskId?: string | null): void => {
+    if (parentTaskId) {
+      const parent = tasks.find(candidate => candidate.id === parentTaskId)
+      if (parent) setSubtaskEditor({ parent, subtask: task })
+      return
+    }
+
     setSelectedTask(task)
-    setSelectedTaskParentId(parentTaskId ?? null)
     setIsEditTaskModalOpen(true)
+  }
+
+  const updateTaskLocally = (updatedTask: Task): void => {
+    setTasks(previous => previous.map(task =>
+      task.id === updatedTask.id ? updatedTask : task))
+  }
+
+  const openCreateSubtaskModal = (parent: Task): void => {
+    setSubtaskEditor({ parent })
   }
 
   const sections = [
@@ -135,7 +153,9 @@ export default function TasksList() {
                 status={status}
                 tasks={effectiveTasks.filter(task => task.status === status)}
                 onEditTask={openEditTaskModal}
+                onCreateSubtask={openCreateSubtaskModal}
                 refreshTasks={fetchTasks}
+                updateTaskLocally={updateTaskLocally}
                 updateTasksLocally={(updatedTasks) =>
                   handleUpdateSectionTasks(status, updatedTasks)}
               />
@@ -154,10 +174,19 @@ export default function TasksList() {
         {isEditTaskModalOpen && selectedTask && (
           <EditTaskModal
             task={selectedTask}
-            parentTaskId={selectedTaskParentId}
             isOpen={isEditTaskModalOpen}
             onClose={() => setIsEditTaskModalOpen(false)}
             onUpdated={fetchTasks}
+          />
+        )}
+
+        {subtaskEditor && (
+          <SubtaskModal
+            parent={subtaskEditor.parent}
+            subtask={subtaskEditor.subtask}
+            isOpen
+            onClose={() => setSubtaskEditor(null)}
+            onSaved={fetchTasks}
           />
         )}
       </main>

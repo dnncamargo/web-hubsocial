@@ -23,5 +23,4 @@ test('Task authoring exposes favorable conditions with the same editor in Add an
 test('Task persistence keeps conditions independent from schedule and Event association fields', () => {
   assert.match(addTaskModal, /automation,\s*schedule,\s*eventAssociation/)
   assert.match(editTaskModal, /buildTaskUpdate\(\{ content, actionPlanning, automation, schedule, eventAssociation \}\)/)
-  assert.match(editTaskModal, /actionPlanning,\s*automation,\s*\.\.\.\(schedule \? \{ schedule \} : \{\}\),\s*\.\.\.\(eventAssociation \? \{ eventAssociation \} : \{\}\)/s)
 })

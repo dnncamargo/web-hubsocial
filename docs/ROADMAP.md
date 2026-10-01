@@ -554,11 +554,11 @@ Quick create routes to the existing Task, Event, and Person creation editors thr
 
 ### 6.7. Simple Subtasks and Task archiving
 
-**Status: DOMAIN/PERSISTENCE FOUNDATION IMPLEMENTED — UI DEFERRED**
+**Status: DOMAIN/PERSISTENCE AND HIERARCHY AUTHORING IMPLEMENTED — ARCHIVE UI DEFERRED**
 
-This work area implements the audited domain and persistence boundary without
-changing layout, card actions, or authoring UI. It does not authorize a bulk
-migration.
+This work area implements the audited domain, persistence boundary, and
+canonical hierarchy authoring without adding Archive UI. It does not authorize
+a bulk migration.
 
 #### DECIDED
 
@@ -577,14 +577,14 @@ migration.
   `lastFocusedOccurrenceDate` occurrence markers;
 - effective status classification and boundary-aware reconciliation;
 - occurrence-scoped aggregate status and confirmed bulk-status primitives; and
-- defensive legacy rich-Subtask round-trip; and
-- root-only Projected Actions and projection simplification.
+- defensive legacy rich-Subtask round-trip;
+- root-only Projected Actions and projection simplification; and
+- direct Subtask create/edit, binary checkbox, promotion, canonical delete,
+  confirmed Supertask bulk commands, and confirmed Supertask Action completion.
 
 #### TO IMPLEMENT
 
-- direct create, edit, and promote UI flows;
-- archive filter and dedicated archived section in the UI; and
-- Supertask Action bulk-confirmation UI and its Action mutation wiring.
+- archive filter and dedicated archived section in the UI.
 
 #### LEGACY COMPATIBILITY
 

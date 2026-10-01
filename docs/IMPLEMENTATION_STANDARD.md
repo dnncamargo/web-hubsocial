@@ -220,8 +220,8 @@ the persisted parent status.
 Action completion for a simple root uses the canonical root status writer. A
 Supertask Action is a bulk semantic operation and must update the current
 occurrence's Subtasks; writing only the derived parent status is invalid. The
-current Action surface is intentionally gated until a confirmation-capable UI
-is added.
+Action surface reuses the same confirmation message and bulk writer as the
+global Supertask `Concluída` command; cancelling performs no write.
 
 Daily execution is distinct from Task lifecycle completion. Completing an
 occurrence must not end a recurring Task. A completed Task remains persistent

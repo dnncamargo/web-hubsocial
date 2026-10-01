@@ -17,7 +17,6 @@ import { TaskEventAssociation, TaskNature, TaskSchedule } from '../../types/task
 import {
   buildTaskUpdate,
   hydrateTask,
-  serializeTaskSubtask,
 } from '../../utils/taskPayload'
 import ActionPlanningControl from '../../components/actions/ActionPlanningControl'
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
@@ -35,7 +34,6 @@ import styles from './TaskEditor.module.css'
 
 interface EditTaskModalProps {
   task: Task
-  parentTaskId?: string | null
   isOpen: boolean
   onClose: () => void
   onUpdated: () => void
@@ -58,7 +56,6 @@ function buildTaskOptionalFields(task: Task): OptionalField[] {
 
 export default function EditTaskModal({
   task,
-  parentTaskId = null,
   isOpen,
   onClose,
   onUpdated,
@@ -115,7 +112,7 @@ export default function EditTaskModal({
     setSaveError('')
     setShowAssociatePersonModal(false)
     resetAssociatedPeople()
-  }, [task.id, parentTaskId, isOpen])
+  }, [task.id, isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -184,32 +181,6 @@ export default function EditTaskModal({
     })
   }
 
-  const convertEmbeddedSubtask = async () => {
-    if (!uid || !parentTaskId) return
-
-    const parentReference = doc(db, `users/${uid}/tasks-list`, parentTaskId)
-    await runTransaction(db, async transaction => {
-      const parentSnapshot = await transaction.get(parentReference)
-      if (!parentSnapshot.exists()) {
-        throw new Error('A tarefa pai não existe mais.')
-      }
-
-      const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
-      const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
-      const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
-      if (subtaskIndex === -1) {
-        throw new Error('A subtarefa não foi encontrada na tarefa pai.')
-      }
-
-      const currentSubtask = subtasks[subtaskIndex]
-      const eventReference = doc(collection(db, `users/${uid}/events-history`))
-      const updatedSubtasks = subtasks.filter(subtask => subtask.id !== task.id)
-
-      transaction.set(eventReference, buildEventFromTask(currentSubtask))
-      transaction.update(parentReference, { subtasks: updatedSubtasks })
-    })
-  }
-
   const updateTopLevelTask = async () => {
     if (!uid) return
 
@@ -217,50 +188,6 @@ export default function EditTaskModal({
       doc(db, `users/${uid}/tasks-list`, task.id),
       buildTaskUpdate({ content, actionPlanning, automation, schedule, eventAssociation }),
     )
-  }
-
-  const updateEmbeddedSubtask = async () => {
-    if (!uid || !parentTaskId) return
-
-    const parentReference = doc(db, `users/${uid}/tasks-list`, parentTaskId)
-    await runTransaction(db, async transaction => {
-      const parentSnapshot = await transaction.get(parentReference)
-      if (!parentSnapshot.exists()) {
-        throw new Error('A tarefa pai não existe mais.')
-      }
-
-      const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
-      const subtasks = Array.isArray(parentTask.subtasks) ? parentTask.subtasks : []
-      const subtaskIndex = subtasks.findIndex(subtask => subtask.id === task.id)
-      if (subtaskIndex === -1) {
-        throw new Error('A subtarefa não foi encontrada na tarefa pai.')
-      }
-
-      const currentSubtask = subtasks[subtaskIndex]
-      const updatedSubtasks = subtasks.map((subtask, index) => (
-        index === subtaskIndex
-          ? (() => {
-            const {
-              schedule: _schedule,
-              eventAssociation: _eventAssociation,
-              ...withoutScheduleAndAssociation
-            } = currentSubtask
-            return {
-              ...withoutScheduleAndAssociation,
-              content: content.trim(),
-              actionPlanning,
-              automation,
-              ...(schedule ? { schedule } : {}),
-              ...(eventAssociation ? { eventAssociation } : {}),
-            }
-          })()
-          : subtask
-      ))
-
-      transaction.update(parentReference, {
-        subtasks: updatedSubtasks.map(serializeTaskSubtask),
-      })
-    })
   }
 
   const handleUpdate = async (submitEvent?: React.FormEvent<HTMLFormElement>) => {
@@ -277,7 +204,7 @@ export default function EditTaskModal({
 
     if (addingDate && !validateEventSchedule()) return
 
-    if (addingDate && !parentTaskId && (task.subtasks?.length ?? 0) > 0) {
+    if (addingDate && (task.subtasks?.length ?? 0) > 0) {
       const confirmed = window.confirm(
         'Esta tarefa possui subtarefas.\n\nDeseja que todas elas se incorporem ao novo evento?',
       )
@@ -289,13 +216,7 @@ export default function EditTaskModal({
 
     try {
       if (addingDate) {
-        if (parentTaskId) {
-          await convertEmbeddedSubtask()
-        } else {
-          await convertTopLevelTask()
-        }
-      } else if (parentTaskId) {
-        await updateEmbeddedSubtask()
+        await convertTopLevelTask()
       } else {
         await updateTopLevelTask()
       }

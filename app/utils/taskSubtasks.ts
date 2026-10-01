@@ -191,3 +191,14 @@ export function setSupertaskNotStarted(task: Task, targetDate: string): Task | n
 export function setSupertaskCompleted(task: Task, targetDate: string): Task | null {
   return setAllSubtaskCompletion(task, true, targetDate)
 }
+
+export function getSupertaskStatusConfirmationMessage(
+  status: 0 | 2,
+  subtaskCount: number,
+): string {
+  if (status === 2) {
+    return `Esta tarefa possui ${subtaskCount} subtarefas.\n\nAlterar o estado para Concluída marcará todas as subtarefas como concluídas.`
+  }
+
+  return `Alterar o estado para Não iniciada marcará todas as subtarefas como não feitas.`
+}

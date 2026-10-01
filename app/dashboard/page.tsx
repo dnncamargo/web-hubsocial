@@ -32,10 +32,14 @@ import { formatDateTime } from '../utils/datePresentation'
 import {
   buildTaskFocusReconciliationUpdate,
   buildTaskStatusUpdateForTask,
+  buildSupertaskStatusUpdate,
   hydrateTask,
 } from '../utils/taskPayload'
 import { reconcileTaskFocusTree } from '../utils/taskFocus'
-import { getEffectiveTaskStatus } from '../utils/taskSubtasks'
+import {
+  getEffectiveTaskStatus,
+  getSupertaskStatusConfirmationMessage,
+} from '../utils/taskSubtasks'
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
 import styles from './Dashboard.module.css'
@@ -401,16 +405,24 @@ export default function Dashboard(): JSX.Element {
       if (!taskSnapshot.exists()) return
 
       const rootTask = hydrateTask(taskSnapshot.id, taskSnapshot.data())
+      const targetDate = item.date ?? format(new Date(), 'yyyy-MM-dd')
       if (rootTask.subtasks?.length) {
-        console.warn('A conclusão da Action de uma Supertask requer confirmação bulk da UI.')
-        return
+        const confirmed = window.confirm(
+          getSupertaskStatusConfirmationMessage(2, rootTask.subtasks.length),
+        )
+        if (!confirmed) return
+
+        const bulkUpdate = buildSupertaskStatusUpdate(rootTask, 2, targetDate)
+        if (!bulkUpdate) return
+
+        await updateDoc(taskReference, bulkUpdate)
+      } else {
+        await updateDoc(
+          taskReference,
+          buildTaskStatusUpdateForTask(rootTask, 2, targetDate),
+        )
       }
 
-      const targetDate = item.date ?? format(new Date(), 'yyyy-MM-dd')
-      await updateDoc(
-        taskReference,
-        buildTaskStatusUpdateForTask(rootTask, 2, targetDate),
-      )
       await fetchPlannedActions()
     } catch (error) {
       console.error('Erro ao concluir ação do dia:', error)

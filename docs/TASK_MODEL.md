@@ -655,10 +655,26 @@ does not block projection after the next real occurrence boundary.
 Completing a simple root Action uses the canonical root status writer. A
 Supertask Action has bulk semantics: completing or reopening it must update
 the current occurrence's Subtasks through the canonical bulk helper rather
-than writing only the derived parent status. The existing Action surface does
-not yet provide the required confirmation UI, so that mutation remains
-explicitly gated until the authoring/UI checkpoint; no silent bulk completion
-is performed.
+than writing only the derived parent status. Its confirmation reuses the same
+semantic boundary as the global `Concluída` command; cancelling performs no
+write.
+
+The implemented hierarchy authoring follows the canonical UI boundary. Root
+Tasks expose `Criar subtask`, `Editar`, and `Excluir`; Subtasks expose a
+binary checkbox, `Promover`, `Editar`, and `Excluir`. Creating or editing a
+Subtask uses the simple content-only editor and the canonical
+`createCanonicalSubtask(...)` factory, so no new recurrence, planning, Event,
+condition, or Action fields are authored. Individual checkbox changes use
+`isSubtaskCompletedForOccurrence(...)` and preserve legacy rich fields.
+
+Supertask `Não iniciada` and `Concluída` commands share the confirmed bulk
+status boundary; `Em foco` remains derived from mixed progress and is not a
+manual target. The same confirmation and bulk writer are used when completing
+a Supertask Projected Action. Promotion preserves the stable id/content and
+valid legacy root capabilities without inheriting the parent's recurrence;
+deletion removes only the selected Subtask or, after explicit root warning,
+the root and its embedded Subtasks. Legacy nested descendants remain
+preserved defensively and do not acquire new authoring affordances.
 
 Date-only values use `YYYY-MM-DD` civil-date semantics and are never shifted
 through UTC. Invalid legacy schedules or unknown lifecycle values are hydrated

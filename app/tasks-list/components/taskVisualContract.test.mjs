@@ -11,6 +11,7 @@ const taskCard = readComponentFile('TaskCard.tsx')
 const taskSectionCss = readComponentFile('TaskSection.module.css')
 const taskSection = readComponentFile('TaskSection.tsx')
 const tokens = readFileSync(join(componentsRoot, '../../styles/tokens.css'), 'utf8')
+const dashboard = readFileSync(join(componentsRoot, '../../dashboard/page.tsx'), 'utf8')
 
 test('section headers expose independent semantic status accents', () => {
   assert.match(taskSectionCss, /\.header\s*\{[\s\S]*?position:\s*relative/)
@@ -45,4 +46,20 @@ test('status tokens exist for light and dark themes and subtasks reuse TaskCard'
 
   assert.equal((taskSection.match(/<TaskCard/g) ?? []).length, 2)
   assert.match(taskSection, /className=\{styles\.subtasks\}/)
+})
+
+test('canonical hierarchy actions replace positional attach and demote controls', () => {
+  assert.match(taskCard, /Criar subtask/)
+  assert.match(taskCard, /Promover subtarefa/)
+  assert.match(taskCard, /type="checkbox"/)
+  assert.doesNotMatch(taskCard, /onMakeSubtask|Transformar em subtarefa|ArrowDownRight/)
+  assert.doesNotMatch(taskSection, /attachSubtask|handleMakeSubtask|makeSubtask/)
+})
+
+test('Supertask status and Action completion share the confirmed bulk boundary', () => {
+  assert.match(taskSection, /getSupertaskStatusConfirmationMessage/)
+  assert.match(taskSection, /buildSupertaskStatusUpdate/)
+  assert.match(dashboard, /getSupertaskStatusConfirmationMessage/)
+  assert.match(dashboard, /buildSupertaskStatusUpdate/)
+  assert.doesNotMatch(dashboard, /requer confirmação bulk da UI/)
 })

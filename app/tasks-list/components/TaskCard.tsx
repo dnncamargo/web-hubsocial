@@ -5,12 +5,12 @@ import { motion } from 'motion/react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
-  ArrowDownRight,
   ArrowUpLeft,
   CircleCheck,
   CirclePlay,
   Flag,
   GripVertical,
+  ListPlus,
   MoreHorizontal,
   SquarePen,
   Trash2,
@@ -23,8 +23,10 @@ interface TaskCardProps {
   task: Task
   onEditTask: (task: Task, parentTaskId?: string | null) => void
   onPromoteSubtask: (task: Task) => void
-  onMakeSubtask: (task: Task) => void
+  onCreateSubtask: () => void
   onStatusSwitch: (status: 0 | 1 | 2) => void
+  onToggleSubtask?: (completed: boolean) => void
+  subtaskCompleted?: boolean
   parentTaskId?: string | null
   onDelete: () => void
   refreshTasks: () => void
@@ -55,8 +57,10 @@ export default function TaskCard({
   task,
   onEditTask,
   onPromoteSubtask,
-  onMakeSubtask,
+  onCreateSubtask,
   onStatusSwitch,
+  onToggleSubtask,
+  subtaskCompleted = false,
   parentTaskId,
   onDelete,
   refreshTasks,
@@ -75,6 +79,12 @@ export default function TaskCard({
   const [x, setX] = useState(0)
   const [showActionsOn, setShowActionsOn] = useState<'left' | 'right' | null>(null)
 
+  const isSubtask = Boolean(parentTaskId)
+  const isSupertask = !isSubtask && (task.subtasks?.length ?? 0) > 0
+  const isCompleted = isSubtask ? subtaskCompleted : task.status === 2
+  const visibleStatus = isSubtask ? (isCompleted ? 2 : 0) : task.status
+  const currentStatus = statusMeta[visibleStatus]
+  const CurrentStatusIcon = currentStatus.icon
   const threshold = 84
   const deleteSwipe = 160
 
@@ -84,6 +94,7 @@ export default function TaskCard({
   }
 
   const showStatusActions = () => {
+    if (isSubtask) return
     setX(threshold)
     setShowActionsOn('left')
   }
@@ -91,11 +102,6 @@ export default function TaskCard({
   const showTaskActions = () => {
     setX(-threshold)
     setShowActionsOn('right')
-  }
-
-  const makeSubtask = async () => {
-    await onMakeSubtask(task)
-    handleResetPosition()
   }
 
   const promoteSubtask = async () => {
@@ -111,11 +117,6 @@ export default function TaskCard({
     handleResetPosition()
   }
 
-  const statusSwitch = (status: 0 | 1 | 2) => {
-    onStatusSwitch(status)
-    handleResetPosition()
-  }
-
   const deleteTask = () => {
     onDelete()
     handleResetPosition()
@@ -126,12 +127,10 @@ export default function TaskCard({
     transition,
   }
 
-  const currentStatus = statusMeta[task.status]
-  const CurrentStatusIcon = currentStatus.icon
   const rowClass = [
     styles.row,
     currentStatus.rowClassName,
-    parentTaskId ? styles.subtaskRow : '',
+    isSubtask ? styles.subtaskRow : '',
     isDragging ? styles.rowDragging : '',
   ].filter(Boolean).join(' ')
 
@@ -139,9 +138,9 @@ export default function TaskCard({
     <div ref={setNodeRef} style={sortableStyle} className={styles.container}>
       <div className={styles.actionLayer}>
         <div className={styles.actionGroup}>
-          {showActionsOn === 'left' && (
+          {showActionsOn === 'left' && !isSubtask && (
             ([0, 1, 2] as const)
-              .filter(status => status !== task.status)
+              .filter(status => status !== task.status && (!isSupertask || status !== 1))
               .map(status => {
                 const meta = statusMeta[status]
                 const StatusIcon = meta.icon
@@ -151,7 +150,10 @@ export default function TaskCard({
                     key={status}
                     type="button"
                     className={styles.actionButton}
-                    onClick={() => statusSwitch(status)}
+                    onClick={() => {
+                      onStatusSwitch(status)
+                      handleResetPosition()
+                    }}
                     aria-label={`Mover para ${meta.label}`}
                     title={`Mover para ${meta.label}`}
                   >
@@ -168,7 +170,7 @@ export default function TaskCard({
         <div className={styles.actionGroup}>
           {showActionsOn === 'right' && (
             <>
-              {parentTaskId ? (
+              {isSubtask ? (
                 <button
                   type="button"
                   className={styles.actionButton}
@@ -183,20 +185,13 @@ export default function TaskCard({
                   type="button"
                   className={styles.actionButton}
                   onClick={() => {
-                    if (task.subtasks && task.subtasks.length > 0) {
-                      alert(
-                        'Essa tarefa já possui subtarefas e não pode ser transformada em subtarefa.',
-                      )
-                      handleResetPosition()
-                      return
-                    }
-
-                    makeSubtask()
+                    onCreateSubtask()
+                    handleResetPosition()
                   }}
-                  aria-label="Transformar em subtarefa da tarefa anterior"
-                  title="Transformar em subtarefa"
+                  aria-label="Criar subtask"
+                  title="Criar subtask"
                 >
-                  <ArrowDownRight className={styles.actionIcon} aria-hidden="true" />
+                  <ListPlus className={styles.actionIcon} aria-hidden="true" />
                 </button>
               )}
 
@@ -204,8 +199,8 @@ export default function TaskCard({
                 type="button"
                 className={styles.actionButton}
                 onClick={editTask}
-                aria-label="Editar tarefa"
-                title="Editar tarefa"
+                aria-label={isSubtask ? 'Editar subtask' : 'Editar tarefa'}
+                title={isSubtask ? 'Editar subtask' : 'Editar tarefa'}
               >
                 <SquarePen className={styles.actionIcon} aria-hidden="true" />
               </button>
@@ -214,8 +209,8 @@ export default function TaskCard({
                 type="button"
                 className={`${styles.actionButton} ${styles.actionButtonDanger}`}
                 onClick={deleteTask}
-                aria-label="Excluir tarefa"
-                title="Excluir tarefa"
+                aria-label={isSubtask ? 'Excluir subtask' : 'Excluir tarefa'}
+                title={isSubtask ? 'Excluir subtask' : 'Excluir tarefa'}
               >
                 <Trash2 className={styles.actionIcon} aria-hidden="true" />
               </button>
@@ -246,9 +241,7 @@ export default function TaskCard({
         }}
         className={rowClass}
         onClick={() => {
-          if (showActionsOn !== null) {
-            handleResetPosition()
-          }
+          if (showActionsOn !== null) handleResetPosition()
         }}
       >
         <button
@@ -263,26 +256,40 @@ export default function TaskCard({
           <GripVertical className={styles.gripIcon} aria-hidden="true" />
         </button>
 
-        <button
-          type="button"
-          className={`${styles.statusButton} ${currentStatus.iconClassName}`}
-          onClick={(event) => {
-            event.stopPropagation()
-            showStatusActions()
-          }}
-          aria-label={`Status: ${currentStatus.label}. Alterar status`}
-          title={currentStatus.label}
-        >
-          <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
-        </button>
+        {isSubtask ? (
+          <input
+            type="checkbox"
+            className={styles.subtaskCheckbox}
+            checked={isCompleted}
+            onChange={(event) => {
+              event.stopPropagation()
+              onToggleSubtask?.(event.target.checked)
+            }}
+            onClick={(event) => event.stopPropagation()}
+            aria-label={isCompleted ? 'Subtask concluída' : 'Subtask não feita'}
+          />
+        ) : (
+          <button
+            type="button"
+            className={`${styles.statusButton} ${currentStatus.iconClassName}`}
+            onClick={(event) => {
+              event.stopPropagation()
+              showStatusActions()
+            }}
+            aria-label={`Status: ${currentStatus.label}. Alterar status`}
+            title={currentStatus.label}
+          >
+            <CurrentStatusIcon className={styles.statusIcon} aria-hidden="true" />
+          </button>
+        )}
 
         <span
-          className={task.status === 2
+          className={isCompleted
             ? `${styles.content} ${styles.contentCompleted}`
             : styles.content}
         >
           {task.content}
-          {parentTaskId && <span className={styles.subtaskLabel}>Subtarefa</span>}
+          {isSubtask && <span className={styles.subtaskLabel}>Subtask</span>}
         </span>
 
         <button

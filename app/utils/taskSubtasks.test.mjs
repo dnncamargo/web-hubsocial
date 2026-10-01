@@ -12,6 +12,7 @@ import {
 import {
   createCanonicalSubtask,
   deriveSupertaskStatus,
+  getSupertaskStatusConfirmationMessage,
   getCanonicalSubtaskStatus,
   isSubtaskCompletedForOccurrence,
   setSupertaskCompleted,
@@ -297,4 +298,15 @@ test('global recurring commands affect only the current occurrence', () => {
     undefined,
     undefined,
   ])
+})
+
+test('Supertask confirmation messages describe the two allowed global commands', () => {
+  assert.match(
+    getSupertaskStatusConfirmationMessage(2, 3),
+    /marcará todas as subtarefas como concluídas/,
+  )
+  assert.match(
+    getSupertaskStatusConfirmationMessage(0, 3),
+    /marcará todas as subtarefas como não feitas/,
+  )
 })
