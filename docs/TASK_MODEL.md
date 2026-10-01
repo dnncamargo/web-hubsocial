@@ -211,6 +211,36 @@ new Task occurrence, redefine recurrence, change lifecycle status, or place a
 Task in Calendar. A manually relevant Task is not silently removed because a
 condition is not currently satisfied.
 
+Favorable conditions are a Task dimension of their own. They are evaluated
+only after the canonical Task/Event projection has produced an Action, and
+the result enriches that Action in memory. The current persisted wire keeps
+the technical `automation` field for compatibility; it is the single
+condition configuration boundary, not a second scheduling engine.
+
+The supported condition rules remain weekday, current weather, and upcoming
+Event. `all` requires every rule to match; `any` requires at least one rule to
+match. An Action evaluation has one explicit status:
+
+- `noConditions`: the Task has no configured conditions;
+- `matched`: the configured match mode is satisfied and the Action may be
+  highlighted;
+- `notMatched`: every required context was available and the match mode was
+  not satisfied; or
+- `notEvaluable`: at least one required context or rule was unavailable or
+  invalid.
+
+An absent, failed, or timed-out weather result therefore produces
+`notEvaluable` while keeping the Action visible. Weather is requested lazily
+only when a projected source has a weather rule, and the resolved context is
+passed into the pure evaluator from outside; geolocation and provider access
+do not belong to the evaluator. Evaluated status is never persisted.
+
+The dimension is independent from Task nature, frequency, schedule, manual
+Action planning, lifecycle status, hierarchy, and Event association. A
+Subtask owns and evaluates its own conditions; a Supertask's conditions are
+not inherited. An explicit upcoming-Event condition may use Event context,
+but it does not merge with the separate `eventAssociation` field.
+
 ## 9. Event association
 
 Event association is an independent Task dimension. For example:
@@ -321,8 +351,9 @@ Task.
 
 The current persistence foundation keeps the existing `tasks-list` wire
 collection and its decided fields: `content`, numeric `status`, `order`,
-`createdAt`, hierarchy, legacy planning, automation, daily execution, legacy
-`schedule` data, and canonical `eventAssociation`. Readers hydrate the
+`createdAt`, hierarchy, legacy planning, automation/favorable conditions,
+daily execution, legacy `schedule` data, and canonical `eventAssociation`.
+Readers hydrate the
 Firestore document id separately
 from document data, and writers use an explicit whitelist, so the top-level
 runtime `id` is never written as a document field.
@@ -430,7 +461,8 @@ The projection now applies these rules:
   a Subtask uses only its own status, recurrence, daily execution, planning,
   automation, and Event association; and
 - status, schedule, planning, and completion matches are resolved before
-  favorable-condition highlighting.
+  favorable-condition evaluation, which only enriches the already projected
+  Action.
 
 Projected Actions carry their source and completion mode in memory. Recurring
 completion writes use `lastActionCompletedDate`; punctual completion writes
@@ -445,8 +477,10 @@ date field, and broader hierarchy UI remain future work.
 
 `actionPlanning` remains readable for existing Tasks and is interpreted in the
 projection layer. It does not replace recurrence or create a parallel Action
-model. Existing weather/automation evaluation remains a post-projection
-highlighting step; unavailable weather does not remove the base Action.
+model. Existing weather/automation evaluation remains the single
+post-projection favorable-condition step; unavailable weather does not remove
+the base Action. The technical `automation` name is retained in storage and
+code paths until a future migration is explicitly scoped.
 
 This checkpoint freezes product semantics and the decided association wire.
 Do not yet invent or freeze exact TypeScript or Firestore representations for:

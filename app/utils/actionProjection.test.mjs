@@ -5,6 +5,7 @@ import {
   projectActionsForDate,
   projectActionSources,
 } from './actionProjection.ts'
+import { evaluateAutomation } from './automation.ts'
 
 const referenceDate = new Date('2026-09-30T12:00:00-03:00')
 const weatherRule = {
@@ -45,6 +46,7 @@ test('does not request weather when no action rule depends on it', () => {
 
   assert.equal(hasWeatherRules([['day', [source]]]), false)
   assert.equal(project(source).day[0].title, 'Lavar roupa')
+  assert.equal(project(source).day[0].automation.status, 'noConditions')
 })
 
 test('keeps a weather-dependent action visible and unresolved without weather', () => {
@@ -56,6 +58,7 @@ test('keeps a weather-dependent action visible and unresolved without weather', 
 
   assert.equal(hasWeatherRules([['day', [source]]]), true)
   assert.equal(item.title, 'Lavar roupa')
+  assert.equal(item.automation.status, 'notEvaluable')
   assert.equal(item.automation.highlighted, false)
   assert.deepEqual(item.automation.rules, [
     { ruleId: 'weather-1', status: 'unresolved' },
@@ -70,6 +73,7 @@ test('highlights a weather-dependent action after a matching response', () => {
   const item = project(source, 'sunny').day[0]
 
   assert.equal(item.title, 'Lavar roupa')
+  assert.equal(item.automation.status, 'matched')
   assert.equal(item.automation.highlighted, true)
   assert.deepEqual(item.automation.rules, [
     { ruleId: 'weather-1', status: 'matched' },
@@ -84,9 +88,50 @@ test('keeps a weather-dependent action visible when the condition does not match
   const item = project(source, 'rainy').day[0]
 
   assert.equal(item.title, 'Lavar roupa')
+  assert.equal(item.automation.status, 'notMatched')
   assert.equal(item.automation.highlighted, false)
   assert.deepEqual(item.automation.rules, [
     { ruleId: 'weather-1', status: 'notMatched' },
+  ])
+})
+
+test('multiple favorable conditions distinguish all/any and unresolved context', () => {
+  const weekdayRule = {
+    id: 'weekday-1',
+    type: 'weekday',
+    weekdays: ['wednesday'],
+  }
+  const unresolvedWeatherRule = {
+    id: 'weather-2',
+    type: 'weather',
+    condition: 'sunny',
+  }
+
+  const allItem = project(taskSource({
+    match: 'all',
+    rules: [weekdayRule, unresolvedWeatherRule],
+  })).day[0]
+  assert.equal(allItem.automation.status, 'notEvaluable')
+  assert.equal(allItem.automation.highlighted, false)
+
+  const anyItem = project(taskSource({
+    match: 'any',
+    rules: [weekdayRule, unresolvedWeatherRule],
+  })).day[0]
+  assert.equal(anyItem.automation.status, 'matched')
+  assert.equal(anyItem.automation.highlighted, true)
+})
+
+test('invalid favorable rules become not evaluable without breaking the Action', () => {
+  const evaluation = evaluateAutomation({
+    match: 'all',
+    rules: [null],
+  })
+
+  assert.equal(evaluation.status, 'notEvaluable')
+  assert.equal(evaluation.highlighted, false)
+  assert.deepEqual(evaluation.rules, [
+    { ruleId: 'invalid-rule', status: 'unresolved' },
   ])
 })
 
@@ -284,6 +329,41 @@ test('projects a direct subtask independently from its Supertask', () => {
       effectiveDate: '2026-10-08',
     },
   ])
+})
+
+test('parent and subtask conditions are evaluated independently after projection', () => {
+  const child = task('child', { type: 'daily' }, {
+    parentTaskId: 'root',
+    automation: { match: 'all', rules: [] },
+  })
+  const root = task('root', undefined, {
+    status: 1,
+    automation: { match: 'all', rules: [weatherRule] },
+    subtasks: [child],
+  })
+  const projected = taskActions([root], '2026-10-08')
+  const projection = projectActionSources(
+    [['day', projected.map((action) => ({
+      item: {
+        key: action.parentTaskId
+          ? `task:${action.parentTaskId}:subtask:${action.taskId}`
+          : `task:${action.taskId}`,
+        sourceType: 'task',
+        sourceId: action.taskId,
+        title: action.taskId,
+        completed: false,
+      },
+      automation: action.taskId === 'root'
+        ? root.automation
+        : root.subtasks[0].automation,
+    }))], ['week', []], ['month', []]],
+    { referenceDate, events: [], weatherCondition: 'sunny' },
+  )
+
+  assert.deepEqual(
+    projection.day.map((item) => [item.sourceId, item.automation.status]),
+    [['root', 'matched'], ['child', 'noConditions']],
+  )
 })
 
 test('projects multiple direct subtasks with distinct identities and suppresses completed children only', () => {

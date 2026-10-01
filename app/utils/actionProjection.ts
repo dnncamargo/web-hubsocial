@@ -239,7 +239,8 @@ export function hasWeatherRules(
 ): boolean {
   return sourcesByHorizon.some(([, sources]) =>
     sources.some((source) =>
-      source.automation?.rules.some((rule) => rule.type === 'weather'),
+      Array.isArray(source.automation?.rules)
+      && source.automation.rules.some((rule) => rule.type === 'weather'),
     ),
   )
 }

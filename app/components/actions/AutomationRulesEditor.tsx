@@ -215,9 +215,9 @@ export default function AutomationRulesEditor({
 
   return (
     <fieldset className={styles.fieldset}>
-      <legend className={styles.legend}>Automação</legend>
+      <legend className={styles.legend}>Condições favoráveis</legend>
       <p className={styles.description}>
-        Condições automáticas destacam a ação quando o contexto é favorável. Elas não removem a ação da lista.
+        Estas condições destacam a ação quando o contexto é favorável. Elas não removem a ação da lista.
       </p>
 
       <label className={styles.matchMode}>
