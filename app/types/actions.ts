@@ -38,6 +38,7 @@ export interface ActionProjectionItem {
   completed: boolean
   source?: ActionSource
   completionMode?: ActionCompletionMode
+  parentTaskId?: string
   completedToday?: boolean
   inProgress?: boolean
   categories?: string[]

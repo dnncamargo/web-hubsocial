@@ -1,7 +1,13 @@
 'use client'
 
 import { useAuth } from '../../components/auth/AuthProvider'
-import { updateDoc, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore'
+import {
+  updateDoc,
+  doc,
+  setDoc,
+  deleteDoc,
+  runTransaction,
+} from 'firebase/firestore'
 import { db } from '../../utils/firebaseConfig'
 import {
   DndContext,
@@ -17,7 +23,17 @@ import {
 } from '@dnd-kit/sortable'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { Task } from '../../utils/interfaces'
-import { hydrateTask, serializeTask } from '../../utils/taskPayload'
+import {
+  buildTaskDailyCompletionUpdate,
+  hydrateTask,
+  serializeTask,
+} from '../../utils/taskPayload'
+import {
+  attachSubtask,
+  promoteSubtask,
+  removeSubtask,
+  updateAllSubtasks,
+} from '../../utils/taskHierarchy'
 import TaskCard from './TaskCard'
 import styles from './TaskSection.module.css'
 
@@ -55,30 +71,38 @@ export default function TaskSection({
     return updatedTask
   }
 
-  const handlePromoteSubtask = async (subtask: Task, parentTaskId: string) => {
-    if (!uid) return
+  const handlePromoteSubtask = async (subtask: Task, parentTaskId: string): Promise<boolean> => {
+    if (!uid) return false
 
     const parentRef = doc(db, `users/${uid}/tasks-list`, parentTaskId)
-    const parentSnap = await getDoc(parentRef)
+    const promotedRef = doc(db, `users/${uid}/tasks-list`, subtask.id)
+    let promoted = false
 
-    if (!parentSnap.exists()) return
+    try {
+      await runTransaction(db, async transaction => {
+        const [parentSnap, promotedSnap] = await Promise.all([
+          transaction.get(parentRef),
+          transaction.get(promotedRef),
+        ])
 
-    const parentTask = hydrateTask(parentSnap.id, parentSnap.data())
-    const updatedParent: Task = {
-      ...parentTask,
-      subtasks: (parentTask.subtasks || []).filter(item => item.id !== subtask.id),
+        if (!parentSnap.exists()) return
+        if (promotedSnap.exists()) {
+          throw new Error('Não foi possível promover: já existe uma Task com esse ID.')
+        }
+
+        const parentTask = hydrateTask(parentSnap.id, parentSnap.data())
+        const result = promoteSubtask(parentTask, subtask.id)
+        if (!result.ok) throw new Error(result.reason)
+
+        transaction.set(parentRef, serializeTask(result.value.parent))
+        transaction.set(promotedRef, serializeTask(result.value.promoted))
+        promoted = true
+      })
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível promover a subtask.')
     }
 
-    const promotedTask: Task = {
-      ...subtask,
-      parentTaskId: null,
-      subtasks: [],
-    }
-
-    await Promise.all([
-      setDoc(doc(db, `users/${uid}/tasks-list`, updatedParent.id), serializeTask(updatedParent)),
-      setDoc(doc(db, `users/${uid}/tasks-list`, promotedTask.id), serializeTask(promotedTask)),
-    ])
+    return promoted
   }
 
   const handleMakeSubtask = async (currentTask: Task) => {
@@ -91,19 +115,28 @@ export default function TaskSection({
     }
 
     const aboveTask = tasks[index - 1]
-    const taskAsSubtask = {
-      ...currentTask,
-      parentTaskId: aboveTask.id,
-    }
-    const updatedAboveTask: Task = {
-      ...aboveTask,
-      subtasks: [...(aboveTask.subtasks || []), taskAsSubtask],
-    }
+    const parentRef = doc(db, `users/${uid}/tasks-list`, aboveTask.id)
+    const currentRef = doc(db, `users/${uid}/tasks-list`, currentTask.id)
 
-    await Promise.all([
-      setDoc(doc(db, `users/${uid}/tasks-list`, updatedAboveTask.id), serializeTask(updatedAboveTask)),
-      deleteDoc(doc(db, `users/${uid}/tasks-list`, currentTask.id)),
-    ])
+    try {
+      await runTransaction(db, async transaction => {
+        const [parentSnap, currentSnap] = await Promise.all([
+          transaction.get(parentRef),
+          transaction.get(currentRef),
+        ])
+        if (!parentSnap.exists() || !currentSnap.exists()) return
+
+        const parentTask = hydrateTask(parentSnap.id, parentSnap.data())
+        const childTask = hydrateTask(currentSnap.id, currentSnap.data())
+        const result = attachSubtask(parentTask, childTask)
+        if (!result.ok) throw new Error(result.reason)
+
+        transaction.set(parentRef, serializeTask(result.value))
+        transaction.delete(currentRef)
+      })
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível anexar a subtask.')
+    }
 
     refreshTasks()
   }
@@ -129,12 +162,10 @@ export default function TaskSection({
       )
       if (!confirmed) return
 
-      const updatedTask: Task = {
-        ...resetDailyCompletion(task, newStatus),
-        subtasks: (task.subtasks || []).map(subtask => ({
-          ...resetDailyCompletion(subtask, newStatus),
-        })),
-      }
+      const updatedTask = updateAllSubtasks(
+        resetDailyCompletion(task, newStatus),
+        subtask => resetDailyCompletion(subtask, newStatus),
+      )
 
       await setDoc(doc(db, `users/${uid}/tasks-list`, task.id), serializeTask(updatedTask))
       refreshTasks()
@@ -152,22 +183,25 @@ export default function TaskSection({
       )
 
       if (updateParent) {
-        const updatedParent: Task = {
-          ...resetDailyCompletion(parentTask, newStatus),
-          subtasks: (parentTask.subtasks || []).map(subtask => ({
-            ...resetDailyCompletion(subtask, newStatus),
-          })),
-        }
+        const updatedParent = updateAllSubtasks(
+          resetDailyCompletion(parentTask, newStatus),
+          subtask => resetDailyCompletion(subtask, newStatus),
+        )
 
         await setDoc(
           doc(db, `users/${uid}/tasks-list`, updatedParent.id),
           serializeTask(updatedParent),
         )
       } else {
-        await handlePromoteSubtask(
-          resetDailyCompletion(task, newStatus),
-          parentTask.id,
-        )
+        if (await handlePromoteSubtask(task, parentTask.id)) {
+          await updateDoc(
+            doc(db, `users/${uid}/tasks-list`, task.id),
+            {
+              status: newStatus,
+              ...buildTaskDailyCompletionUpdate(null),
+            },
+          )
+        }
       }
 
       refreshTasks()
@@ -177,9 +211,16 @@ export default function TaskSection({
   const handleDeleteTask = async (task: Task) => {
     if (!uid) return
 
-    const isParent = Boolean(task.subtasks?.length)
-    const isSubtask = !isParent
-      && tasks.some(item => item.subtasks?.some(subtask => subtask.id === task.id))
+    const parent = tasks.find(item =>
+      item.subtasks?.some(subtask => subtask.id === task.id),
+    )
+    const isSubtask = Boolean(parent)
+    const isParent = !isSubtask && Boolean(task.subtasks?.length)
+
+    if (isSubtask && task.subtasks?.length) {
+      alert('Esta subtask possui descendants legados e não pode ser excluída sem revisão.')
+      return
+    }
 
     if (isParent && task.subtasks?.length) {
       const confirmed = window.confirm(
@@ -192,19 +233,24 @@ export default function TaskSection({
       return
     }
 
-    if (isSubtask) {
-      const parent = tasks.find(item =>
-        item.subtasks?.some(subtask => subtask.id === task.id),
-      )
-      if (!parent) return
+    if (isSubtask && parent) {
 
       const confirmed = window.confirm(
-        'Esta tarefa é uma subtarefa. Deseja removê-la do grupo, promovê-la a tarefa principal e então excluí-la?',
+        'Esta tarefa é uma subtarefa. Deseja removê-la do grupo e excluí-la?',
       )
       if (!confirmed) return
 
-      await handlePromoteSubtask(task, parent.id)
-      await deleteDoc(doc(db, `users/${uid}/tasks-list`, task.id))
+      const parentRef = doc(db, `users/${uid}/tasks-list`, parent.id)
+      await runTransaction(db, async transaction => {
+        const parentSnapshot = await transaction.get(parentRef)
+        if (!parentSnapshot.exists()) return
+
+        const currentParent = hydrateTask(parentSnapshot.id, parentSnapshot.data())
+        const result = removeSubtask(currentParent, task.id)
+        if (!result.ok) return
+
+        transaction.set(parentRef, serializeTask(result.value.parent))
+      })
       refreshTasks()
       return
     }

@@ -30,9 +30,12 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { formatDateTime } from '../utils/datePresentation'
 import {
   buildTaskDailyCompletionUpdate,
+  buildNestedTaskDailyCompletionUpdate,
+  buildNestedTaskStatusUpdate,
   buildTaskStatusUpdate,
   hydrateTask,
 } from '../utils/taskPayload'
+import { getDirectTaskEntries } from '../utils/taskHierarchy'
 import SuggestionPanel from './components/SuggestionPanel';
 import ActionsOverview from './components/ActionsOverview';
 import styles from './Dashboard.module.css'
@@ -169,7 +172,7 @@ export default function Dashboard(): JSX.Element {
       sources.forEach(collectEventReferences)
     }
 
-    for (const task of tasks) {
+    for (const { task } of getDirectTaskEntries(tasks)) {
       if (task.schedule?.type === 'eventRelative' && task.schedule.eventId) {
         referencedEventIds.add(task.schedule.eventId)
       }
@@ -215,18 +218,28 @@ export default function Dashboard(): JSX.Element {
     )
 
     for (const action of projectedTaskActions) {
-      const task = tasks.find(candidate => candidate.id === action.taskId)
+      const parentTask = action.parentTaskId
+        ? tasks.find(candidate => candidate.id === action.parentTaskId)
+        : undefined
+      const task = action.parentTaskId
+        ? parentTask?.subtasks?.find(candidate => candidate.id === action.taskId)
+        : tasks.find(candidate => candidate.id === action.taskId)
       if (!task) continue
+
+      const actionKey = action.parentTaskId
+        ? `task:${action.parentTaskId}:subtask:${task.id}`
+        : `task:${task.id}`
 
       taskSourcesByHorizon[action.horizon].push({
         item: {
-          key: `task:${task.id}`,
+          key: actionKey,
           sourceType: 'task',
           sourceId: task.id,
           title: task.content,
           completed: false,
           source: action.source,
           completionMode: action.completionMode,
+          ...(action.parentTaskId ? { parentTaskId: action.parentTaskId } : {}),
           inProgress: task.status === 1,
           ...(action.effectiveDate ? { date: action.effectiveDate } : {}),
         },
@@ -374,14 +387,32 @@ export default function Dashboard(): JSX.Element {
         return
       }
 
-      const taskUpdate = item.completionMode === 'daily'
-        ? buildTaskDailyCompletionUpdate(item.date ?? format(new Date(), 'yyyy-MM-dd'))
-        : buildTaskStatusUpdate(2)
+      if (item.parentTaskId) {
+        const parentReference = doc(db, `users/${uid}/tasks-list`, item.parentTaskId)
+        const parentSnapshot = await getDoc(parentReference)
+        if (!parentSnapshot.exists()) return
 
-      await updateDoc(
-        doc(db, `users/${uid}/tasks-list`, item.sourceId),
-        taskUpdate,
-      )
+        const parentTask = hydrateTask(parentSnapshot.id, parentSnapshot.data())
+        const taskUpdate = item.completionMode === 'daily'
+          ? buildNestedTaskDailyCompletionUpdate(
+            parentTask,
+            item.sourceId,
+            item.date ?? format(new Date(), 'yyyy-MM-dd'),
+          )
+          : buildNestedTaskStatusUpdate(parentTask, item.sourceId, 2)
+
+        if (!taskUpdate) return
+        await updateDoc(parentReference, taskUpdate)
+      } else {
+        const taskUpdate = item.completionMode === 'daily'
+          ? buildTaskDailyCompletionUpdate(item.date ?? format(new Date(), 'yyyy-MM-dd'))
+          : buildTaskStatusUpdate(2)
+
+        await updateDoc(
+          doc(db, `users/${uid}/tasks-list`, item.sourceId),
+          taskUpdate,
+        )
+      }
       await fetchPlannedActions()
     } catch (error) {
       console.error('Erro ao concluir ação do dia:', error)

@@ -245,15 +245,41 @@ association; removing the association deletes only `eventAssociation`.
 
 ## 10. Task structure
 
-The existing hierarchy is:
+The canonical hierarchy is:
 
 - normal Task;
 - Supertask; and
 - Subtask.
 
-A Task with one or more subtasks is called a Supertask. A Task may attach to
-the Task above and become a Subtask. Unlinking or promoting a Subtask makes it
-a normal standalone Task while preserving its logical Task identity.
+A Task with one or more subtasks is called a Supertask. A Subtask is a full
+Task object embedded in the root Task document's `subtasks[]` array. The
+embedded Subtask carries its own `id`, `parentTaskId`, status, nature,
+schedule, automation, planning, daily execution, and Event association.
+
+The canonical depth is exactly one level:
+
+```text
+Supertask
+├── Subtask
+└── Subtask
+```
+
+A Subtask cannot receive another Subtask. `parentTaskId` is the operational
+backlink to the root Task; the embedded position is the storage relationship.
+`groupId` is not part of this hierarchy. It is a legacy opaque compatibility
+field preserved when present, never generated for new Tasks, and never used to
+derive or mutate parent/child relationships.
+
+A Task may attach to a root Task and become a Subtask. Unlinking or promoting
+a Subtask makes it a normal standalone Task while preserving its logical Task
+identity and its own configuration. Attach, promotion, removal, validation,
+and direct-subtask reordering use the canonical hierarchy domain helpers.
+
+Legacy documents may contain nested descendants or malformed backlinks. Read
+hydration preserves those descendants defensively and reports hierarchy
+issues in runtime only; it does not write or migrate them. Authoring refuses
+operations that would create depth greater than one or silently discard
+descendants.
 
 Deleting a Supertask deletes its Subtasks. Converting a Supertask to an Event
 carries its Subtasks into the Event as a Task List in OptionalFields.
@@ -261,6 +287,11 @@ carries its Subtasks into the Event as a Task List in OptionalFields.
 This document does not change current status-propagation rules for parents and
 children. Any future redesign of group-wide status behavior is a separate
 decision and implementation checkpoint.
+
+Supertasks and Subtasks are independently scheduled Tasks. A Subtask may
+produce its own Action when eligible, and its completion does not complete the
+parent or siblings automatically. A parent Action likewise does not complete
+its children.
 
 ## 11. Tasks and Calendar
 
@@ -307,7 +338,11 @@ Legacy event-relative data therefore round-trips with forward normalization,
 without a bulk migration.
 
 Nested subtask ids remain part of the existing decided hierarchy wire format;
-they are not the top-level Firestore document id.
+they are not the top-level Firestore document id. `groupId` remains an opaque
+legacy field and is preserved by the whitelist without participating in
+hierarchy operations. Root documents contain embedded direct subtasks only in
+the canonical model; nested legacy descendants are tolerated but not
+authorable.
 
 Malformed or unknown lifecycle status values hydrate defensively as `0`, and
 invalid legacy schedules are ignored rather than exposed as executable rules.
@@ -391,6 +426,9 @@ The projection now applies these rules:
   `Em foco`, which promotes them to the day projection;
 - event-relative Tasks receive resolved Event context, project on their
   effective date, and roll over after that date while still open; and
+- root Tasks and their direct embedded Subtasks are projected independently;
+  a Subtask uses only its own status, recurrence, daily execution, planning,
+  automation, and Event association; and
 - status, schedule, planning, and completion matches are resolved before
   favorable-condition highlighting.
 

@@ -15,6 +15,7 @@ import {
   deriveTaskNature,
   normalizeTaskSchedule,
 } from './taskSchedule.ts'
+import { updateSubtask, validateTaskHierarchy } from './taskHierarchy.ts'
 
 export { deriveTaskNature } from './taskSchedule.ts'
 
@@ -180,12 +181,13 @@ function normalizeSubtask(value: unknown): Task | null {
 
 export function hydrateTask(id: string, data: Record<string, unknown>): Task {
   const schedule = normalizeTaskSchedule(data.schedule)
+  const rawSubtasks = Array.isArray(data.subtasks) ? data.subtasks : []
   const subtasks = Array.isArray(data.subtasks)
     ? data.subtasks.map(normalizeSubtask).filter((item): item is Task => item !== null)
     : undefined
   const eventAssociation = resolveEventAssociation(data.eventAssociation, schedule)
 
-  return {
+  const hydratedTask: Task = {
     id,
     content: typeof data.content === 'string' ? data.content : '',
     status: normalizeStatus(data.status),
@@ -207,9 +209,20 @@ export function hydrateTask(id: string, data: Record<string, unknown>): Task {
     ...(schedule ? { schedule } : {}),
     ...(eventAssociation ? { eventAssociation } : {}),
   }
+
+  const hierarchyIssues = validateTaskHierarchy(hydratedTask)
+  rawSubtasks.forEach((value, index) => {
+    if (!isRecord(value) || typeof value.id !== 'string' || value.id.trim() === '') {
+      hierarchyIssues.push({ code: 'missing-subtask-id', path: `subtasks[${index}].id` })
+    }
+  })
+
+  return hierarchyIssues.length > 0
+    ? { ...hydratedTask, hierarchyIssues }
+    : hydratedTask
 }
 
-function serializeNestedTask(task: Task): TaskNestedDocument {
+function serializeNestedTask(task: Task, expectedParentTaskId?: string): TaskNestedDocument {
   const schedule = normalizeTaskSchedule(task.schedule)
   const eventAssociation = serializeEventAssociation(task.eventAssociation, schedule)
 
@@ -219,9 +232,11 @@ function serializeNestedTask(task: Task): TaskNestedDocument {
     status: task.status,
     ...(task.groupId !== undefined ? { groupId: task.groupId } : {}),
     ...(task.subtasks !== undefined
-      ? { subtasks: task.subtasks.map(serializeNestedTask) }
+      ? { subtasks: task.subtasks.map(subtask => serializeNestedTask(subtask, task.id)) }
       : {}),
-    ...(task.parentTaskId !== undefined ? { parentTaskId: task.parentTaskId } : {}),
+    ...(expectedParentTaskId !== undefined
+      ? { parentTaskId: expectedParentTaskId }
+      : task.parentTaskId !== undefined ? { parentTaskId: task.parentTaskId } : {}),
     ...(task.createdAt !== undefined ? { createdAt: task.createdAt } : {}),
     ...(task.lastActionCompletedDate !== undefined
       ? { lastActionCompletedDate: task.lastActionCompletedDate }
@@ -247,9 +262,8 @@ export function serializeTask(task: Task): TaskDocumentData {
     ...(task.order !== undefined ? { order: task.order } : {}),
     ...(task.groupId !== undefined ? { groupId: task.groupId } : {}),
     ...(task.subtasks !== undefined
-      ? { subtasks: task.subtasks.map(serializeNestedTask) }
+      ? { subtasks: task.subtasks.map(subtask => serializeNestedTask(subtask, task.id)) }
       : {}),
-    ...(task.parentTaskId !== undefined ? { parentTaskId: task.parentTaskId } : {}),
     ...(task.createdAt !== undefined ? { createdAt: task.createdAt } : {}),
     ...(task.lastActionCompletedDate !== undefined
       ? { lastActionCompletedDate: task.lastActionCompletedDate }
@@ -298,4 +312,30 @@ export function buildTaskStatusUpdate(
   status: TaskStatus,
 ): UpdateData<TaskDocumentData> {
   return { status }
+}
+
+export function buildNestedTaskDailyCompletionUpdate(
+  parentTask: Task,
+  subtaskId: string,
+  completedDate: string,
+): UpdateData<TaskDocumentData> | null {
+  const updatedParent = updateSubtask(parentTask, subtaskId, subtask => ({
+    ...subtask,
+    lastActionCompletedDate: completedDate,
+  }))
+
+  return updatedParent ? serializeTask(updatedParent) : null
+}
+
+export function buildNestedTaskStatusUpdate(
+  parentTask: Task,
+  subtaskId: string,
+  status: TaskStatus,
+): UpdateData<TaskDocumentData> | null {
+  const updatedParent = updateSubtask(parentTask, subtaskId, subtask => ({
+    ...subtask,
+    status,
+  }))
+
+  return updatedParent ? serializeTask(updatedParent) : null
 }

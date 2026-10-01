@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   buildTaskDailyCompletionUpdate,
+  buildNestedTaskDailyCompletionUpdate,
+  buildNestedTaskStatusUpdate,
   buildTaskPayload,
   buildTaskStatusUpdate,
   buildTaskUpdate,
@@ -46,8 +48,21 @@ test('serializes the canonical task fields and excludes top-level runtime extras
 
   assert.equal('id' in payload, false)
   assert.equal('legacyUnknownField' in payload, false)
+  assert.equal('parentTaskId' in payload, false)
   assert.deepEqual(payload.subtasks, [])
   assert.equal(payload.order, 3)
+})
+
+test('preserves legacy groupId without using it as hierarchy and does not generate it for new Tasks', () => {
+  const legacy = hydrateTask('legacy-group', {
+    content: 'Grupo legado',
+    status: 0,
+    groupId: 'legacy-1',
+  })
+  assert.equal(serializeTask(legacy).groupId, 'legacy-1')
+
+  const fresh = buildTaskPayload({ content: 'Nova', status: 0 })
+  assert.equal('groupId' in fresh, false)
 })
 
 test('hydrates legacy statuses defensively and derives punctual nature without a recurrence', () => {
@@ -212,8 +227,49 @@ test('round-trips the decided nested hierarchy and association without using ids
     id: 'child-1',
     content: 'Etapa',
     status: 1,
+    parentTaskId: 'parent-1',
     eventAssociation: { eventId: 'event-1' },
   }])
+})
+
+test('hydrates malformed hierarchy defensively without dropping valid siblings or nested descendants', () => {
+  const task = hydrateTask('parent-1', {
+    content: 'Projeto',
+    status: 0,
+    subtasks: [
+      null,
+      { id: 'child-1', content: 'Etapa', status: 1, parentTaskId: 'wrong-parent' },
+      {
+        id: 'child-2',
+        content: 'Legado aninhado',
+        status: 0,
+        parentTaskId: 'parent-1',
+        subtasks: [{ id: 'grandchild', content: 'Descendente', status: 0, parentTaskId: 'child-2' }],
+      },
+    ],
+  })
+
+  assert.deepEqual(task.subtasks?.map(subtask => subtask.id), ['child-1', 'child-2'])
+  assert.equal(task.subtasks?.[1].subtasks?.[0].id, 'grandchild')
+  assert.equal(task.hierarchyIssues?.some(issue => issue.code === 'missing-subtask-id'), true)
+  assert.equal(task.hierarchyIssues?.some(issue => issue.code === 'invalid-parent-link'), true)
+  assert.equal(task.hierarchyIssues?.some(issue => issue.code === 'nested-subtask'), true)
+})
+
+test('nested completion writers update only the embedded child and preserve the parent', () => {
+  const parent = hydrateTask('parent-1', {
+    content: 'Projeto',
+    status: 1,
+    subtasks: [{ id: 'child-1', content: 'Etapa', status: 0 }],
+  })
+  const dailyUpdate = buildNestedTaskDailyCompletionUpdate(parent, 'child-1', '2026-10-01')
+  const statusUpdate = buildNestedTaskStatusUpdate(parent, 'child-1', 2)
+
+  assert.equal(dailyUpdate?.status, 1)
+  assert.equal(dailyUpdate?.subtasks?.[0].lastActionCompletedDate, '2026-10-01')
+  assert.equal(statusUpdate?.status, 1)
+  assert.equal(statusUpdate?.subtasks?.[0].status, 2)
+  assert.equal(statusUpdate?.subtasks?.[0].parentTaskId, 'parent-1')
 })
 
 test('builds explicit updates for schedule removal and daily completion changes', () => {

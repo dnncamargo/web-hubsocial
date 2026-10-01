@@ -260,3 +260,50 @@ test('the task projector is deterministic for the same civil input', () => {
     taskActions(tasks, '2026-10-08'),
   )
 })
+
+test('projects a direct subtask independently from its Supertask', () => {
+  const child = task('child', { type: 'daily' }, { parentTaskId: 'root' })
+  const root = task('root', undefined, {
+    status: 1,
+    subtasks: [child],
+  })
+
+  assert.deepEqual(taskActions([root], '2026-10-08'), [
+    {
+      taskId: 'root',
+      horizon: 'day',
+      source: 'status',
+      completionMode: 'lifecycle',
+    },
+    {
+      taskId: 'child',
+      parentTaskId: 'root',
+      horizon: 'day',
+      source: 'recurring',
+      completionMode: 'daily',
+      effectiveDate: '2026-10-08',
+    },
+  ])
+})
+
+test('projects multiple direct subtasks with distinct identities and suppresses completed children only', () => {
+  const root = task('root')
+  const first = task('first', { type: 'daily' }, { parentTaskId: 'root' })
+  const second = task('second', { type: 'daily' }, { parentTaskId: 'root', status: 2 })
+  const actions = taskActions([{ ...root, subtasks: [first, second] }], '2026-10-08')
+
+  assert.equal(actions.length, 1)
+  assert.equal(actions[0].taskId, 'first')
+  assert.equal(actions[0].parentTaskId, 'root')
+})
+
+test('weekly flexible subtask uses its own completion window', () => {
+  const child = task('child', { type: 'weekly' }, {
+    parentTaskId: 'root',
+    lastActionCompletedDate: '2026-10-05',
+  })
+  const root = task('root', undefined, { subtasks: [child] })
+
+  assert.equal(taskActions([root], '2026-10-06').length, 0)
+  assert.equal(taskActions([root], '2026-10-12').length, 1)
+})
