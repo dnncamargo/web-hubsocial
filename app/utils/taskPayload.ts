@@ -20,6 +20,7 @@ import {
   getTaskOccurrenceDateForDate,
   normalizeTaskSchedule,
 } from './taskSchedule.ts'
+import { synchronizeUpcomingEventRule } from './taskAuthoring.ts'
 import { validateTaskHierarchy } from './taskHierarchy.ts'
 import {
   deriveSupertaskStatus,
@@ -143,6 +144,14 @@ function normalizeAutomation(value: unknown): AutomationRuleSet | undefined {
   }
 }
 
+function synchronizeAutomationEvent(
+  automation: AutomationRuleSet | undefined,
+  eventId: string | undefined,
+): AutomationRuleSet | undefined {
+  if (!automation) return undefined
+  return synchronizeUpcomingEventRule(automation, eventId)
+}
+
 function deriveEventAssociation(
   schedule: TaskSchedule | undefined,
 ): TaskEventAssociation | undefined {
@@ -164,8 +173,18 @@ function normalizeEventAssociation(value: unknown): TaskEventAssociation | undef
 function resolveEventAssociation(
   value: unknown,
   schedule: TaskSchedule | undefined,
+  automation?: AutomationRuleSet,
 ): TaskEventAssociation | undefined {
-  return normalizeEventAssociation(value) ?? deriveEventAssociation(schedule)
+  const explicitAssociation = normalizeEventAssociation(value)
+  if (explicitAssociation) return explicitAssociation
+
+  const scheduleAssociation = deriveEventAssociation(schedule)
+  if (scheduleAssociation) return scheduleAssociation
+
+  const upcomingEvent = automation?.rules.find(rule => rule.type === 'upcomingEvent')
+  return upcomingEvent?.type === 'upcomingEvent'
+    ? { eventId: upcomingEvent.eventId }
+    : undefined
 }
 
 function normalizeFocusedOnDate(
@@ -179,10 +198,11 @@ function normalizeFocusedOnDate(
 function serializeEventAssociation(
   association: TaskEventAssociation | undefined,
   schedule: TaskSchedule | undefined,
+  automation?: AutomationRuleSet,
 ): TaskEventAssociation | undefined {
-  // eventRelative is a temporal rule that necessarily carries its Event
-  // context. Canonical writes keep both contracts synchronized.
-  return deriveEventAssociation(schedule) ?? normalizeEventAssociation(association)
+  return normalizeEventAssociation(association)
+    ?? deriveEventAssociation(schedule)
+    ?? resolveEventAssociation(undefined, undefined, automation)
 }
 
 export function isTaskArchived(task: Pick<Task, 'archivedAt'>): boolean {
@@ -192,7 +212,11 @@ export function isTaskArchived(task: Pick<Task, 'archivedAt'>): boolean {
 function normalizeSubtask(value: unknown): Task | null {
   if (!isRecord(value) || typeof value.id !== 'string') return null
 
+  // Embedded legacy Subtasks are inert compatibility data. Preserve their
+  // independent Event consumers instead of applying root Task canonicalization.
   const schedule = normalizeTaskSchedule(value.schedule)
+  const automation = normalizeAutomation(value.automation)
+  const eventAssociation = normalizeEventAssociation(value.eventAssociation)
   const nature = deriveTaskNature(schedule)
   const status = normalizeSubtaskStatus(value.status)
   return {
@@ -219,12 +243,10 @@ function normalizeSubtask(value: unknown): Task | null {
       ? { focusedOnDate: value.focusedOnDate }
       : {}),
     ...(isRecord(value.actionPlanning) ? { actionPlanning: value.actionPlanning as ActionPlanning } : {}),
-    ...(normalizeAutomation(value.automation)
-      ? { automation: normalizeAutomation(value.automation) }
-      : {}),
+    ...(automation ? { automation } : {}),
     ...(schedule ? { schedule } : {}),
-    ...(resolveEventAssociation(value.eventAssociation, schedule)
-      ? { eventAssociation: resolveEventAssociation(value.eventAssociation, schedule) }
+    ...(eventAssociation
+      ? { eventAssociation }
       : {}),
   }
 }
@@ -234,15 +256,23 @@ export function hydrateTask(
   data: Record<string, unknown>,
   targetDate: string = getCurrentCivilDate(),
 ): Task {
-  const schedule = normalizeTaskSchedule(data.schedule)
+  const rawSchedule = normalizeTaskSchedule(data.schedule)
+  const rawAutomation = normalizeAutomation(data.automation)
+  const eventAssociation = resolveEventAssociation(
+    data.eventAssociation,
+    rawSchedule,
+    rawAutomation,
+  )
+  const schedule = rawSchedule?.type === 'eventRelative' && eventAssociation
+    ? { ...rawSchedule, eventId: eventAssociation.eventId }
+    : rawSchedule
+  const automation = synchronizeAutomationEvent(rawAutomation, eventAssociation?.eventId)
   const nature = deriveTaskNature(schedule)
   const status = normalizeStatus(data.status)
   const rawSubtasks = Array.isArray(data.subtasks) ? data.subtasks : []
   const subtasks = Array.isArray(data.subtasks)
     ? data.subtasks.map(normalizeSubtask).filter((item): item is Task => item !== null)
     : undefined
-  const eventAssociation = resolveEventAssociation(data.eventAssociation, schedule)
-
   const hydratedTask: Task = {
     id,
     content: typeof data.content === 'string' ? data.content : '',
@@ -268,9 +298,7 @@ export function hydrateTask(
       ? { focusedOnDate: normalizeFocusedOnDate(data.focusedOnDate, nature, status) }
       : {}),
     ...(isRecord(data.actionPlanning) ? { actionPlanning: data.actionPlanning as ActionPlanning } : {}),
-    ...(normalizeAutomation(data.automation)
-      ? { automation: normalizeAutomation(data.automation) }
-      : {}),
+    ...(automation ? { automation } : {}),
     ...(schedule ? { schedule } : {}),
     ...(eventAssociation ? { eventAssociation } : {}),
   }
@@ -294,8 +322,12 @@ export function hydrateTask(
 }
 
 function serializeNestedTask(task: Task, expectedParentTaskId?: string): TaskNestedDocument {
-  const schedule = normalizeTaskSchedule(task.schedule)
-  const eventAssociation = serializeEventAssociation(task.eventAssociation, schedule)
+  const rawSchedule = normalizeTaskSchedule(task.schedule)
+  // Nested data may be a legacy rich Subtask. Its Event ids must round-trip
+  // independently and must never be canonicalized as a root Task.
+  const eventAssociation = normalizeEventAssociation(task.eventAssociation)
+  const schedule = rawSchedule
+  const automation = task.automation
   const status = task.legacySubtaskStatus === 1 && task.status === 0
     ? 1
     : task.status === 2 ? 2 : 0
@@ -322,7 +354,7 @@ function serializeNestedTask(task: Task, expectedParentTaskId?: string): TaskNes
       ? { focusedOnDate: task.focusedOnDate }
       : {}),
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
-    ...(task.automation !== undefined ? { automation: task.automation } : {}),
+    ...(automation !== undefined ? { automation } : {}),
     ...(schedule ? { schedule } : {}),
     ...(eventAssociation ? { eventAssociation } : {}),
   }
@@ -336,9 +368,13 @@ export function serializeTask(
   task: Task,
   targetDate: string = getCurrentCivilDate(),
 ): TaskDocumentData {
-  const schedule = normalizeTaskSchedule(task.schedule)
+  const rawSchedule = normalizeTaskSchedule(task.schedule)
+  const eventAssociation = serializeEventAssociation(task.eventAssociation, rawSchedule, task.automation)
+  const schedule = rawSchedule?.type === 'eventRelative' && eventAssociation
+    ? { ...rawSchedule, eventId: eventAssociation.eventId }
+    : rawSchedule
+  const automation = synchronizeAutomationEvent(task.automation, eventAssociation?.eventId)
   const nature = deriveTaskNature(schedule)
-  const eventAssociation = serializeEventAssociation(task.eventAssociation, schedule)
   const effectiveStatus = getEffectiveTaskStatus(task, targetDate)
 
   return {
@@ -363,30 +399,68 @@ export function serializeTask(
       ? { focusedOnDate: normalizeFocusedOnDate(task.focusedOnDate, nature, effectiveStatus) }
       : {}),
     ...(task.actionPlanning !== undefined ? { actionPlanning: task.actionPlanning } : {}),
-    ...(task.automation !== undefined ? { automation: task.automation } : {}),
+    ...(automation !== undefined ? { automation } : {}),
     ...(schedule ? { schedule } : {}),
     ...(eventAssociation ? { eventAssociation } : {}),
   }
 }
 
+function canonicalizeTaskAuthoringEventContext(
+  association: TaskEventAssociation | undefined,
+  schedule: TaskSchedule | undefined,
+  automation: AutomationRuleSet | undefined,
+): {
+  eventAssociation?: TaskEventAssociation
+  schedule?: TaskSchedule
+  automation?: AutomationRuleSet
+} {
+  const eventAssociation = normalizeEventAssociation(association)
+  const nextSchedule = eventAssociation && schedule?.type === 'eventRelative'
+    ? { ...schedule, eventId: eventAssociation.eventId }
+    : schedule?.type === 'eventRelative' ? undefined : schedule
+
+  return {
+    ...(eventAssociation ? { eventAssociation } : {}),
+    ...(nextSchedule ? { schedule: nextSchedule } : {}),
+    ...(automation
+      ? { automation: synchronizeAutomationEvent(automation, eventAssociation?.eventId) }
+      : {}),
+  }
+}
+
 export function buildTaskPayload(input: TaskPayloadInput): TaskDocumentData {
+  const eventContext = canonicalizeTaskAuthoringEventContext(
+    input.eventAssociation,
+    input.schedule,
+    input.automation,
+  )
+
   return serializeTask({
     id: '',
-    nature: deriveTaskNature(input.schedule),
+    nature: deriveTaskNature(eventContext.schedule),
     subtasks: input.subtasks,
     ...input,
+    ...eventContext,
+    automation: eventContext.automation,
+    schedule: eventContext.schedule,
+    eventAssociation: eventContext.eventAssociation,
     content: input.content.trim(),
   })
 }
 
 export function buildTaskUpdate(input: Pick<TaskPayloadInput, 'content' | 'actionPlanning' | 'automation' | 'schedule' | 'eventAssociation'>): UpdateData<TaskDocumentData> {
-  const schedule = normalizeTaskSchedule(input.schedule)
-  const eventAssociation = serializeEventAssociation(input.eventAssociation, schedule)
+  const eventContext = canonicalizeTaskAuthoringEventContext(
+    input.eventAssociation,
+    normalizeTaskSchedule(input.schedule),
+    input.automation,
+  )
+  const schedule = eventContext.schedule
+  const eventAssociation = eventContext.eventAssociation
 
   return {
     content: input.content.trim(),
     actionPlanning: input.actionPlanning ?? {},
-    automation: input.automation ?? { match: 'all', rules: [] },
+    automation: eventContext.automation ?? { match: 'all', rules: [] },
     ...(deriveTaskNature(schedule) === 'recurring'
       ? { focusedOnDate: deleteField() }
       : {}),

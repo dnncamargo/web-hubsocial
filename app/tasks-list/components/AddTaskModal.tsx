@@ -13,7 +13,10 @@ import ActionPlanningControl from '../../components/actions/ActionPlanningContro
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
 import TaskNatureControl from '../../components/actions/TaskNatureControl'
 import TaskScheduleControl from '../../components/actions/TaskScheduleControl'
-import { changeTaskNature } from '../../utils/taskAuthoring'
+import {
+  changeTaskNature,
+  synchronizeUpcomingEventRule,
+} from '../../utils/taskAuthoring'
 import styles from './TaskEditor.module.css'
 
 interface AddTaskModalProps {
@@ -121,6 +124,11 @@ export default function AddTaskModal({
     setSchedule(changeTaskNature(schedule, nextNature))
   }
 
+  const handleEventAssociationChange = (nextAssociation: TaskEventAssociation | undefined) => {
+    setEventAssociation(nextAssociation)
+    setAutomation(current => synchronizeUpcomingEventRule(current, nextAssociation?.eventId))
+  }
+
   return (
     <motion.div
       className={styles.overlay}
@@ -180,7 +188,7 @@ export default function AddTaskModal({
             value={schedule}
             onChange={setSchedule}
             eventAssociation={eventAssociation}
-            onEventAssociationChange={setEventAssociation}
+            onEventAssociationChange={handleEventAssociationChange}
           />
 
           <div className={styles.disclosure}>
@@ -198,6 +206,7 @@ export default function AddTaskModal({
                 uid={uid}
                 value={automation}
                 onChange={setAutomation}
+                associatedEventId={eventAssociation?.eventId ?? null}
               />
             )}
           </div>

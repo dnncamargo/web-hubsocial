@@ -338,7 +338,8 @@ Associated Event: Casamento do Raphael
 Lead time: 14 days
 ```
 
-The canonical association wire is independent from recurrence:
+Each root Task has at most one canonical Event association. The canonical
+association wire is independent from recurrence:
 
 ```ts
 eventAssociation?: {
@@ -347,10 +348,19 @@ eventAssociation?: {
 ```
 
 The legacy `eventRelative` schedule remains a separate punctual temporal rule
-whose `eventId` and `leadDays` determine its effective civil date. Canonical
-writes may preserve both contracts with synchronized Event ids. Removing an
-Event-relative rule may preserve an independent association; removing the
-association deletes only `eventAssociation`.
+whose `eventId` and `leadDays` determine its effective civil date. When it is
+materialized on a root Task, its Event id is synchronized with the canonical
+association. Likewise, a root Task's `upcomingEvent` favorable condition uses
+the same canonical Event id while retaining its independent `withinDays`
+window. Changing the root association synchronizes these materialized Event
+consumers; removing the association removes or deactivates only the
+Event-dependent root capabilities and preserves unrelated conditions.
+
+No migration in bulk is performed. Legacy data is read defensively. Rich
+legacy Subtasks retain their own `eventAssociation`, `eventRelative`, and
+`upcomingEvent` values independently during hydration and serialization; these
+fields remain inert while the item is a Subtask and are never synchronized as
+part of root Task canonicalization.
 
 New Subtasks do not individually have:
 

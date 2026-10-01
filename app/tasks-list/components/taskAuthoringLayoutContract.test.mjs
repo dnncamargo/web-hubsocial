@@ -36,9 +36,13 @@ test('Add and Edit share the guided task authoring order and canonical actions',
   }
 })
 
-test('recurring schedule controls expose only frequency details and keep Event context separate', () => {
+test('recurring schedule controls expose frequency details and one canonical Event context', () => {
   assert.match(scheduleControl, /Com que frequência ela se repete\?/)
-  assert.match(scheduleControl, /Contexto \/ Event associado/)
+  assert.match(scheduleControl, /<legend[^>]*>Contexto<\/legend>/)
+  assert.match(scheduleControl, /Antes do Event associado/)
+  assert.match(scheduleControl, /synchronizeEventRelativeSchedule/)
+  assert.doesNotMatch(scheduleControl, /Evento da regra temporal/)
+  assert.doesNotMatch(scheduleControl, /selectRelativeEvent/)
   assert.match(scheduleControl, /Flexível/)
   assert.match(scheduleControl, /Em dias específicos/)
   assert.match(scheduleControl, /Diariamente/)

@@ -25,7 +25,10 @@ import ActionPlanningControl from '../../components/actions/ActionPlanningContro
 import AutomationRulesEditor from '../../components/actions/AutomationRulesEditor'
 import TaskNatureControl from '../../components/actions/TaskNatureControl'
 import TaskScheduleControl from '../../components/actions/TaskScheduleControl'
-import { changeTaskNature } from '../../utils/taskAuthoring'
+import {
+  changeTaskNature,
+  synchronizeUpcomingEventRule,
+} from '../../utils/taskAuthoring'
 import { OptionalField } from '../../types/optionalFields'
 import { buildEventPayload } from '../../utils/eventPayload'
 import CalendarEventCreator from '../../components/ui/CalendarEventCreator'
@@ -136,6 +139,11 @@ export default function EditTaskModal({
   const handleNatureChange = (nextNature: TaskNature) => {
     setNature(nextNature)
     setSchedule(changeTaskNature(schedule, nextNature))
+  }
+
+  const handleEventAssociationChange = (nextAssociation: TaskEventAssociation | undefined) => {
+    setEventAssociation(nextAssociation)
+    setAutomation(current => synchronizeUpcomingEventRule(current, nextAssociation?.eventId))
   }
 
   const validateEventSchedule = () => {
@@ -345,7 +353,7 @@ export default function EditTaskModal({
             value={schedule}
             onChange={setSchedule}
             eventAssociation={eventAssociation}
-            onEventAssociationChange={setEventAssociation}
+            onEventAssociationChange={handleEventAssociationChange}
           />
 
           <div className={styles.conversionPanel}>
@@ -418,6 +426,7 @@ export default function EditTaskModal({
                 uid={uid}
                 value={automation}
                 onChange={setAutomation}
+                associatedEventId={eventAssociation?.eventId ?? null}
               />
             )}
           </div>

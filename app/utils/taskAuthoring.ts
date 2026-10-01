@@ -1,5 +1,5 @@
-import type { WeekdayName } from '../types/automation'
-import type { TaskNature, TaskSchedule } from '../types/tasks'
+import type { AutomationRuleSet, WeekdayName } from '../types/automation'
+import type { TaskEventAssociation, TaskNature, TaskSchedule } from '../types/tasks'
 
 export type TaskFrequency = 'daily' | 'weekly' | 'monthly'
 export type WeeklyAuthoringMode = 'flexible' | 'specific'
@@ -35,6 +35,33 @@ export function changeTaskNature(
     || schedule?.type === 'monthly'
     ? schedule
     : { type: 'daily' }
+}
+
+export function synchronizeEventRelativeSchedule(
+  schedule: TaskSchedule | undefined,
+  eventAssociation: TaskEventAssociation | undefined,
+): TaskSchedule | undefined {
+  if (schedule?.type !== 'eventRelative') return schedule
+  if (!eventAssociation?.eventId) return undefined
+
+  return {
+    ...schedule,
+    eventId: eventAssociation.eventId,
+  }
+}
+
+export function synchronizeUpcomingEventRule(
+  automation: AutomationRuleSet,
+  eventId: string | undefined,
+): AutomationRuleSet {
+  return {
+    ...automation,
+    rules: automation.rules
+      .filter(rule => rule.type !== 'upcomingEvent' || eventId !== undefined)
+      .map(rule => rule.type === 'upcomingEvent' && eventId !== undefined
+        ? { ...rule, eventId }
+        : rule),
+  }
 }
 
 export function changeTaskFrequency(
